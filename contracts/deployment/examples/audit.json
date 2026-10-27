@@ -1,0 +1,15 @@
+{
+  "contract_version": "1.0",
+  "record_id": "00000000-0000-4000-8000-000000000009",
+  "instance_id": "00000000-0000-4000-8000-000000000010",
+  "actor_ref": "principalref://installer",
+  "action_id": "init-dirs",
+  "plan_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "approval_ref": "approvalref://local-owner",
+  "phase": "receipt",
+  "outcome": "succeeded",
+  "generation": 1,
+  "recorded_at": "2026-10-28T00:00:00Z",
+  "manifest_digest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "error_code": null
+}

@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yixumemory.org/contracts/deployment/v1/client-config.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "contract_version": {
+      "const": "1.0"
+    },
+    "client_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "audience": {
+      "const": "yixumemory-memory"
+    },
+    "tenant_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "space_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "minItems": 1,
+      "uniqueItems": true,
+      "maxItems": 1
+    },
+    "transport": {
+      "enum": [
+        "rest",
+        "mcp-stdio",
+        "mcp-http"
+      ]
+    },
+    "endpoint": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "uri"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "connection_ref": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^connectionref://[a-z0-9/_-]+$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "credential_ref": {
+      "type": "string",
+      "pattern": "^secretref://[a-z0-9][a-z0-9/._-]*$"
+    },
+    "scopes": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "capabilities.read",
+          "payload.stage",
+          "event.append",
+          "event.read",
+          "evidence.read",
+          "memory.append",
+          "memory.read",
+          "memory.revise",
+          "memory.history",
+          "memory.search",
+          "memory.context",
+          "memory.erase",
+          "deletion.read"
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "api_major": {
+      "const": "v1"
+    },
+    "mcp_protocol": {
+      "anyOf": [
+        {
+          "const": "2025-11-25"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "contract_version",
+    "client_id",
+    "audience",
+    "tenant_id",
+    "space_ids",
+    "transport",
+    "endpoint",
+    "connection_ref",
+    "credential_ref",
+    "scopes",
+    "api_major",
+    "mcp_protocol"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "transport": {
+            "const": "mcp-stdio"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "endpoint": {
+            "type": "null"
+          },
+          "connection_ref": {
+            "type": "string"
+          },
+          "mcp_protocol": {
+            "const": "2025-11-25"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^(https://[^/?#@\\s]+(?:/[^?#\\s]*)?|http://127\\.0\\.0\\.1(?::[0-9]+)?(?:/[^?#\\s]*)?|http://\\[::1\\](?::[0-9]+)?(?:/[^?#\\s]*)?)$"
+          },
+          "connection_ref": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "transport": {
+            "const": "rest"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "mcp_protocol": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "mcp_protocol": {
+            "const": "2025-11-25"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yixumemory.org/contracts/deployment/v1/audit-record.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "contract_version": {
+      "const": "1.0"
+    },
+    "record_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "instance_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "actor_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "action_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "plan_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "approval_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "phase": {
+      "enum": [
+        "before-intent",
+        "receipt"
+      ]
+    },
+    "outcome": {
+      "enum": [
+        "pending",
+        "succeeded",
+        "blocked",
+        "failed",
+        "recovery_required"
+      ]
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "recorded_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "manifest_digest": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "error_code": {
+      "anyOf": [
+        {
+          "enum": [
+            "invalid_input",
+            "prerequisite_missing",
+            "approval_required",
+            "permission_denied",
+            "state_conflict",
+            "security_blocked",
+            "unavailable",
+            "recovery_required",
+            "verification_failed",
+            "compatibility_blocked"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "contract_version",
+    "record_id",
+    "instance_id",
+    "actor_ref",
+    "action_id",
+    "plan_hash",
+    "approval_ref",
+    "phase",
+    "outcome",
+    "generation",
+    "recorded_at",
+    "manifest_digest",
+    "error_code"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "phase": {
+            "const": "before-intent"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "outcome": {
+            "const": "pending"
+          },
+          "error_code": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "outcome": {
+            "enum": [
+              "succeeded",
+              "blocked",
+              "failed",
+              "recovery_required"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "outcome": {
+            "const": "succeeded"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "error_code": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ]
+}

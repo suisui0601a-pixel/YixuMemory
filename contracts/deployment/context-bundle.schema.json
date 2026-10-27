@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yixumemory.org/contracts/deployment/v1/context-bundle.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "tenant_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "space_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "memory_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 65536
+          },
+          "assertion_kind": {
+            "enum": [
+              "extracted_fact",
+              "model_inference",
+              "fictional_setting",
+              "user_assertion"
+            ]
+          },
+          "source_kinds": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "raw_event",
+                "external_document",
+                "user_statement",
+                "model_output",
+                "fictional_setting"
+              ]
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "valid_from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "knowledge_seq": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "conflict": {
+            "type": "boolean"
+          },
+          "trust": {
+            "const": "untrusted_data"
+          }
+        },
+        "required": [
+          "memory_id",
+          "revision_id",
+          "evidence_ids",
+          "text",
+          "assertion_kind",
+          "source_kinds",
+          "valid_from",
+          "valid_to",
+          "knowledge_seq",
+          "conflict",
+          "trust"
+        ]
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "knowledge_token": {
+      "type": "string",
+      "minLength": 1
+    },
+    "policy_epoch": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "partial": {
+      "type": "boolean"
+    },
+    "truncation_reason": {
+      "anyOf": [
+        {
+          "enum": [
+            "byte_budget",
+            "item_limit"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "tenant_id",
+    "space_id",
+    "items",
+    "knowledge_token",
+    "policy_epoch",
+    "partial",
+    "truncation_reason"
+  ]
+}

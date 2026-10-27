@@ -1,0 +1,72 @@
+{
+  "contract_version": "1.0",
+  "entries": [
+    {
+      "exit_code": 0,
+      "code": "ok",
+      "retryable": false
+    },
+    {
+      "exit_code": 2,
+      "code": "invalid_input",
+      "retryable": false
+    },
+    {
+      "exit_code": 3,
+      "code": "prerequisite_missing",
+      "retryable": false
+    },
+    {
+      "exit_code": 4,
+      "code": "approval_required",
+      "retryable": false
+    },
+    {
+      "exit_code": 5,
+      "code": "permission_denied",
+      "retryable": false
+    },
+    {
+      "exit_code": 6,
+      "code": "state_conflict",
+      "retryable": false
+    },
+    {
+      "exit_code": 7,
+      "code": "security_blocked",
+      "retryable": false
+    },
+    {
+      "exit_code": 8,
+      "code": "unavailable",
+      "retryable": true
+    },
+    {
+      "exit_code": 9,
+      "code": "recovery_required",
+      "retryable": false
+    },
+    {
+      "exit_code": 10,
+      "code": "verification_failed",
+      "retryable": false
+    },
+    {
+      "exit_code": 11,
+      "code": "compatibility_blocked",
+      "retryable": false
+    }
+  ],
+  "error_precedence": [
+    2,
+    9,
+    7,
+    5,
+    4,
+    6,
+    11,
+    3,
+    8,
+    10
+  ]
+}

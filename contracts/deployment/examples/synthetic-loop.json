@@ -1,0 +1,308 @@
+{
+  "fixture_version": "1.0",
+  "synthetic_only": true,
+  "runtime_executed": false,
+  "tenant_id": "00000000-0000-4000-8000-000000000001",
+  "space_id": "00000000-0000-4000-8000-000000000002",
+  "principal_id": "00000000-0000-4000-8000-000000000009",
+  "scopes": [
+    "capabilities.read",
+    "payload.stage",
+    "event.append",
+    "event.read",
+    "evidence.read",
+    "memory.append",
+    "memory.read",
+    "memory.search",
+    "memory.context"
+  ],
+  "steps": [
+    {
+      "tool": "memory_capabilities",
+      "arguments": {
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "space_id": "00000000-0000-4000-8000-000000000002"
+      },
+      "expected": {
+        "contract_version": "1.0",
+        "api_major": "v1",
+        "data_schema": "1.0",
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "space_id": "00000000-0000-4000-8000-000000000002",
+        "policy_epoch": 1,
+        "transports": [
+          "rest",
+          "mcp-stdio",
+          "mcp-http"
+        ],
+        "mcp_protocols": [
+          "2025-11-25"
+        ],
+        "tools": [
+          "memory_capabilities",
+          "payload_stage",
+          "events_ingest",
+          "memories_create",
+          "memories_search",
+          "memories_context"
+        ],
+        "model_mode": "none",
+        "external_model_calls": false,
+        "read_your_writes": true,
+        "context_hydration": true
+      },
+      "receipt": {
+        "request_id": "00000000-0000-4000-8000-000000000100",
+        "code": "ok",
+        "retryable": false,
+        "result_ref": "synthetic-result-0",
+        "commit_token": null
+      }
+    },
+    {
+      "tool": "payload_stage",
+      "arguments": {
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "space_id": "00000000-0000-4000-8000-000000000002",
+        "purpose": "content",
+        "classification": "synthetic",
+        "text": "Synthetic persona prefers synth-cobalt notebooks.",
+        "idempotency_key": "fixture-00000001"
+      },
+      "expected": {
+        "id": "00000000-0000-4000-8000-000000000007",
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "space_id": "00000000-0000-4000-8000-000000000002",
+        "purpose": "content",
+        "expires_at": "2026-10-28T00:10:00Z"
+      },
+      "receipt": {
+        "request_id": "00000000-0000-4000-8000-000000000101",
+        "code": "ok",
+        "retryable": false,
+        "result_ref": "synthetic-result-1",
+        "commit_token": null
+      }
+    },
+    {
+      "tool": "payload_stage",
+      "arguments": {
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "space_id": "00000000-0000-4000-8000-000000000002",
+        "purpose": "locator",
+        "classification": "synthetic",
+        "text": "synthetic:persona-fixture:line-1",
+        "idempotency_key": "fixture-00000002"
+      },
+      "expected": {
+        "id": "00000000-0000-4000-8000-000000000008",
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "space_id": "00000000-0000-4000-8000-000000000002",
+        "purpose": "locator",
+        "expires_at": "2026-10-28T00:10:00Z"
+      },
+      "receipt": {
+        "request_id": "00000000-0000-4000-8000-000000000102",
+        "code": "ok",
+        "retryable": false,
+        "result_ref": "synthetic-result-2",
+        "commit_token": null
+      }
+    },
+    {
+      "tool": "events_ingest",
+      "arguments": {
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "space_id": "00000000-0000-4000-8000-000000000002",
+        "kind": "user_statement",
+        "payload_id": "00000000-0000-4000-8000-000000000007",
+        "occurred_at": "2026-10-28T00:00:00Z",
+        "source_kind": "user_statement",
+        "source_locator": "00000000-0000-4000-8000-000000000008",
+        "idempotency_key": "fixture-00000003"
+      },
+      "expected": {
+        "event": {
+          "schema_version": "1.0",
+          "tenant_id": "00000000-0000-4000-8000-000000000001",
+          "space_id": "00000000-0000-4000-8000-000000000002",
+          "id": "00000000-0000-4000-8000-000000000006",
+          "kind": "user_statement",
+          "payload_id": "00000000-0000-4000-8000-000000000007",
+          "occurred_at": "2026-10-28T00:00:00Z",
+          "recorded_at": "2026-10-28T00:00:00Z",
+          "actor_id": "00000000-0000-4000-8000-000000000009",
+          "knowledge_seq": 1
+        },
+        "evidence": {
+          "schema_version": "1.0",
+          "tenant_id": "00000000-0000-4000-8000-000000000001",
+          "space_id": "00000000-0000-4000-8000-000000000002",
+          "id": "00000000-0000-4000-8000-000000000005",
+          "event_id": "00000000-0000-4000-8000-000000000006",
+          "source_kind": "user_statement",
+          "source_locator": "00000000-0000-4000-8000-000000000008",
+          "payload_id": "00000000-0000-4000-8000-000000000007",
+          "captured_at": "2026-10-28T00:00:00Z"
+        }
+      },
+      "receipt": {
+        "request_id": "00000000-0000-4000-8000-000000000103",
+        "code": "ok",
+        "retryable": false,
+        "result_ref": "synthetic-result-3",
+        "commit_token": "demo:1"
+      }
+    },
+    {
+      "tool": "memories_create",
+      "arguments": {
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "space_id": "00000000-0000-4000-8000-000000000002",
+        "assertion_kind": "user_assertion",
+        "content_payload_id": "00000000-0000-4000-8000-000000000007",
+        "valid_from": "2026-10-28T00:00:00Z",
+        "valid_to": null,
+        "evidence_ids": [
+          "00000000-0000-4000-8000-000000000005"
+        ],
+        "idempotency_key": "fixture-00000004"
+      },
+      "expected": {
+        "schema_version": "1.0",
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "space_id": "00000000-0000-4000-8000-000000000002",
+        "id": "00000000-0000-4000-8000-000000000003",
+        "current_revision_id": "00000000-0000-4000-8000-000000000004",
+        "version": 1,
+        "state": "active",
+        "created_at": "2026-10-28T00:00:00Z"
+      },
+      "receipt": {
+        "request_id": "00000000-0000-4000-8000-000000000104",
+        "code": "ok",
+        "retryable": false,
+        "result_ref": "synthetic-result-4",
+        "commit_token": "demo:2"
+      }
+    },
+    {
+      "tool": "memories_search",
+      "arguments": {
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "space_id": "00000000-0000-4000-8000-000000000002",
+        "query": "synth-cobalt",
+        "domain": "real",
+        "limit": 10,
+        "min_commit_token": "demo:2"
+      },
+      "expected": {
+        "items": [
+          {
+            "schema_version": "1.0",
+            "tenant_id": "00000000-0000-4000-8000-000000000001",
+            "space_id": "00000000-0000-4000-8000-000000000002",
+            "id": "00000000-0000-4000-8000-000000000003",
+            "current_revision_id": "00000000-0000-4000-8000-000000000004",
+            "version": 1,
+            "state": "active",
+            "created_at": "2026-10-28T00:00:00Z"
+          }
+        ],
+        "next_cursor": null,
+        "partial": false,
+        "index_watermark": "demo:2"
+      },
+      "receipt": {
+        "request_id": "00000000-0000-4000-8000-000000000105",
+        "code": "ok",
+        "retryable": false,
+        "result_ref": "synthetic-result-5",
+        "commit_token": "demo:2"
+      }
+    },
+    {
+      "tool": "memories_context",
+      "arguments": {
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "space_id": "00000000-0000-4000-8000-000000000002",
+        "memory_ids": [
+          "00000000-0000-4000-8000-000000000003"
+        ],
+        "domain": "real",
+        "max_bytes": 4096,
+        "min_commit_token": "demo:2"
+      },
+      "expected": {
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "space_id": "00000000-0000-4000-8000-000000000002",
+        "items": [
+          {
+            "memory_id": "00000000-0000-4000-8000-000000000003",
+            "revision_id": "00000000-0000-4000-8000-000000000004",
+            "evidence_ids": [
+              "00000000-0000-4000-8000-000000000005"
+            ],
+            "text": "Synthetic persona prefers synth-cobalt notebooks.",
+            "assertion_kind": "user_assertion",
+            "source_kinds": [
+              "user_statement"
+            ],
+            "valid_from": "2026-10-28T00:00:00Z",
+            "valid_to": null,
+            "knowledge_seq": 2,
+            "conflict": false,
+            "trust": "untrusted_data"
+          }
+        ],
+        "knowledge_token": "demo:2",
+        "policy_epoch": 1,
+        "partial": false,
+        "truncation_reason": null
+      },
+      "receipt": {
+        "request_id": "00000000-0000-4000-8000-000000000106",
+        "code": "ok",
+        "retryable": false,
+        "result_ref": "synthetic-result-6",
+        "commit_token": "demo:2"
+      }
+    }
+  ],
+  "revision": {
+    "schema_version": "1.0",
+    "tenant_id": "00000000-0000-4000-8000-000000000001",
+    "space_id": "00000000-0000-4000-8000-000000000002",
+    "id": "00000000-0000-4000-8000-000000000004",
+    "memory_id": "00000000-0000-4000-8000-000000000003",
+    "number": 1,
+    "parent_revision_id": null,
+    "assertion_kind": "user_assertion",
+    "content_payload_id": "00000000-0000-4000-8000-000000000007",
+    "valid_from": "2026-10-28T00:00:00Z",
+    "valid_to": null,
+    "recorded_at": "2026-10-28T00:00:00Z",
+    "evidence_ids": [
+      "00000000-0000-4000-8000-000000000005"
+    ],
+    "knowledge_seq": 2
+  },
+  "negative_cases": [
+    {
+      "name": "foreign-space",
+      "tool": "memories_search",
+      "space_id": "00000000-0000-4000-8000-000000000099",
+      "expected_code": "not_visible"
+    },
+    {
+      "name": "erase-not-granted",
+      "tool": "memories_erase",
+      "expected_code": "denied"
+    },
+    {
+      "name": "install-not-a-memory-tool",
+      "tool": "up",
+      "expected_jsonrpc_code": -32601
+    }
+  ]
+}

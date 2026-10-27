@@ -1,0 +1,53 @@
+{
+  "contract_version": "1.0",
+  "instance_id": "00000000-0000-4000-8000-000000000010",
+  "profile": "desktop",
+  "runtime": "native",
+  "database": {
+    "backend": "sqlite",
+    "endpoint_scope": "local",
+    "publish_host_port": false,
+    "credential_ref": null,
+    "tls_mode": "not-applicable"
+  },
+  "data_root_ref": "pathref://default-data",
+  "storage": {
+    "persistent": true,
+    "filesystem": "local-verified",
+    "volume_ref": null,
+    "unknown_files": "reject",
+    "preserve_existing_data": true
+  },
+  "network": {
+    "application_bind": "127.0.0.1",
+    "application_port": 8787,
+    "host_publish_bind": "127.0.0.1",
+    "remote_enabled": false,
+    "proxy_endpoint": null,
+    "authentication_required": true,
+    "tls_required_remote": true
+  },
+  "secrets": {
+    "backend": "os-broker",
+    "payload_key_ref": "secretref://instance/payload-root",
+    "deployment_audience": "yixumemory-control",
+    "client_audience": "yixumemory-memory"
+  },
+  "model": {
+    "mode": "none",
+    "external_calls": false
+  },
+  "licensing": {
+    "registration_required": false,
+    "activation_required": false,
+    "periodic_online_check": false,
+    "device_limit": null,
+    "memory_upload_required": false
+  },
+  "backup": {
+    "required_before_upgrade": true,
+    "restore_drill_required": true,
+    "deletion_watermark_required": true,
+    "target_ref": "backupref://independent-target"
+  }
+}

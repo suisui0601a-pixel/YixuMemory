@@ -1,0 +1,507 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yixumemory.org/contracts/deployment/v1/config.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "contract_version": {
+      "const": "1.0"
+    },
+    "instance_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "profile": {
+      "enum": [
+        "desktop",
+        "container",
+        "server",
+        "postgres"
+      ]
+    },
+    "runtime": {
+      "enum": [
+        "native",
+        "container",
+        "service"
+      ]
+    },
+    "database": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "backend": {
+          "enum": [
+            "sqlite",
+            "postgres"
+          ]
+        },
+        "endpoint_scope": {
+          "enum": [
+            "local",
+            "private"
+          ]
+        },
+        "publish_host_port": {
+          "const": false
+        },
+        "credential_ref": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^secretref://[a-z0-9][a-z0-9/._-]*$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tls_mode": {
+          "enum": [
+            "not-applicable",
+            "local-socket",
+            "verify-full"
+          ]
+        }
+      },
+      "required": [
+        "backend",
+        "endpoint_scope",
+        "publish_host_port",
+        "credential_ref",
+        "tls_mode"
+      ]
+    },
+    "data_root_ref": {
+      "type": "string",
+      "pattern": "^pathref://[a-z0-9/-]+$"
+    },
+    "storage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "persistent": {
+          "const": true
+        },
+        "filesystem": {
+          "const": "local-verified"
+        },
+        "volume_ref": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^volumeref://[a-z0-9_-]+$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unknown_files": {
+          "const": "reject"
+        },
+        "preserve_existing_data": {
+          "const": true
+        }
+      },
+      "required": [
+        "persistent",
+        "filesystem",
+        "volume_ref",
+        "unknown_files",
+        "preserve_existing_data"
+      ]
+    },
+    "network": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "application_bind": {
+          "enum": [
+            "127.0.0.1",
+            "::1",
+            "0.0.0.0"
+          ]
+        },
+        "application_port": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 65535
+        },
+        "host_publish_bind": {
+          "enum": [
+            "127.0.0.1",
+            "::1"
+          ]
+        },
+        "remote_enabled": {
+          "type": "boolean"
+        },
+        "proxy_endpoint": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uri",
+              "pattern": "^https://"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "authentication_required": {
+          "const": true
+        },
+        "tls_required_remote": {
+          "const": true
+        }
+      },
+      "required": [
+        "application_bind",
+        "application_port",
+        "host_publish_bind",
+        "remote_enabled",
+        "proxy_endpoint",
+        "authentication_required",
+        "tls_required_remote"
+      ]
+    },
+    "secrets": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "backend": {
+          "enum": [
+            "os-broker",
+            "protected-keyfile",
+            "mounted-secret-broker"
+          ]
+        },
+        "payload_key_ref": {
+          "type": "string",
+          "pattern": "^secretref://[a-z0-9][a-z0-9/._-]*$"
+        },
+        "deployment_audience": {
+          "const": "yixumemory-control"
+        },
+        "client_audience": {
+          "const": "yixumemory-memory"
+        }
+      },
+      "required": [
+        "backend",
+        "payload_key_ref",
+        "deployment_audience",
+        "client_audience"
+      ]
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "const": "none"
+        },
+        "external_calls": {
+          "const": false
+        }
+      },
+      "required": [
+        "mode",
+        "external_calls"
+      ]
+    },
+    "licensing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "registration_required": {
+          "const": false
+        },
+        "activation_required": {
+          "const": false
+        },
+        "periodic_online_check": {
+          "const": false
+        },
+        "device_limit": {
+          "type": "null"
+        },
+        "memory_upload_required": {
+          "const": false
+        }
+      },
+      "required": [
+        "registration_required",
+        "activation_required",
+        "periodic_online_check",
+        "device_limit",
+        "memory_upload_required"
+      ]
+    },
+    "backup": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "required_before_upgrade": {
+          "const": true
+        },
+        "restore_drill_required": {
+          "const": true
+        },
+        "deletion_watermark_required": {
+          "const": true
+        },
+        "target_ref": {
+          "type": "string",
+          "pattern": "^backupref://[a-z0-9/_-]+$"
+        }
+      },
+      "required": [
+        "required_before_upgrade",
+        "restore_drill_required",
+        "deletion_watermark_required",
+        "target_ref"
+      ]
+    }
+  },
+  "required": [
+    "contract_version",
+    "instance_id",
+    "profile",
+    "runtime",
+    "database",
+    "data_root_ref",
+    "storage",
+    "network",
+    "secrets",
+    "model",
+    "licensing",
+    "backup"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "runtime": {
+            "enum": [
+              "native",
+              "service"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "network": {
+            "properties": {
+              "application_bind": {
+                "enum": [
+                  "127.0.0.1",
+                  "::1"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "runtime": {
+            "const": "container"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "storage": {
+            "properties": {
+              "volume_ref": {
+                "type": "string",
+                "pattern": "^volumeref://[a-z0-9_-]+$"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "profile": {
+            "const": "desktop"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "runtime": {
+            "const": "native"
+          },
+          "database": {
+            "properties": {
+              "backend": {
+                "const": "sqlite"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "profile": {
+            "const": "container"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "runtime": {
+            "const": "container"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "profile": {
+            "const": "server"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "runtime": {
+            "const": "service"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "profile": {
+            "const": "postgres"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "database": {
+            "properties": {
+              "backend": {
+                "const": "postgres"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "network": {
+            "properties": {
+              "remote_enabled": {
+                "const": true
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "network": {
+            "properties": {
+              "proxy_endpoint": {
+                "type": "string",
+                "format": "uri",
+                "pattern": "^https://"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "database": {
+            "properties": {
+              "backend": {
+                "const": "postgres"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "database": {
+            "properties": {
+              "credential_ref": {
+                "type": "string",
+                "pattern": "^secretref://[a-z0-9][a-z0-9/._-]*$"
+              },
+              "tls_mode": {
+                "enum": [
+                  "local-socket",
+                  "verify-full"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "database": {
+            "properties": {
+              "endpoint_scope": {
+                "const": "local"
+              },
+              "credential_ref": {
+                "type": "null"
+              },
+              "tls_mode": {
+                "const": "not-applicable"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "database": {
+            "properties": {
+              "backend": {
+                "const": "postgres"
+              },
+              "endpoint_scope": {
+                "const": "private"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "database": {
+            "properties": {
+              "tls_mode": {
+                "const": "verify-full"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

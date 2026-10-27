@@ -1,0 +1,20 @@
+{
+  "contract_version": "1.0",
+  "client_id": "00000000-0000-4000-8000-000000000009",
+  "audience": "yixumemory-memory",
+  "tenant_id": "00000000-0000-4000-8000-000000000001",
+  "space_ids": [
+    "00000000-0000-4000-8000-000000000002"
+  ],
+  "transport": "mcp-stdio",
+  "endpoint": null,
+  "connection_ref": "connectionref://persona-test",
+  "credential_ref": "secretref://clients/persona-test",
+  "scopes": [
+    "capabilities.read",
+    "memory.read",
+    "memory.search"
+  ],
+  "api_major": "v1",
+  "mcp_protocol": "2025-11-25"
+}

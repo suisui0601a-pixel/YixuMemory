@@ -1,0 +1,951 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "YixuMemory self-hosted agent extension draft",
+    "version": "0.0.0-p0",
+    "description": "Design extension, not deployed. Merge added paths/schemas; existing search gets only optional watermark header. Base resource DTOs unchanged."
+  },
+  "servers": [
+    {
+      "url": "https://example.invalid"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/v1/tenants/{tenant_id}/spaces/{space_id}/payloads": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/tenant_id"
+        },
+        {
+          "$ref": "#/components/parameters/space_id"
+        }
+      ],
+      "post": {
+        "operationId": "stagePayload",
+        "description": "Design extension only; authorize target and scope using server AuthContext; never trust client-claimed grants.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Authorized result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StagedPayload"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayloadInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tenants/{tenant_id}/spaces/{space_id}/capabilities": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/tenant_id"
+        },
+        {
+          "$ref": "#/components/parameters/space_id"
+        }
+      ],
+      "get": {
+        "operationId": "discoverCapabilities",
+        "description": "Design extension only; authorize target and scope using server AuthContext; never trust client-claimed grants.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Authorized result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Capabilities"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tenants/{tenant_id}/spaces/{space_id}/context": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/tenant_id"
+        },
+        {
+          "$ref": "#/components/parameters/space_id"
+        }
+      ],
+      "post": {
+        "operationId": "hydrateContext",
+        "description": "Design extension only; authorize target and scope using server AuthContext; never trust client-claimed grants.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Authorized result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContextBundle"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Stable baseline error; no existence leakage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContextInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/tenants/{tenant_id}/spaces/{space_id}/search": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/tenant_id"
+        },
+        {
+          "$ref": "#/components/parameters/space_id"
+        }
+      ],
+      "post": {
+        "operationId": "searchMemories",
+        "responses": {
+          "200": {
+            "description": "Success; authorized server representation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Denied without existence details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found or not visible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Idempotency/state/cursor conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Erased; only when caller remains authorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Stale expected version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid evidence/time/classification",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Missing precondition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Quota exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Retryable unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchInput"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "X-Min-Commit-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "description": "Opaque tenant knowledge token; authority fallback or 503 if index below watermark; header is not an authorization grant."
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "PayloadInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "purpose": {
+            "enum": [
+              "content",
+              "locator"
+            ]
+          },
+          "classification": {
+            "enum": [
+              "synthetic",
+              "personal",
+              "sensitive"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 65536
+          }
+        },
+        "required": [
+          "purpose",
+          "classification",
+          "text"
+        ]
+      },
+      "StagedPayload": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "space_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "purpose": {
+            "enum": [
+              "content",
+              "locator"
+            ]
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "space_id",
+          "purpose",
+          "expires_at"
+        ]
+      },
+      "Capabilities": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "contract_version": {
+            "const": "1.0"
+          },
+          "api_major": {
+            "const": "v1"
+          },
+          "data_schema": {
+            "const": "1.0"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "space_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "policy_epoch": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "transports": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "rest",
+                "mcp-stdio",
+                "mcp-http"
+              ]
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "mcp_protocols": {
+            "type": "array",
+            "items": {
+              "const": "2025-11-25"
+            },
+            "minItems": 0,
+            "uniqueItems": true
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 0,
+            "uniqueItems": true
+          },
+          "model_mode": {
+            "const": "none"
+          },
+          "external_model_calls": {
+            "const": false
+          },
+          "read_your_writes": {
+            "const": true
+          },
+          "context_hydration": {
+            "const": true
+          }
+        },
+        "required": [
+          "contract_version",
+          "api_major",
+          "data_schema",
+          "tenant_id",
+          "space_id",
+          "policy_epoch",
+          "transports",
+          "mcp_protocols",
+          "tools",
+          "model_mode",
+          "external_model_calls",
+          "read_your_writes",
+          "context_hydration"
+        ]
+      },
+      "ContextInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "memory_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "uniqueItems": true,
+            "maxItems": 100
+          },
+          "domain": {
+            "enum": [
+              "real",
+              "fiction"
+            ]
+          },
+          "max_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65536
+          },
+          "min_commit_token": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "memory_ids",
+          "domain",
+          "max_bytes",
+          "min_commit_token"
+        ]
+      },
+      "ContextBundle": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "space_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "memory_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "revision_id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "evidence_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "minItems": 1,
+                  "uniqueItems": true
+                },
+                "text": {
+                  "type": "string",
+                  "maxLength": 65536
+                },
+                "assertion_kind": {
+                  "enum": [
+                    "extracted_fact",
+                    "model_inference",
+                    "fictional_setting",
+                    "user_assertion"
+                  ]
+                },
+                "source_kinds": {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "raw_event",
+                      "external_document",
+                      "user_statement",
+                      "model_output",
+                      "fictional_setting"
+                    ]
+                  },
+                  "minItems": 1,
+                  "uniqueItems": true
+                },
+                "valid_from": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "valid_to": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "knowledge_seq": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "conflict": {
+                  "type": "boolean"
+                },
+                "trust": {
+                  "const": "untrusted_data"
+                }
+              },
+              "required": [
+                "memory_id",
+                "revision_id",
+                "evidence_ids",
+                "text",
+                "assertion_kind",
+                "source_kinds",
+                "valid_from",
+                "valid_to",
+                "knowledge_seq",
+                "conflict",
+                "trust"
+              ]
+            },
+            "minItems": 0,
+            "uniqueItems": true
+          },
+          "knowledge_token": {
+            "type": "string",
+            "minLength": 1
+          },
+          "policy_epoch": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "partial": {
+            "type": "boolean"
+          },
+          "truncation_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "byte_budget",
+                  "item_limit"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "tenant_id",
+          "space_id",
+          "items",
+          "knowledge_token",
+          "policy_epoch",
+          "partial",
+          "truncation_reason"
+        ]
+      }
+    },
+    "parameters": {},
+    "securitySchemes": {}
+  },
+  "x-overlay-policy": {
+    "add_paths": [
+      "/v1/tenants/{tenant_id}/spaces/{space_id}/payloads",
+      "/v1/tenants/{tenant_id}/spaces/{space_id}/capabilities",
+      "/v1/tenants/{tenant_id}/spaces/{space_id}/context"
+    ],
+    "existing_path_change": "search post: add optional X-Min-Commit-Token header only",
+    "resource_schemas_unchanged": true
+  }
+}

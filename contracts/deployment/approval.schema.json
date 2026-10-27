@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yixumemory.org/contracts/deployment/v1/approval.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "contract_version": {
+      "const": "1.0"
+    },
+    "approval_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "issuer_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "proof_ref": {
+      "type": "string",
+      "pattern": "^proofref://[a-z0-9/_-]+$"
+    },
+    "plan_hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "instance_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "host_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "valid_until": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "action_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "scopes": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "filesystem.create",
+          "config.write",
+          "secrets.provision",
+          "artifact.install",
+          "service.start",
+          "service.register",
+          "network.expose",
+          "backup.create",
+          "backup.restore",
+          "schema.migrate",
+          "credentials.rotate",
+          "keys.rotate",
+          "client.config.write",
+          "synthetic.write",
+          "service.stop",
+          "backup.verify"
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "allow_elevation": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "contract_version",
+    "approval_id",
+    "issuer_ref",
+    "proof_ref",
+    "plan_hash",
+    "instance_id",
+    "host_id",
+    "valid_until",
+    "action_ids",
+    "scopes",
+    "allow_elevation"
+  ]
+}
