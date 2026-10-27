@@ -44,6 +44,7 @@ GitHub Actions 将用 Python 3.12 独立复验。本地使用 Python 3.14.6、Gi
 - `pyproject.toml`
 - `requirements-dev.lock.txt`
 - `requirements-dev.txt`
+- `tests/conftest.py`
 - `tests/test_contracts.py`
 - `tests/test_sqlite_probes.py`
 - `docs/BASELINE_MANIFEST.md`
@@ -51,3 +52,7 @@ GitHub Actions 将用 Python 3.12 独立复验。本地使用 Python 3.14.6、Gi
 ## 尚未通过的生产门槛
 
 见 P0_ACCEPTANCE 中 P1-01 至 P1-11 与 RISK_REGISTER。特别是双后端端口套件、真实敏感数据擦除、备份恢复、完整授权矩阵、模型投毒防御均未实现。独立审查未完成，CI 不能代替独立审查。
+
+## 干净检出修复验证
+
+首个远端运行暴露 work 父目录不存在的问题，修复为 pytest session 启动时创建仓库内 work 目录。正常工作区与无预先 work 的全新 Git archive 均通过 41 项测试；mypy 现在覆盖 5 个源文件。此修复经 PR 的 baseline 检查后合并；早期失败运行保留作为可追溯记录。
