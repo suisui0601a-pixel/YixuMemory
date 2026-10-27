@@ -36,6 +36,7 @@
           "mcp-http"
         ],
         "mcp_protocols": [
+          "2026-07-28",
           "2025-11-25"
         ],
         "tools": [
@@ -49,7 +50,13 @@
         "model_mode": "none",
         "external_model_calls": false,
         "read_your_writes": true,
-        "context_hydration": true
+        "context_hydration": true,
+        "mcp_support": {
+          "status": "design-only",
+          "first_release_target": "2026-07-28",
+          "legacy_target": "2025-11-25",
+          "wire_runtime_verified": false
+        }
       },
       "receipt": {
         "request_id": "00000000-0000-4000-8000-000000000100",

@@ -1,0 +1,44 @@
+{
+  "contract_version": "1.0",
+  "runtime_verified": false,
+  "anchor_required": true,
+  "no_path_string_fallback": true,
+  "overwrite_existing": false,
+  "cross_volume": false,
+  "cleanup_requires_exact_owned_identity": true,
+  "platforms": {
+    "linux": {
+      "required": [
+        "openat2-beneath-no-symlinks-no-xdev",
+        "renameat2-noreplace",
+        "verified-owner-acl",
+        "local-file-identity"
+      ]
+    },
+    "macos": {
+      "required": [
+        "openat-single-component-nofollow",
+        "renameatx-np-excl",
+        "protected-parent-acl",
+        "local-file-identity"
+      ]
+    },
+    "windows": {
+      "required": [
+        "rootdirectory-relative-ntcreatefile",
+        "reject-reparse-tags",
+        "rename-handle-no-replace",
+        "verified-owner-dacl",
+        "local-file-identity"
+      ]
+    }
+  },
+  "unsupported_filesystems": [
+    "smb",
+    "nfs",
+    "unverified-fuse",
+    "fat-without-acl",
+    "unknown"
+  ],
+  "note": "Required primitives and protected ancestors must be probed on the actual filesystem. No transparent path-based fallback."
+}

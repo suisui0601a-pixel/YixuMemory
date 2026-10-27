@@ -19,7 +19,7 @@ AuthContext 由验证凭据后服务端 Principal/Grant 映射，不信任请求
 
 REST `GET /v1/tenants/{tenant_id}/spaces/{space_id}/capabilities` 返回经授权过滤的 contract version、工具集、API major、数据 schema、transport、NoModel 标志、索引水位能力及 policy epoch。未认证返回 401；错误 tenant/Space 统一不可见；服务/版本健康 public probe 仅最小 liveness 不泄漏实例细节。
 
-MCP initialize 协商协议版本，基线锁定 `2025-11-25`，不把它称作永久 latest；不支持版本明确拒绝。tools/list 按当前授权过滤并支持分页；Grant 变化触发 listChanged（若宣告支持）及重新发现，实际调用仍重验。资源/prompt/sampling/elicitation 未实现时不宣告，服务不会调用模型或主动采样。工具目录见 `contracts/deployment/tools.json`；说明、annotations 只辅助用户判断，不是授权边界。
+MCP 首发目标 modern `2026-07-28`，兼容目标 legacy `2025-11-25`；实际两者均未运行实现。两时代的 metadata、握手、检测、HTTP headers、错误、会话和工具发现见 [双时代矩阵](MCP_COMPATIBILITY.md)，禁止只替换版本字符串。现代服务必须实现 server/discover，但客户端可不经 discover 直接调用；旧客户端独立 initialize/initialized。tools/list 经授权过滤，调用时重验；首发不宣告 listChanged/subscriptions、sampling、elicitation 等未实现能力。工具目录与 capabilities 只记录设计目标，不能当作实际 SDK 认证。
 
 API major 为 v1，deployment contract 为 1.0、MCP protocol 为日期版本，SDK 软件版本独立。schema 形状沿用 2020-12；新增写字段不默许接受，不支持版本或未知工具返回稳定错误。原 Event/Memory/Revision/Evidence schema 本轮不变。`agent-extension.openapi.json` 为可合并主草案的三个新增端点及一个只读搜索 header 扩展，现有端点不改语义：
 
@@ -39,7 +39,7 @@ REST 最小本地个人模式可由本地 owner 创建有界 bearer secret；第
 
 MCP stdio：客户端启动受信的 `yixumemory-mcp --connection-ref <id>` 薄适配器，通过受限凭据 broker/handle 访问已运行数据服务，不直接打开 DB，不继承安装助手凭据。stdout 只输出换行分隔 UTF-8 JSON-RPC；stderr 脱敏。client config 不含 shell 字符串或 token，参数数组由 adapter 按宿主客户端格式生成；不修改其他 MCP server 项。stdio 会话经 OS 用户/连接 ref 映射有界 Grant，禁止用“本机进程”作为无条件数据权限。
 
-Streamable HTTP：单端点 `/mcp` POST；GET 支持可选 SSE，未启用时 405；session ID 不是认证，所有请求重验凭据。遵循协商版本 header、Content-Type/Accept 和 session lifecycle；SSE 断线不等于事务回滚，客户端写重放使用同一 idempotency_key。检查 Origin allowlist（存在且非法即 403）、Host 和代理来源，防 DNS rebinding；远端 HTTPS+认证，禁 token URL/query、跨 audience token passthrough。流重连及消息回放不绕过撤权和删除，不承诺 exactly-once。
+Streamable HTTP：同 `/mcp` 的不同 wire handler 隔离时代。modern 每 POST 校验 params._meta 与 MCP-Protocol-Version/Mcp-Method/Mcp-Name，不一致 400/-32020；无旧 session/GET/DELETE/Last-Event-ID 恢复。legacy 才使用 initialize/initialized 和经认证的可选旧 session、GET/DELETE。现代服务忽略旧 session header，不用它选取旧状态。具体检测/降级以 MCP_COMPATIBILITY 为准，认证或现代错误不得触发静默降级。所有请求校验 Origin/Host、HTTPS 与 resource/audience，禁止 token query/passthrough；取消/断线不等于事务回滚，写重放仍用原幂等键。
 
 标准远端 OAuth 接入目标：protected-resource metadata、授权服务器发现、resource/audience 绑定、PKCE S256、state 与精确 redirect allowlist，scope 映射服务端 Grant；本地部署可配置自托管 issuer，不依赖官方账户或第三方 LLM。认证服务器实现/选择及客户端支持是未来运行验收阻断项；未实现时不宣称可兼容任意 HTTP MCP 客户端。不自动暴露或关闭认证来换兼容。
 
@@ -71,7 +71,7 @@ getMemory 和 SearchResult 原 DTO 继续为指针。正文只经新增 hydrateC
 
 connect 默认 preview 返回 client-config.schema.json 中立 manifest：tenant/Space allowlist、transport、endpoint 或 connection_ref、audience、credential_ref、scopes、API/协议版本；无 token。配置不是权限凭据；server 以授权 registry 为准。用户先通过本地受保护入口授权 client Principal，安装助手只能引用已有受限凭据；不得借 bootstrap admin 代授内容权限。
 
-apply 将中立 manifest 转为特定客户端格式前检查支持的 transport、secret 注入机制、版本与原文件 digest，生成具体 diff 并经已授权范围确认；只原子更新自己管理项和备份原配置，拒绝未知覆盖。目标客户端不支持安全 secret broker 时返回 capability unavailable，不打印 token 或退化为把 secret 放在聊天/参数/配置中。SDK 使用同 manifest 权限与错误模型，不强制任何 Agent 框架。
+apply 将中立 manifest 转为特定客户端格式前检查 transport/时代、secret 注入、版本并生成 preview。依 FILESYSTEM_OPERATIONS 初版只能通过可信锚点句柄 no-replace 发布新管理文件；已有客户端配置保持不变，合并改写等待专用 adapter 安全审查，不以原文件 digest 检查后普通覆盖。目标客户端不支持安全 secret broker 时返回 capability unavailable，不打印 token 或退化为把 secret 放在聊天/参数/配置中。SDK 使用同 manifest 权限与错误模型，不强制任何 Agent 框架。
 
 上下文注入是显式客户端策略：用户批准的 Space、真实/fiction 查询域、时间及 token budget；每个片段标 memory/revision/evidence、来源类别、valid time、knowledge token、冲突状态和 `untrusted_data`。从记忆读出的安装指令、管理员自述或 prompt injection 不改变工具/部署权限；不把检索文本放成 system 权限指令。撤权/删除后停止续流，丢弃受控客户端缓存；无法保证抹去已送达第三方模型的历史上下文，发送外部模型需用户及 tenant policy 允许。
 
@@ -81,4 +81,6 @@ apply 将中立 manifest 转为特定客户端格式前检查支持的 transport
 
 未来实机复现步骤：隔离实例 → owner 建立 tenant A/Space A 和无关 B → 给 persona-test 仅 A 的 writer+reader+来源权限 → capabilities 发现 → stage 合成事件文本与 locator → events_ingest 得 Event+Evidence → stage 合成 user_assertion → memories_create 附 Evidence → memories_search 用固定词法 token `synth-cobalt`、domain real、min_commit_token → 得唯一同一 Memory、知识水位不落后 → memories_context 取同版本正文/证据和 untrusted_data 标记 → 验证 B 不可访问、无 memory.erase/安装权限；每步独立幂等键，重复不增版本。索引未追上时权威回退或 503，不能把空列表视为成功。verify 写探针仅在专用 synthetic Space 中显式授权；清理使用另外批准的擦除主体，不给普通 Agent 默认删除权限。
 
-协议依据（固定版本）：[MCP transports](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)、[authorization](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)、[lifecycle](https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle)、[tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)。具体兼容行为必须跑实际客户端套件；仅对齐文本不算协议实现。
+以下为 legacy 固定版本参考；modern 正式版本及差异以 MCP_COMPATIBILITY 的来源矩阵为准：[MCP transports](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)、[authorization](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)、[lifecycle](https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle)、[tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)。具体兼容行为必须跑实际客户端套件；仅对齐文本不算协议实现。
+
+PR #3 修复依据与状态：[ADR-009](adr/009-pr3-remediation.md)。旧协议固定描述由双时代矩阵取代，未改变 L2 业务规则或宣称真实协议支持。

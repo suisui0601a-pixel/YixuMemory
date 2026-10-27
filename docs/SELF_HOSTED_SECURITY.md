@@ -17,6 +17,8 @@ flowchart LR
   App --> DB[Authoritative DB / erasable Payload]
 ```
 
+文件变更的可信锚点/句柄/no-replace/清理约束以 [FILESYSTEM_OPERATIONS](FILESYSTEM_OPERATIONS.md) 为准；realpath+lock 不再作为抗竞态结论。MCP 双时代隔离以 [MCP_COMPATIBILITY](MCP_COMPATIBILITY.md) 为准。
+
 安装 helper 的 control audience 与 memory audience 分离，不存在“安装 token 也能读记忆”的 fallback。安装助手可能看到路径、进程、版本、健康、非内容审计；不能看到正文或 key。能控制同 OS 用户/宿主机的任意 shell 的 AI 仍可读取进程/密钥，无法靠逻辑角色做到保密，必须由 OS sandbox、受限 helper 与服务身份限制实际能力。对管理员/物理访问的威胁由磁盘保护和运维治理处理。
 
 原生服务默认只监听 127.0.0.1；启用 IPv6 只加 ::1，防意外绑定 ::。loopback 同样认证，不信任其他本地用户。容器可在隔离网络内监听通配地址，但 host publication 仍只能 loopback；禁止 host network、privileged、Docker socket 挂载。server 远端入口仅受认证 TLS 代理；认证在应用再次校验，不能只信任 X-User。Forwarded header 仅来自 allowlisted proxy，禁止直连绕过代理策略。PG 默认无 host port publication，私网防火墙/最小角色且远端验证 TLS 证书。
@@ -37,8 +39,8 @@ client 轮换先准备新 credential/ref，经授权切换，验证新凭据并�
 
 | ID | 反例 | 必须结果 | 本轮/未来证据 |
 |---|---|---|---|
-| SH-01 | AI 修改批准 JSON 增加 bind 公网、路径或管理员 | 签发者证明/plan hash/范围检查拒绝 | 本轮形状+语义反例；真实 broker 验收未来 |
-| SH-02 | init 目标存在未知文件，或检查后被 junction/symlink 替换 | 不覆盖，冲突/安全阻断；原始字节保持 | 当前计划约束，未来实机 TOCTOU/ACL 测试 |
+| SH-01 | AI 修改批准 JSON 增加 bind 公网、路径或管理员 | 签发者证明/plan hash/动作和 scope 精确集合及提权检查拒绝 | 本轮形状+语义反例；真实 broker 验收未来 |
+| SH-02 | init 目标存在未知文件，或检查后被 junction/symlink 替换 | 不覆盖，冲突/安全阻断；原始字节保持 | 句柄契约反例，实际 native/TOCTOU/ACL 测试仍未来 |
 | SH-03 | 另一主机/旧 facts/过期 approval 重放同计划 | 拒绝并重新 plan；不会沿用 --non-interactive 批准 | 语义 oracle，未来实际 CLI |
 | SH-04 | 重装自动删除卷或重新生成旧 key | 拒绝；同实例配置重复执行 no-op | schema 固定 preserve，未来重启/断电演练 |
 | SH-05 | 匿名远端、本机恶意网页、伪 Host/Origin | 401/403；无内容或跨 Space 计数 | 未来 HTTP/DNS rebinding/代理测试 |
@@ -67,3 +69,5 @@ journal append before-intent/receipt、实例锁、恢复探针和幂等 action 
 5. 多设备数据同步、离线冲突合并、自动公网证书、防火墙、rootless 容器支持范围未实现；本轮不承诺这些额外能力。
 6. 诊断保留期、备份策略默认频率和 RPO/RTO 未定，先以显式配置与可验证回执为门槛，不编造指标。
 7. 源码公开仍为 MIT，本轮设计与契约检查不发布计划采用新商业授权的完整核心，也不使 PR #2 生效。
+
+A3：单计划 approval 超集/重复/额外提权一律拒绝。生产服务不得反序列化客户端提交的 broker_proof_verified 或 elevation_policy_allows 为真实授权；当前纯 oracle 无任何认证能力，测试 true 只模拟已被隔离的受信观察。

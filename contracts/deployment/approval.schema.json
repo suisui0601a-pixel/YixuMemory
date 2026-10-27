@@ -71,6 +71,9 @@
     },
     "allow_elevation": {
       "type": "boolean"
+    },
+    "approval_kind": {
+      "const": "single-plan"
     }
   },
   "required": [
@@ -84,6 +87,8 @@
     "valid_until",
     "action_ids",
     "scopes",
-    "allow_elevation"
-  ]
+    "allow_elevation",
+    "approval_kind"
+  ],
+  "description": "Single normalized plan only; exact action/scope sets and elevation equality checked semantically. JSON proof_ref is not verified authorization."
 }

@@ -16,5 +16,9 @@
     "memory.search"
   ],
   "api_major": "v1",
-  "mcp_protocol": "2025-11-25"
+  "mcp_protocol": "2026-07-28",
+  "mcp_compatibility": {
+    "mode": "dual-era",
+    "legacy_fallback_allowed": true
+  }
 }

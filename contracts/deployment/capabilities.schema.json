@@ -40,7 +40,10 @@
     "mcp_protocols": {
       "type": "array",
       "items": {
-        "const": "2025-11-25"
+        "enum": [
+          "2026-07-28",
+          "2025-11-25"
+        ]
       },
       "minItems": 0,
       "uniqueItems": true
@@ -65,6 +68,30 @@
     },
     "context_hydration": {
       "const": true
+    },
+    "mcp_support": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "const": "design-only"
+        },
+        "first_release_target": {
+          "const": "2026-07-28"
+        },
+        "legacy_target": {
+          "const": "2025-11-25"
+        },
+        "wire_runtime_verified": {
+          "const": false
+        }
+      },
+      "required": [
+        "status",
+        "first_release_target",
+        "legacy_target",
+        "wire_runtime_verified"
+      ]
     }
   },
   "required": [
@@ -80,6 +107,7 @@
     "model_mode",
     "external_model_calls",
     "read_your_writes",
-    "context_hydration"
+    "context_hydration",
+    "mcp_support"
   ]
 }

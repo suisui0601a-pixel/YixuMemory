@@ -1,0 +1,50 @@
+{
+  "contract_version": "1.0",
+  "runtime_verified": false,
+  "first_release_target": "2026-07-28",
+  "compatibility_target": "2025-11-25",
+  "legacy_http_sse_2024_supported": false,
+  "eras": {
+    "modern": {
+      "version": "2026-07-28",
+      "handshake": false,
+      "per_request_meta": true,
+      "required_methods": [
+        "server/discover"
+      ],
+      "http_methods": [
+        "POST"
+      ],
+      "result_type_required": true,
+      "list_change_subscription_supported": false,
+      "http_session_id": "none",
+      "stdio_session_id": false
+    },
+    "legacy": {
+      "version": "2025-11-25",
+      "handshake": true,
+      "per_request_meta": false,
+      "required_methods": [
+        "initialize",
+        "notifications/initialized"
+      ],
+      "http_methods": [
+        "POST",
+        "GET",
+        "DELETE"
+      ],
+      "result_type_required": false,
+      "list_change_subscription_supported": false,
+      "http_session_id": "optional",
+      "stdio_session_id": false
+    }
+  },
+  "protocol_errors": {
+    "HeaderMismatch": -32020,
+    "MissingRequiredClientCapabilityError": -32021,
+    "UnsupportedProtocolVersionError": -32022,
+    "MethodNotFound": -32601,
+    "InvalidParams": -32602
+  },
+  "notes": "Actual advertised versions must be filtered by installed adapter acceptance, not copied blindly from this design matrix."
+}

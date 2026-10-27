@@ -1,0 +1,222 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yixumemory.org/contracts/deployment/v1/mcp-wire.schema.json",
+  "description": "Request review fixture subset; legacy initialized notification and results are exercised separately. Not full official schema or executable transport.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "era": {
+      "enum": [
+        "modern",
+        "legacy"
+      ]
+    },
+    "transport": {
+      "enum": [
+        "stdio",
+        "http"
+      ]
+    },
+    "http_method": {
+      "enum": [
+        "POST",
+        "GET",
+        "DELETE"
+      ]
+    },
+    "headers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "value"
+        ]
+      }
+    },
+    "state": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "legacy_initialized": {
+          "type": "boolean"
+        },
+        "legacy_protocol": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "legacy_session_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "legacy_initialized",
+        "legacy_protocol",
+        "legacy_session_id"
+      ]
+    },
+    "request": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "jsonrpc": {
+              "const": "2.0"
+            },
+            "id": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "method": {
+              "type": "string",
+              "minLength": 1
+            },
+            "params": {
+              "type": "object",
+              "properties": {
+                "_meta": {
+                  "type": "object",
+                  "properties": {
+                    "io.modelcontextprotocol/protocolVersion": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "io.modelcontextprotocol/clientCapabilities": {
+                      "type": "object"
+                    },
+                    "io.modelcontextprotocol/clientInfo": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "version"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "io.modelcontextprotocol/protocolVersion",
+                    "io.modelcontextprotocol/clientCapabilities"
+                  ],
+                  "additionalProperties": true
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "required": [
+            "jsonrpc",
+            "method"
+          ],
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "method": {
+                    "const": "notifications/initialized"
+                  }
+                }
+              },
+              "then": {
+                "not": {
+                  "required": [
+                    "id"
+                  ]
+                }
+              },
+              "else": {
+                "required": [
+                  "id"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "era",
+    "transport",
+    "http_method",
+    "headers",
+    "state",
+    "request"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "era": {
+            "const": "modern"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "request": {
+            "required": [
+              "params"
+            ],
+            "properties": {
+              "params": {
+                "required": [
+                  "_meta"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "http_method": {
+            "const": "POST"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "request": {
+            "type": "object"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "request": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -41,6 +41,14 @@ git diff --check
 | RUN-09 | 删除前备份/旧 key/旧 worker 恢复后尝试读 | 最新删除水位/撤销重放，无法复活；无法证明清理时保持 blocked |
 | RUN-10 | client、payload、TLS/OAuth signing key 轮换与泄露紧急撤销 | 旧权限失效、必要恢复仍可用、已删除 key 不复活、所有日志无秘密 |
 | RUN-11 | 上下文水合期间撤权/删除/换 revision，超预算、虚构域、提示注入 | 输出对应授权快照版本，变化时中止，不能把记忆文字提升系统权限；外发需批准 |
-| RUN-12 | 客户端原配置含其他 MCP 项，connect preview/apply 并发编辑 | 精确 diff/CAS，保留其他配置、无 Token；不支持 secret 注入时拒绝 |
+| RUN-12 | 客户端原配置含其他 MCP 项，connect preview/apply 并发编辑 | preview 保留原配置，apply 仅 no-replace 新管理文件，无 Token；直接改写既有配置不在初版范围 |
 
 兼容目标、资源、RPO/RTO、NAS 型号、OAuth issuer、key backend、签名包/发布渠道未实测前均不得标为生产验收通过。P0 设计通过只说明可评审文档与契约检查通过。
+
+## PR #3 FAIL 定点修复的追加验收
+
+- A1：mcp-wire-examples、双时代 schema/矩阵、逐请求 metadata/header 语义、legacy 初始化状态、modern discover 可选客户端调用、版本错误和禁止跨时代降级。见 MCP_COMPATIBILITY 的真实 SDK 门槛。
+- A2：filesystem-operation/policy 与纯观察 oracle 覆盖 plan 后父目录替换、创建组件、发布前 symlink/junction、rename/跨卷/未知已有文件、失败后清理身份替换和原语不足。**没有实际调用 OS 竞态原语，真实多进程竞争套件尚未执行**，详见 FILESYSTEM_OPERATIONS。
+- A3：精确 action/scope 集合、重复/额外/admin scope、额外动作、提权相等及受信安全策略；原 137 个 node ID 保留并继续执行。真实 broker/IPC/签名验证仍未实现，不能由此把 caller bool 当真实审批。
+
+提交检查还须比对被审查 SHA 的 pytest collection，报告新增 node ID 数与原用例保留情况；不得删除/skip 原用例掩盖审查发现。最终只报告 remediation ready，等待 Luna 对新 HEAD 再审。

@@ -13,5 +13,6 @@
   "scopes": [
     "filesystem.create"
   ],
-  "allow_elevation": false
+  "allow_elevation": false,
+  "approval_kind": "single-plan"
 }

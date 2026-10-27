@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yixumemory.org/contracts/deployment/v1/filesystem-operation.schema.json",
+  "description": "Bounded intent, not an OS handle or authorization. Live handle/ACL checks required.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "anchor_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "anchor_identity": {
+      "type": "string",
+      "minLength": 1
+    },
+    "volume_identity": {
+      "type": "string",
+      "minLength": 1
+    },
+    "owner_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "acl_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "components": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "not": {
+          "enum": [
+            ".",
+            ".."
+          ]
+        },
+        "pattern": "^(?:[A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9._-]{0,126}[A-Za-z0-9_-])$"
+      }
+    },
+    "operation": {
+      "enum": [
+        "create_directory",
+        "publish_new_file",
+        "read_owned",
+        "cleanup_owned"
+      ]
+    },
+    "expected_type": {
+      "enum": [
+        "file",
+        "directory"
+      ]
+    },
+    "no_replace": {
+      "const": true
+    },
+    "reject_reparse": {
+      "const": true
+    },
+    "same_volume": {
+      "const": true
+    },
+    "handle_relative_only": {
+      "const": true
+    }
+  },
+  "required": [
+    "anchor_ref",
+    "anchor_identity",
+    "volume_identity",
+    "owner_ref",
+    "acl_digest",
+    "components",
+    "operation",
+    "expected_type",
+    "no_replace",
+    "reject_reparse",
+    "same_volume",
+    "handle_relative_only"
+  ]
+}

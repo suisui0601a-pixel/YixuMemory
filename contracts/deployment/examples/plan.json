@@ -16,7 +16,17 @@
       "ref": "pathref://default-data",
       "absolute_path": "/synthetic/yixumemory",
       "preimage_digest": null,
-      "owned": false
+      "owned": false,
+      "anchor_ref": "anchorref://synthetic-owner-root",
+      "relative_components": [
+        "instances",
+        "demo"
+      ],
+      "anchor_identity": "demo-anchor-1",
+      "volume_identity": "demo-volume-1",
+      "owner_ref": "principalref://installer-helper",
+      "acl_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "expected_type": "directory"
     }
   ],
   "actions": [

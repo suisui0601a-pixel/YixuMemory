@@ -716,7 +716,10 @@
           "mcp_protocols": {
             "type": "array",
             "items": {
-              "const": "2025-11-25"
+              "enum": [
+                "2026-07-28",
+                "2025-11-25"
+              ]
             },
             "minItems": 0,
             "uniqueItems": true
@@ -741,6 +744,30 @@
           },
           "context_hydration": {
             "const": true
+          },
+          "mcp_support": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "status": {
+                "const": "design-only"
+              },
+              "first_release_target": {
+                "const": "2026-07-28"
+              },
+              "legacy_target": {
+                "const": "2025-11-25"
+              },
+              "wire_runtime_verified": {
+                "const": false
+              }
+            },
+            "required": [
+              "status",
+              "first_release_target",
+              "legacy_target",
+              "wire_runtime_verified"
+            ]
           }
         },
         "required": [
@@ -756,7 +783,8 @@
           "model_mode",
           "external_model_calls",
           "read_your_writes",
-          "context_hydration"
+          "context_hydration",
+          "mcp_support"
         ]
       },
       "ContextInput": {
@@ -947,5 +975,13 @@
     ],
     "existing_path_change": "search post: add optional X-Min-Commit-Token header only",
     "resource_schemas_unchanged": true
+  },
+  "x-mcp-wire-contract": {
+    "path": "/mcp",
+    "schema": "mcp-wire.schema.json",
+    "primary_target": "2026-07-28",
+    "legacy_target": "2025-11-25",
+    "runtime_implemented": false,
+    "note": "MCP JSON-RPC wire endpoint is distinct from REST API; era-specific header/session validation is normative in MCP_COMPATIBILITY.md. No REST bearer credential passthrough across audience."
   }
 }

@@ -62,7 +62,8 @@
           },
           "absolute_path": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Display only; must never be reopened for mutation after validation."
           },
           "preimage_digest": {
             "anyOf": [
@@ -77,13 +78,61 @@
           },
           "owned": {
             "type": "boolean"
+          },
+          "anchor_ref": {
+            "type": "string",
+            "pattern": "^anchorref://[a-z0-9/_-]+$"
+          },
+          "relative_components": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "not": {
+                "enum": [
+                  ".",
+                  ".."
+                ]
+              },
+              "pattern": "^(?:[A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9._-]{0,126}[A-Za-z0-9_-])$"
+            }
+          },
+          "anchor_identity": {
+            "type": "string",
+            "minLength": 1
+          },
+          "volume_identity": {
+            "type": "string",
+            "minLength": 1
+          },
+          "owner_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "acl_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "expected_type": {
+            "enum": [
+              "file",
+              "directory"
+            ]
           }
         },
         "required": [
           "ref",
           "absolute_path",
           "preimage_digest",
-          "owned"
+          "owned",
+          "anchor_ref",
+          "relative_components",
+          "anchor_identity",
+          "volume_identity",
+          "owner_ref",
+          "acl_digest",
+          "expected_type"
         ]
       },
       "minItems": 1,

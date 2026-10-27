@@ -1,6 +1,5 @@
 {
   "contract_version": "1.0",
-  "mcp_protocol": "2025-11-25",
   "tool_result_encoding": "structuredContent is receipt; resource is a separate resource content block matching operation response; no resource secrets",
   "tools": [
     {
@@ -1956,5 +1955,31 @@
         "openWorldHint": false
       }
     }
-  ]
+  ],
+  "mcp_protocols": [
+    "2026-07-28",
+    "2025-11-25"
+  ],
+  "wire_contract": "mcp-wire.schema.json",
+  "protocol_methods": {
+    "modern": [
+      "server/discover",
+      "tools/list",
+      "tools/call",
+      "ping"
+    ],
+    "legacy": [
+      "initialize",
+      "notifications/initialized",
+      "tools/list",
+      "tools/call",
+      "ping"
+    ]
+  },
+  "wire_result_encoding": {
+    "modern": "JSON-RPC result includes resultType=complete; structuredContent receipt unchanged",
+    "legacy": "result has no required resultType; adapter may normalize absence to complete internally only",
+    "session_state_shared_between_eras": false,
+    "runtime_verified": false
+  }
 }

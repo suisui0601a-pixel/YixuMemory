@@ -14,3 +14,9 @@ Design-only artifacts, not installable configuration, binaries, an installer or 
 Run python -m pytest -q tests/test_self_hosting_contracts.py. Pure policy oracles validate contract relationships against synthetic trusted observations; they do not implement authorization, cryptography or deployment. Domain cross-object constraints, path realness, token secrecy, UTF-8 byte limits and runtime transactions need the real acceptance suite in docs/SELF_HOSTED_ACCEPTANCE.md.
 
 This extension is published under the repository's current MIT license. It does not implement the unmerged licensing proposal or release a complete commercial-targeted core engine.
+
+PR #3 remediation: MCP_COMPATIBILITY.md defines the independent legacy/modern wire profiles; mcp-protocols.json, mcp-wire.schema.json and mcp-wire-examples.json are review fixtures only. The 13 business tools are shared; server/discover and initialize are protocol methods, not business tools. Modern complete results include resultType; legacy absence is normalized only internally. client-config explicitly selects a mode, and capabilities labels support as design-only.
+
+FILESYSTEM_OPERATIONS.md defines trusted anchors, handle-relative no-reparse access and exclusive/no-replace publication. filesystem-operation.schema.json records intent, never live handle authority; filesystem-policy.json is a target capability checklist. Existing absolute_path is display-only. Single-plan approval requires exact duplicate-free sets and elevation equality; no implicit broad preauthorization. Caller-provided proof booleans have no authentication meaning.
+
+Wire example case.request is the JSON-RPC body, case.headers/http_method are transport inputs, and expected is an oracle decision rather than a wire response. expected.http_status applies only to HTTP; stdio uses the JSON-RPC error code without an HTTP status. Separate results examples illustrate legacy and modern response bodies.

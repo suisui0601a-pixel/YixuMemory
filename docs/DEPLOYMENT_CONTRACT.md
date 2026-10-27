@@ -23,7 +23,7 @@ Profile 默认模板在 `contracts/deployment/profiles/`；`config.schema.json` 
 
 ## 路径、持久化与秘密
 
-Windows 根目录 `%LOCALAPPDATA%\YixuMemory\instances\<id>`；macOS `~/Library/Application Support/YixuMemory/instances/<id>`；Linux `${XDG_DATA_HOME:-~/.local/share}/yixumemory/instances/<id>`。server 根可按授权改变。`plan` 解析成绝对规范路径，检查 realpath、符号链接、Windows junction、ACL、父目录、卷标识和路径是否逃逸；`init` 在锁内重新检查，防 TOCTOU。拒绝仓库、未知已有目录或未验证网络卷作为默认数据根。
+Windows 根目录 `%LOCALAPPDATA%\YixuMemory\instances\<id>`；macOS `~/Library/Application Support/YixuMemory/instances/<id>`；Linux `${XDG_DATA_HOME:-~/.local/share}/yixumemory/instances/<id>`。server 根可按授权改变。`plan` 的绝对规范路径仅供展示和漂移诊断，不是安全写能力。`init` 等操作必须遵循 [FILESYSTEM_OPERATIONS](FILESYSTEM_OPERATIONS.md)：可信锚点、逐组件句柄相对/no-follow、身份/owner/ACL/卷核验、exclusive/no-replace；不允许检查后重新按字符串写入，能力不足 fail closed。程序锁只协调正常实例，不能据此证明防 TOCTOU。拒绝仓库、未知已有目录或未验证网络卷作为默认数据根。
 
 实例结构：`instance.json`（实例 ID、schema、owned-path manifest，无秘密）、`config/`、`db/`、`payloads/`、`outbox/`（外部派生暂存，不另建写入真相）、`indexes/`、`diagnostics/`、`audit/`、`staging/`。DB 内 outbox 仍与写入同事务。备份位置须与活动数据分开，并检查故障域；仅另一子目录不算独立备份。
 
@@ -40,7 +40,7 @@ Windows 根目录 `%LOCALAPPDATA%\YixuMemory\instances\<id>`；macOS `~/Library/
 | init | 验证计划和授权后初始化新实例、目录、配置及秘密引用；不启动网络服务 | owned manifest 与配置一致则 no-op；未知文件/不同实例 ID 拒绝；无 force 覆盖 |
 | up | 启动已初始化实例；目标版本不同视为升级，需新计划、备份及迁移兼容门槛 | 已运行且版本/配置相同 no-op，不重建卷/重新生成 key |
 | status | 脱敏健康与进度、版本/迁移/备份状态，不输出内容、Token 或完整 DSN | 只读；不自动修复、提权或升级 |
-| connect | 检查已有的有界数据面 credential ref，生成客户端中立配置供审阅；默认 reader；不凭安装身份签发内容权限 | 先 preview；apply 仅写入计划中独立文件或受控配置项，使用原文件 digest CAS；未知项目不覆盖 |
+| connect | 检查已有的有界数据面 credential ref，生成客户端中立配置供审阅；默认 reader；不凭安装身份签发内容权限 | 先 preview；apply 仅句柄相对 no-replace 生成新管理文件；已有配置保持不变，不承诺通用 digest CAS 改写 |
 | verify | 默认只读核验版本、连通性、认证拒绝、权限/安全 posture；写探针须对专用 synthetic Space 有显式授权 | 有界 ID/幂等键；不得将诊断成功视为全平台/删除能力已验收 |
 
 `--non-interactive --plan <ref> --approval <ref>` 仅表示不弹窗，不授予权限；`--yes`（若未来支持）不能绕过审批/漂移/未知文件拒绝。安装依赖或系统服务不是隐式副作用，而是可枚举 action。停止服务、备份、隔离恢复验证、恢复、轮换使用受限运维 adapter 的类型化 action，经 plan/apply 执行；七个命令不承担无限制 shell 或未定义的 restore 子命令。
@@ -53,7 +53,7 @@ Windows 根目录 `%LOCALAPPDATA%\YixuMemory\instances\<id>`；macOS `~/Library/
 
 固定流程 doctor → plan → 核对授权 → init → up → connect → verify。无 doctor facts digest 不可 apply。plan 绑定实例、主机标识、规范 config digest、preflight digest、固定 artifact digest、schema/target version、目标路径/配置 preimage、动作、网络目标、有效期与执行身份。hash 用 RFC8785 等确定性 canonicalization（最终库待选），hash 覆盖有效期，排除 request_id 等随机信封字段；不能用含秘密内容计算；secret ref 被绑定但 secret 明文不参与输出。
 
-approval 是受信任授权 broker/OS 边界产生的记录，绑定 plan hash、有效期、action ID 和每个 scope；文件形状不是授权证明。AI 自己生成 `approved:true` 或改 JSON 不会被认可。明确预授权可覆盖多个同类安全动作，但必须限制路径、端口、artifact digest、instance 与期限；动作或环境漂移返回 4/6 而不是沿用旧批准。系统权限、监听范围扩大、迁移/恢复、客户端配置改写、真实数据读写须各自相应授权。
+approval 是受信任授权 broker/OS 边界产生的记录，绑定 plan hash、有效期、action ID 和每个 scope；文件形状不是授权证明。AI 自己生成 `approved:true` 或改 JSON 不会被认可。本轮仅接受 single-plan approval：action_ids 与规范化计划动作 ID 精确集合匹配、scopes 与计划所需 scope 精确集合匹配且无重复；allow_elevation 必须等于计划是否实际需要提权，并受额外受信 OS/helper 安全策略允许。计划需求由受信执行器结合实际操作推导，不能仅信 AI 声明无需提权。广义预授权未设计，不能通过多加动作/scope 或 allow_elevation=true 获得；后续如需必须独立对象与 ADR。动作或环境漂移返回 4/6 而不是沿用旧批准。系统权限、监听范围扩大、迁移/恢复、客户端配置改写、真实数据读写须各自相应授权。
 
 动作状态 `planned → authorized → running → succeeded`；失败分为 `blocked`（未执行）、`failed`（未完成）、`recovery_required`（部分生效），仅允许基于 journal、相同 idempotency_key 和重新校验前置条件重入。journal 每动作写 before-intent 并 fsync，再执行，完成后写 receipt；崩溃后先探测真实状态，不能盲目重装。实例锁防两助手并发；外部副作用 generation/fencing 沿用 P0 原则。
 
@@ -72,3 +72,7 @@ SQLite 使用一致性 backup API/受控维护快照，不能仅复制运行中�
 本轮：四 Profile schema/交叉约束、CLI envelope/退出码一致性、plan/approval 形状及引用、权限分离、工具映射、合成闭环 fixture 正反例。见 `SELF_HOSTED_ACCEPTANCE.md`。这些测试不启动实例或真实容器。
 
 未来必须在每个目标 OS/架构与两后端真实执行冷启动/重复 init/中断恢复/密钥轮换/备份恢复/升级，验证 loopback、ACL、无模型断网 CRUD 和跨租户拒绝。资源建议、NAS 型号、签名发行渠道、key broker 库和性能数据均待实测；未完成前不能宣传为可生产安装或高并发已验证。
+
+MCP 连接必须区分 modern/legacy wire 与 session，见 [MCP_COMPATIBILITY](MCP_COMPATIBILITY.md)。部署 oracle 的 broker_proof_verified 是合成可信观察占位，调用者提供 true 永不构成真实授权；生产签发者认证及受保护 IPC 尚未实现。
+
+审批集合规范化忽略列表排列但不允许重复；实际动作执行顺序属于 plan hash，不能通过重排 approval 改变计划。proof_ref 必须由受信 broker 校验其绑定的完整审批记录、签发者、期限与权限；只是引用字符串或 true 标记不足以授权。

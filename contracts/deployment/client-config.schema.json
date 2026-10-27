@@ -89,7 +89,62 @@
     "mcp_protocol": {
       "anyOf": [
         {
-          "const": "2025-11-25"
+          "enum": [
+            "2026-07-28",
+            "2025-11-25"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "mcp_compatibility": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "enum": [
+                "modern-only",
+                "legacy-only",
+                "dual-era"
+              ]
+            },
+            "legacy_fallback_allowed": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "mode",
+            "legacy_fallback_allowed"
+          ],
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "mode": {
+                    "const": "dual-era"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "legacy_fallback_allowed": {
+                    "const": true
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "legacy_fallback_allowed": {
+                    "const": false
+                  }
+                }
+              }
+            }
+          ]
         },
         {
           "type": "null"
@@ -109,7 +164,8 @@
     "credential_ref",
     "scopes",
     "api_major",
-    "mcp_protocol"
+    "mcp_protocol",
+    "mcp_compatibility"
   ],
   "allOf": [
     {
@@ -129,7 +185,10 @@
             "type": "string"
           },
           "mcp_protocol": {
-            "const": "2025-11-25"
+            "enum": [
+              "2026-07-28",
+              "2025-11-25"
+            ]
           }
         }
       },
@@ -158,13 +217,107 @@
         "properties": {
           "mcp_protocol": {
             "type": "null"
+          },
+          "mcp_compatibility": {
+            "type": "null"
           }
         }
       },
       "else": {
         "properties": {
           "mcp_protocol": {
+            "enum": [
+              "2026-07-28",
+              "2025-11-25"
+            ]
+          },
+          "mcp_compatibility": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "mode": {
+                "enum": [
+                  "modern-only",
+                  "legacy-only",
+                  "dual-era"
+                ]
+              },
+              "legacy_fallback_allowed": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "mode",
+              "legacy_fallback_allowed"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "mode": {
+                      "const": "dual-era"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "legacy_fallback_allowed": {
+                      "const": true
+                    }
+                  }
+                },
+                "else": {
+                  "properties": {
+                    "legacy_fallback_allowed": {
+                      "const": false
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "mcp_compatibility": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "const": "legacy-only"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "mcp_protocol": {
             "const": "2025-11-25"
+          }
+        }
+      },
+      "else": {
+        "if": {
+          "properties": {
+            "transport": {
+              "enum": [
+                "mcp-http",
+                "mcp-stdio"
+              ]
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "mcp_protocol": {
+              "const": "2026-07-28"
+            }
           }
         }
       }
