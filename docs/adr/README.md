@@ -9,3 +9,5 @@
 - [005 版本、时间与契约](005-contracts.md)
 
 - [006 仓库与验证基线](006-repository.md)
+
+- [007 未来版本授权策略预审](007-future-licensing-proposal.md) — **Proposal，未实施，不改变现行 MIT**
