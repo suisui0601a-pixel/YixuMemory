@@ -1,0 +1,35 @@
+# 忆序 · YixuMemory
+
+Independent Long-Term Memory Infrastructure
+
+Version: `0.0.0-p0` · Architecture: `P0-Baseline-001`
+
+独立开源长期记忆内核的首轮架构基线。当前交付为设计、数据契约与验收框架，**没有可运行的记忆服务**。不承诺消除 AI 遗忘，也不宣称未经测试的吞吐、安全或后端等价性。
+
+## 阅读顺序
+
+1. [架构](docs/ARCHITECTURE.md) 与 [领域模型](docs/DOMAIN_MODEL.md)
+2. [生命周期](docs/MEMORY_LIFECYCLE.md)、[时序](docs/SEQUENCES.md)、[一致性](docs/CONSISTENCY.md)
+3. [安全](docs/SECURITY_MODEL.md)、[兼容](docs/COMPATIBILITY.md)、[ADR](docs/adr/README.md)
+4. [验收](docs/P0_ACCEPTANCE.md)、[独立审查风险](docs/RISK_REGISTER.md)
+5. [同步制度](docs/SYNC_POLICY.md)、[Agent 规则](AGENTS.md)
+
+## 本地验证（无需模型、数据库服务或真实记忆）
+
+Python 3.12+：
+
+```sh
+python -m venv work/venv
+# Windows: work/venv/Scripts/python；POSIX: work/venv/bin/python
+python -m pip install -r requirements-dev.lock.txt
+python -m pytest -q
+python -m mypy checks tests
+python -m ruff check .
+python checks/security_scan.py
+```
+
+请在已激活的虚拟环境执行 pip 与检查。`tests/` 验证契约、反例及 SQLite 隔离探针，不是生产引擎的集成测试；后端、删除及授权验收仍有明确待实现项目。
+
+所有数据示例均为合成数据；不上传真实聊天、密钥、数据库或环境文件。基线标签采用 `arch/p0-baseline-001`，与未来软件发布标签分离。
+
+License: [MIT](LICENSE). 开源许可不意味着生产验收已完成。

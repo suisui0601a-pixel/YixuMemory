@@ -1,0 +1,20 @@
+[project]
+name = "yixumemory-baseline"
+version = "0.0.0+p0"
+description = "Architecture contracts and checks; not a memory engine"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--basetemp=work/pytest-tmp"
+
+[tool.ruff]
+line-length = 100
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["jsonschema.*", "openapi_spec_validator.*"]
+ignore_missing_imports = true

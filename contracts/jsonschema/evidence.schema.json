@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yixumemory.org/schemas/v1/evidence.schema.json",
+  "title": "Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "tenant_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "space_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "event_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "source_kind": {
+      "enum": [
+        "raw_event",
+        "external_document",
+        "user_statement",
+        "model_output",
+        "fictional_setting"
+      ]
+    },
+    "source_locator": {
+      "description": "Opaque pointer to erasable locator Payload, never raw URI/text",
+      "type": "string",
+      "format": "uuid"
+    },
+    "payload_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "captured_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    }
+  },
+  "required": [
+    "schema_version",
+    "id",
+    "tenant_id",
+    "space_id",
+    "event_id",
+    "source_kind",
+    "source_locator",
+    "payload_id",
+    "captured_at"
+  ]
+}
