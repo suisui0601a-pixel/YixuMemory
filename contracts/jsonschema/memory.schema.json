@@ -33,7 +33,8 @@
         "active",
         "archived",
         "deletion_pending",
-        "purged"
+        "purged",
+        "source_blocked"
       ]
     },
     "created_at": {

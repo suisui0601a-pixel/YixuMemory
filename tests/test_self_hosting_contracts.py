@@ -271,18 +271,20 @@ def test_synthetic_loop_shapes_references_and_watermarks() -> None:
         Draft202012Validator(root | resource, format_checker=FormatChecker()).validate(step["expected"])
     Draft202012Validator(schemas["Revision"], format_checker=FormatChecker()).validate(fixture["revision"])
     steps = fixture["steps"]
-    payload, locator, ingest, memory, search, context = [s["expected"] for s in steps[1:]]
+    payload, locator, revision_payload, ingest, memory, search, context = [s["expected"] for s in steps[1:]]
     assert ingest["event"]["payload_id"] == payload["id"]
     assert ingest["evidence"]["event_id"] == ingest["event"]["id"]
     assert ingest["evidence"]["source_locator"] == locator["id"]
     assert fixture["revision"]["evidence_ids"] == [ingest["evidence"]["id"]]
+    assert fixture["revision"]["content_payload_id"] == revision_payload["id"]
+    assert revision_payload["id"] != payload["id"]  # Independent erasure/key ownership.
     assert memory["current_revision_id"] == fixture["revision"]["id"]
     assert search["items"] == [memory]
     assert context["items"][0]["memory_id"] == memory["id"]
     assert context["items"][0]["revision_id"] == memory["current_revision_id"]
     assert context["items"][0]["evidence_ids"] == fixture["revision"]["evidence_ids"]
     assert context["items"][0]["text"] == steps[1]["arguments"]["text"]
-    assert context["knowledge_token"] == search["index_watermark"] == steps[4]["receipt"]["commit_token"]
+    assert context["knowledge_token"] == search["index_watermark"] == steps[5]["receipt"]["commit_token"]
     assert context["items"][0]["trust"] == "untrusted_data"
     assert not {"memory.erase", "installation.admin"} & set(fixture["scopes"])
     assert fixture["negative_cases"][0]["space_id"] != fixture["space_id"]

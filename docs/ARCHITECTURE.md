@@ -25,12 +25,14 @@ flowchart TD
   RUN --> ADAPT
 ```
 
-核心 Ports：UoW.run(transaction)、MemoryRepository.get/cas_append、EventRepository.append、EvidenceRepository.resolve、Policy.authorize、Idempotency.reserve、Outbox.claim/ack、PayloadStore.erase、KeyVault.revoke、Index.upsert/delete、Clock.now。签名必须携带服务端 AuthContext、tenant_id、deadline；返回明确的 NotFound/Conflict/Denied/RetryableFailure。跨租户查找不能提供不带 tenant 的仓储方法。所有业务持久写仅经同一 UoW；外部调用在事务外。
+核心 Ports：UoW.run(transaction)、MemoryRepository.get/cas_append、EventRepository.append、EvidenceRepository.resolve、Policy.authorize/classify、Idempotency.reserve、Outbox.claim/ack、PayloadStore.publish_ciphertext/erase、KeyVault.readiness/allocate/lookup_intent/seal/open/revoke/verify、Index.upsert/delete、Clock.now。签名必须携带服务端 AuthContext、tenant_id、deadline；返回明确的 NotFound/Conflict/Denied/RetryableFailure。跨租户查找不能提供不带 tenant 的仓储方法。所有业务持久写仅经同一 UoW；外部调用在事务外。
 
 无模型模式仍支持人工附证写入、版本读取、时间过滤和确定性词法检索；提取服务关闭时返回 capability unavailable，不伪造推断或 embedding。模型输出是待验证候选，不能独立决定权限或覆盖事实。
 
-事件记录逻辑不可变；敏感内容置于可擦除 Payload；删除保留最小无内容审计信封而非保留可逆明文。删除与不可变冲突的取舍见 ADR-003。
+事件记录逻辑不可变；全部生产内容置于安全 backend 加密的可擦除 Payload；删除保留最小无内容审计信封而非保留可逆明文。删除与不可变冲突的取舍见 ADR-003。
 
 扩展：REST 与 MCP 调用同一用例；SDK 从契约生成但不共享授权实现。索引、模型与队列均可替换，数据库为权威，索引为可丢弃派生物。尚无性能、安全认证或生产实现。
 
 验证：后续引擎以依赖扫描禁止 L3/L4 导入 adapters/web/provider；两个后端跑同一端口契约；当前检查对应 P0_ACCEPTANCE。
+
+P0-SC 不改变六层或授权根。删除操作/范围及源失效投影见 [ADR-010](adr/010-deletion-scope-boundary.md)，分类与 KeyVault/staging 前置条件见 [ADR-011](adr/011-payload-protection.md)。新增 Ports 方法是契约目标，无生产 adapter；外部 key/密文操作仍在 T1 外，UoW 保存补偿/关联元数据。

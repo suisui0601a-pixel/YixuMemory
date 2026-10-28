@@ -45,3 +45,7 @@ License: [MIT](LICENSE). 开源许可不意味着生产验收已完成。
 - [ADR-008](docs/adr/008-self-hosting-agent-native.md) 与 [机器契约](contracts/deployment/README.md)
 
 这些是架构、接口与合成测试，当前没有可安装发行包、CLI、服务或生产部署；CI 通过不等于实机部署通过。授权 PR #2 仍未实施。
+
+## P0-SC 核心安全边界收敛（Proposal）
+
+本轮只提案收敛 R1/R14，待独立审查：[删除范围](docs/DELETION_SCOPE.md)、[Payload 分类与加密](docs/PAYLOAD_PROTECTION.md)、[契约与 P1 运行门槛](docs/P0_SECURITY_ACCEPTANCE.md)、[ADR-010](docs/adr/010-deletion-scope-boundary.md) / [ADR-011](docs/adr/011-payload-protection.md)。Space 显式图删除仍须完成全部受控副本；跨 Space 来源/主体全面擦除明确拒绝。客户端 synthetic 不豁免全部生产内容加密，NoModel 可使用安全离线 key backend。当前只有设计与纯合成契约测试，无生产删除或密码实现。

@@ -81,7 +81,10 @@
         "tenant_id": "00000000-0000-4000-8000-000000000001",
         "space_id": "00000000-0000-4000-8000-000000000002",
         "purpose": "content",
-        "expires_at": "2026-10-28T00:10:00Z"
+        "expires_at": "2026-10-28T00:10:00Z",
+        "effective_classification": "sensitive",
+        "protection_policy_epoch": 1,
+        "encrypted": true
       },
       "receipt": {
         "request_id": "00000000-0000-4000-8000-000000000101",
@@ -106,13 +109,44 @@
         "tenant_id": "00000000-0000-4000-8000-000000000001",
         "space_id": "00000000-0000-4000-8000-000000000002",
         "purpose": "locator",
-        "expires_at": "2026-10-28T00:10:00Z"
+        "expires_at": "2026-10-28T00:10:00Z",
+        "effective_classification": "sensitive",
+        "protection_policy_epoch": 1,
+        "encrypted": true
       },
       "receipt": {
         "request_id": "00000000-0000-4000-8000-000000000102",
         "code": "ok",
         "retryable": false,
         "result_ref": "synthetic-result-2",
+        "commit_token": null
+      }
+    },
+    {
+      "tool": "payload_stage",
+      "arguments": {
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "space_id": "00000000-0000-4000-8000-000000000002",
+        "purpose": "content",
+        "classification": "synthetic",
+        "text": "Synthetic persona prefers synth-cobalt notebooks.",
+        "idempotency_key": "fixture-revision-content-01"
+      },
+      "expected": {
+        "id": "00000000-0000-4000-8000-000000000017",
+        "tenant_id": "00000000-0000-4000-8000-000000000001",
+        "space_id": "00000000-0000-4000-8000-000000000002",
+        "purpose": "content",
+        "expires_at": "2026-10-28T00:10:00Z",
+        "effective_classification": "sensitive",
+        "protection_policy_epoch": 1,
+        "encrypted": true
+      },
+      "receipt": {
+        "request_id": "00000000-0000-4000-8000-000000000107",
+        "code": "ok",
+        "retryable": false,
+        "result_ref": "synthetic-result-revision-content",
         "commit_token": null
       }
     },
@@ -167,7 +201,7 @@
         "tenant_id": "00000000-0000-4000-8000-000000000001",
         "space_id": "00000000-0000-4000-8000-000000000002",
         "assertion_kind": "user_assertion",
-        "content_payload_id": "00000000-0000-4000-8000-000000000007",
+        "content_payload_id": "00000000-0000-4000-8000-000000000017",
         "valid_from": "2026-10-28T00:00:00Z",
         "valid_to": null,
         "evidence_ids": [
@@ -285,7 +319,7 @@
     "number": 1,
     "parent_revision_id": null,
     "assertion_kind": "user_assertion",
-    "content_payload_id": "00000000-0000-4000-8000-000000000007",
+    "content_payload_id": "00000000-0000-4000-8000-000000000017",
     "valid_from": "2026-10-28T00:00:00Z",
     "valid_to": null,
     "recorded_at": "2026-10-28T00:00:00Z",

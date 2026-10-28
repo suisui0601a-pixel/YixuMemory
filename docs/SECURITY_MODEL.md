@@ -32,3 +32,9 @@
 静态磁盘泄漏、云管理权限和供应商快照不在纯应用逻辑可完全证明范围；需部署级演练与审计。默认不向外部模型发送内容；启用必须明确 tenant policy、数据分类和供应商保留规则。审计不可包含原文、URI、稳定个人关联；公开访问日志不记录请求体。授权失败日志只记最小类别。
 
 本基线无认证服务、RLS 或密码实现；上述为必须实现并测试的控制，不能描述为已获得安全保证。未来安全问题不公开附真实数据；通过 GitHub private vulnerability reporting（启用情况须核验）或由维护者指定安全渠道报告。
+
+## P0-SC R1/R14 收敛
+
+来源擦除能力仍需现有额外批准，memory.erase 不隐含来源或主体全面擦除。先按 Space 完整关系闭包授权，再原子栅栏；未授权不能部分执行。跨 Space 来源/主体全面擦除在首版明确拒绝，不因管理员身份而假称支持。局部完成必须回显 operation/requested_scope/effective_scope/coverage，不能用空泛 completed 冒充租户擦除。所有历史/缓存/计数/上下文依当前 RevisionInvalidation/删除栅栏拒绝，旧来源不能由新 Evidence 静默复活。见 [删除设计](DELETION_SCOPE.md)。
+
+classification 是客户端声明，不授予存储降级权；有效分类由 Space 下限、来源/Evidence/派生/既有等级与声明 join，未知 sensitive。全部生产内容先安全 backend 加密后持久化，synthetic/personal/NoModel 无免加密例外。无 backend/key 或加密失败 fail closed；staging 只放密文，原文不入 DB/WAL/索引元数据/日志/审计/备份，失败补偿不得清理假成功。只允许隔离非生产测试装配保留未来合成明文 adapter 的可能，公开 API 不能启用。见 [保护设计](PAYLOAD_PROTECTION.md)。受信观察真值与 Schema 标志不构成真实安全证据。

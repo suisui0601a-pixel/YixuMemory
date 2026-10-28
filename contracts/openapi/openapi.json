@@ -3,7 +3,7 @@
   "info": {
     "title": "YixuMemory P0 API draft",
     "version": "0.0.0-p0",
-    "description": "Design only; no deployed service. Server AuthContext is authoritative. Tenant path never grants permission. All writes reauthorize. Staged payload upload, grant management, archive, conflict resolution and SDK generation are reserved for later API revisions. Source erasure requires explicit erase-source capability and computes full dependency closure."
+    "description": "Design only; no deployed service. Server AuthContext is authoritative. Tenant path never grants permission. All writes reauthorize. Payload staging is specified in the separate agent extension draft; grant management, archive, conflict resolution and SDK generation remain reserved for later API revisions. Source erasure requires explicit erase-source capability and computes full dependency closure. P0-SC: eraseSource means only source_graph rooted at the named Event within this Space. Tenant/source/subject all-copies erasure is unsupported and rejected without side effects. All controlled copies in an accepted graph remain required for completion."
   },
   "servers": [
     {
@@ -1081,7 +1081,10 @@
           {
             "$ref": "#/components/parameters/IfMatch"
           }
-        ]
+        ],
+        "description": "Fixed memory_graph/space operation. No implicit source/subject-wide request or scope narrowing. Server preauthorizes the full graph, atomically fences, and requires all controlled-copy receipts; see DELETION_SCOPE.md.",
+        "x-erasure-operation": "memory_graph",
+        "x-erasure-scope": "space"
       }
     },
     "/v1/tenants/{tenant_id}/spaces/{space_id}/memories/{memory_id}/revisions": {
@@ -1692,7 +1695,178 @@
           {
             "$ref": "#/components/parameters/IdempotencyKey"
           }
-        ]
+        ],
+        "description": "Fixed source_graph/space operation. No implicit source/subject-wide request or scope narrowing. Server preauthorizes the full graph, atomically fences, and requires all controlled-copy receipts; see DELETION_SCOPE.md.",
+        "x-erasure-operation": "source_graph",
+        "x-erasure-scope": "space"
+      }
+    },
+    "/v1/tenants/{tenant_id}/spaces/{space_id}/deletions": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/tenant_id"
+        },
+        {
+          "$ref": "#/components/parameters/space_id"
+        }
+      ],
+      "post": {
+        "operationId": "requestDeletion",
+        "responses": {
+          "202": {
+            "description": "Success; authorized server representation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Deletion"
+                }
+              }
+            },
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Relative resource or deletion URL"
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid authentication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Denied without existence details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found or not visible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Idempotency/state/cursor conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Erased; only when caller remains authorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Stale expected version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "unsupported_erasure_scope or invalid target pairing; no job or fence created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Missing precondition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Quota exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Retryable unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Conditionally mandatory for memory_graph: use current Memory ETag/version; missing -> 428, stale -> 412 before any fence. Event/Evidence roots are immutable, no Memory CAS required."
+          }
+        ],
+        "description": "Explicit p0-sc-1 intent. Path/body scope selectors must match. Unsupported tenant/source_all_copies/subject_all_copies requests return 422 unsupported_erasure_scope before any erasure side effect (minimal rejection audit is permitted); denied graph returns 403/404. No partial execution. memory_graph retains the existing If-Match/CAS precondition (428 missing / 412 stale); this generic endpoint cannot bypass eraseMemory concurrency rules.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeletionIntent"
+              }
+            }
+          }
+        }
       }
     }
   },
@@ -1783,6 +1957,7 @@
     },
     "schemas": {
       "Memory": {
+        "title": "Memory",
         "type": "object",
         "additionalProperties": false,
         "properties": {
@@ -1814,7 +1989,8 @@
               "active",
               "archived",
               "deletion_pending",
-              "purged"
+              "purged",
+              "source_blocked"
             ]
           },
           "created_at": {
@@ -1832,8 +2008,7 @@
           "version",
           "state",
           "created_at"
-        ],
-        "title": "Memory"
+        ]
       },
       "Event": {
         "title": "Event",
@@ -2214,10 +2389,47 @@
         ]
       },
       "Deletion": {
+        "title": "DeletionRequest",
+        "description": "Accepted server record only; unsupported broad intents produce an error before any fence/job. Flags/refs are not execution proof.",
         "type": "object",
         "additionalProperties": false,
         "properties": {
+          "contract_version": {
+            "const": "p0-sc-1"
+          },
           "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "space_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "operation": {
+            "enum": [
+              "memory_graph",
+              "evidence_graph",
+              "source_graph"
+            ]
+          },
+          "requested_scope": {
+            "const": "space"
+          },
+          "effective_scope": {
+            "const": "space"
+          },
+          "target_type": {
+            "enum": [
+              "memory",
+              "evidence",
+              "event"
+            ]
+          },
+          "target_id": {
             "type": "string",
             "format": "uuid"
           },
@@ -2230,20 +2442,147 @@
               "completed"
             ]
           },
-          "target_id": {
-            "type": "string",
-            "format": "uuid"
-          },
           "generation": {
             "type": "integer",
             "minimum": 1
+          },
+          "graph_cut_off": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "closure_ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "closure_version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "policy_epoch": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "requested_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "coverage": {
+            "enum": [
+              "pending",
+              "space_graph_complete"
+            ]
+          },
+          "receipt_set_ref": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
+          "contract_version",
           "id",
-          "status",
+          "tenant_id",
+          "space_id",
+          "operation",
+          "requested_scope",
+          "effective_scope",
+          "target_type",
           "target_id",
-          "generation"
+          "status",
+          "generation",
+          "graph_cut_off",
+          "closure_ref",
+          "closure_version",
+          "policy_epoch",
+          "requested_by",
+          "coverage",
+          "receipt_set_ref"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "operation": {
+                  "const": "memory_graph"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "target_type": {
+                  "const": "memory"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "operation": {
+                  "const": "evidence_graph"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "target_type": {
+                  "const": "evidence"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "operation": {
+                  "const": "source_graph"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "target_type": {
+                  "const": "event"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "completed"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "coverage": {
+                  "const": "space_graph_complete"
+                },
+                "receipt_set_ref": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "coverage": {
+                  "const": "pending"
+                },
+                "receipt_set_ref": {
+                  "type": "null"
+                }
+              }
+            }
+          }
         ]
       },
       "SearchInput": {
@@ -2343,6 +2682,149 @@
         "required": [
           "event",
           "evidence"
+        ]
+      },
+      "DeletionIntent": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "contract_version": {
+            "const": "p0-sc-1"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "space_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "operation": {
+            "enum": [
+              "memory_graph",
+              "evidence_graph",
+              "source_graph",
+              "source_all_copies",
+              "subject_all_copies"
+            ]
+          },
+          "requested_scope": {
+            "enum": [
+              "space",
+              "tenant"
+            ]
+          },
+          "target_type": {
+            "enum": [
+              "memory",
+              "evidence",
+              "event",
+              "canonical_source",
+              "subject"
+            ]
+          },
+          "target_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "contract_version",
+          "tenant_id",
+          "space_id",
+          "operation",
+          "requested_scope",
+          "target_type",
+          "target_id"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "operation": {
+                  "const": "memory_graph"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "target_type": {
+                  "const": "memory"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "operation": {
+                  "const": "evidence_graph"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "target_type": {
+                  "const": "evidence"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "operation": {
+                  "const": "source_graph"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "target_type": {
+                  "const": "event"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "operation": {
+                  "const": "source_all_copies"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "target_type": {
+                  "const": "canonical_source"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "operation": {
+                  "const": "subject_all_copies"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "target_type": {
+                  "const": "subject"
+                }
+              }
+            }
+          }
         ]
       }
     }

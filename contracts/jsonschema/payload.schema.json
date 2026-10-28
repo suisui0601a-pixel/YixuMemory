@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yixumemory.org/schemas/p0-sc-1/payload.schema.json",
+  "title": "Payload",
+  "description": "Production persistence metadata; never plaintext or serialized keys. Internal metadata, not a public content response.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "contract_version": {
+      "const": "p0-sc-1"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "tenant_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "space_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "purpose": {
+      "enum": [
+        "content",
+        "locator",
+        "provenance",
+        "index_projection"
+      ]
+    },
+    "declared_classification": {
+      "enum": [
+        "synthetic",
+        "personal",
+        "sensitive",
+        null
+      ]
+    },
+    "effective_classification": {
+      "enum": [
+        "personal",
+        "sensitive"
+      ]
+    },
+    "protection_policy_epoch": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "encrypted": {
+      "const": true
+    },
+    "encrypted_ref": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "uuid"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "key_ref": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "uuid"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "encryption_profile": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "state": {
+      "enum": [
+        "staged",
+        "available",
+        "erasure_pending",
+        "blocked",
+        "erased"
+      ]
+    },
+    "seal_context_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Immutable server seal-time AAD context reference; current policy epoch is separate."
+    }
+  },
+  "required": [
+    "contract_version",
+    "id",
+    "tenant_id",
+    "space_id",
+    "purpose",
+    "declared_classification",
+    "effective_classification",
+    "protection_policy_epoch",
+    "encrypted",
+    "encrypted_ref",
+    "key_ref",
+    "encryption_profile",
+    "generation",
+    "state",
+    "seal_context_id"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "erased"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "encrypted_ref": {
+            "type": "null"
+          },
+          "key_ref": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "encrypted_ref": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "key_ref": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -161,7 +161,8 @@
               "synthetic",
               "personal",
               "sensitive"
-            ]
+            ],
+            "description": "Untrusted data declaration only. All production payloads encrypted; server computes effective protection. No synthetic/NoModel exemption."
           },
           "text": {
             "type": "string",

@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yixumemory.org/schemas/p0-sc-1/deletion-intent.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "contract_version": {
+      "const": "p0-sc-1"
+    },
+    "tenant_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "space_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "uuid"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "operation": {
+      "enum": [
+        "memory_graph",
+        "evidence_graph",
+        "source_graph",
+        "source_all_copies",
+        "subject_all_copies"
+      ]
+    },
+    "requested_scope": {
+      "enum": [
+        "space",
+        "tenant"
+      ]
+    },
+    "target_type": {
+      "enum": [
+        "memory",
+        "evidence",
+        "event",
+        "canonical_source",
+        "subject"
+      ]
+    },
+    "target_id": {
+      "type": "string",
+      "format": "uuid"
+    }
+  },
+  "required": [
+    "contract_version",
+    "tenant_id",
+    "space_id",
+    "operation",
+    "requested_scope",
+    "target_type",
+    "target_id"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "memory_graph"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "target_type": {
+            "const": "memory"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "evidence_graph"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "target_type": {
+            "const": "evidence"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "source_graph"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "target_type": {
+            "const": "event"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "source_all_copies"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "target_type": {
+            "const": "canonical_source"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "subject_all_copies"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "target_type": {
+            "const": "subject"
+          }
+        }
+      }
+    }
+  ]
+}

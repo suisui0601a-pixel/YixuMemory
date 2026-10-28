@@ -13,3 +13,6 @@
 - [008 自托管与 AI 原生接入](008-self-hosting-agent-native.md) — 设计扩展，运行验收待完成
 
 - [009 PR #3 定点修复](009-pr3-remediation.md) — 待 Luna 独立重审
+
+- [010 删除范围与跨 Space 来源边界](010-deletion-scope-boundary.md) — Proposal，待 R1 独立审查
+- [011 分类与生产 Payload 保护](011-payload-protection.md) — Proposal，待 R14 独立审查

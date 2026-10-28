@@ -1,0 +1,95 @@
+{
+  "synthetic_only": true,
+  "runtime_executed": false,
+  "deletion_intent": {
+    "contract_version": "p0-sc-1",
+    "tenant_id": "00000000-0000-4000-8000-000000000001",
+    "space_id": "00000000-0000-4000-8000-000000000002",
+    "operation": "source_graph",
+    "requested_scope": "space",
+    "target_type": "event",
+    "target_id": "00000000-0000-4000-8000-000000000010"
+  },
+  "deletion_request": {
+    "contract_version": "p0-sc-1",
+    "id": "00000000-0000-4000-8000-000000000020",
+    "tenant_id": "00000000-0000-4000-8000-000000000001",
+    "space_id": "00000000-0000-4000-8000-000000000002",
+    "operation": "source_graph",
+    "requested_scope": "space",
+    "effective_scope": "space",
+    "target_type": "event",
+    "target_id": "00000000-0000-4000-8000-000000000010",
+    "status": "completed",
+    "generation": 1,
+    "graph_cut_off": 8,
+    "closure_ref": "00000000-0000-4000-8000-000000000021",
+    "closure_version": 1,
+    "policy_epoch": 1,
+    "requested_by": "00000000-0000-4000-8000-000000000009",
+    "coverage": "space_graph_complete",
+    "receipt_set_ref": "00000000-0000-4000-8000-000000000022"
+  },
+  "payload": {
+    "contract_version": "p0-sc-1",
+    "id": "00000000-0000-4000-8000-000000000007",
+    "tenant_id": "00000000-0000-4000-8000-000000000001",
+    "space_id": "00000000-0000-4000-8000-000000000002",
+    "purpose": "content",
+    "declared_classification": "synthetic",
+    "effective_classification": "sensitive",
+    "protection_policy_epoch": 1,
+    "encrypted": true,
+    "encrypted_ref": "00000000-0000-4000-8000-000000000030",
+    "key_ref": "00000000-0000-4000-8000-000000000031",
+    "encryption_profile": "synthetic-profile-not-a-crypto-implementation",
+    "generation": 1,
+    "state": "staged",
+    "seal_context_id": "00000000-0000-4000-8000-000000000032"
+  },
+  "shared_graph": {
+    "tenant_id": "00000000-0000-4000-8000-000000000001",
+    "space_id": "00000000-0000-4000-8000-000000000002",
+    "nodes": {
+      "event": "event",
+      "e": "evidence",
+      "ma": "memory",
+      "mb": "memory",
+      "ra": "revision",
+      "rb": "revision"
+    },
+    "evidence_events": {
+      "e": "event"
+    },
+    "revision_evidence": {
+      "ra": [
+        "e"
+      ],
+      "rb": [
+        "e"
+      ]
+    },
+    "revision_memory": {
+      "ra": "ma",
+      "rb": "mb"
+    },
+    "derived_from": {},
+    "payload_owners": {
+      "source": [
+        "event",
+        "e"
+      ],
+      "pa": [
+        "ra"
+      ],
+      "pb": [
+        "rb"
+      ]
+    },
+    "snapshot_complete": true,
+    "memory_versions": {
+      "ma": 1,
+      "mb": 1
+    }
+  }
+}

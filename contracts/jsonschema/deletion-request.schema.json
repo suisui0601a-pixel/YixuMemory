@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yixumemory.org/schemas/p0-sc-1/deletion-request.schema.json",
+  "title": "DeletionRequest",
+  "description": "Accepted server record only; unsupported broad intents produce an error before any fence/job. Flags/refs are not execution proof.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "contract_version": {
+      "const": "p0-sc-1"
+    },
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "tenant_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "space_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "operation": {
+      "enum": [
+        "memory_graph",
+        "evidence_graph",
+        "source_graph"
+      ]
+    },
+    "requested_scope": {
+      "const": "space"
+    },
+    "effective_scope": {
+      "const": "space"
+    },
+    "target_type": {
+      "enum": [
+        "memory",
+        "evidence",
+        "event"
+      ]
+    },
+    "target_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "status": {
+      "enum": [
+        "queued",
+        "running",
+        "verifying",
+        "blocked",
+        "completed"
+      ]
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "graph_cut_off": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "closure_ref": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "closure_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "policy_epoch": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "requested_by": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "coverage": {
+      "enum": [
+        "pending",
+        "space_graph_complete"
+      ]
+    },
+    "receipt_set_ref": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "uuid"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "contract_version",
+    "id",
+    "tenant_id",
+    "space_id",
+    "operation",
+    "requested_scope",
+    "effective_scope",
+    "target_type",
+    "target_id",
+    "status",
+    "generation",
+    "graph_cut_off",
+    "closure_ref",
+    "closure_version",
+    "policy_epoch",
+    "requested_by",
+    "coverage",
+    "receipt_set_ref"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "memory_graph"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "target_type": {
+            "const": "memory"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "evidence_graph"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "target_type": {
+            "const": "evidence"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "const": "source_graph"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "target_type": {
+            "const": "event"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "completed"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "coverage": {
+            "const": "space_graph_complete"
+          },
+          "receipt_set_ref": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "coverage": {
+            "const": "pending"
+          },
+          "receipt_set_ref": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ]
+}

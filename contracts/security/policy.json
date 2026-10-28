@@ -1,0 +1,46 @@
+{
+  "contract_version": "p0-sc-1",
+  "runtime_verified": false,
+  "supported_deletions": {
+    "memory_graph": "memory",
+    "evidence_graph": "evidence",
+    "source_graph": "event"
+  },
+  "supported_scope": "space",
+  "unsupported_operations": [
+    "source_all_copies",
+    "subject_all_copies"
+  ],
+  "all_controlled_copies_required": true,
+  "read_surfaces": [
+    "search",
+    "hydrate",
+    "history",
+    "cache",
+    "index",
+    "export",
+    "context",
+    "count"
+  ],
+  "required_stores": [
+    "payload",
+    "key_backend",
+    "index",
+    "cache",
+    "export",
+    "staging",
+    "backup",
+    "jobs",
+    "metadata_mappings",
+    "temporary"
+  ],
+  "production_encrypt_all_payloads": true,
+  "unknown_classification": "sensitive",
+  "effective_classes": [
+    "personal",
+    "sensitive"
+  ],
+  "synthetic_is_test_property_only": true,
+  "public_plaintext_bypass": false,
+  "no_model_crypto_exemption": false
+}
