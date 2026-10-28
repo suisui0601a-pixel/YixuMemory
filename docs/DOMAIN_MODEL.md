@@ -46,3 +46,7 @@
 | StagingIntent | tenant/id，Space/actor/purpose/generation/TTL/key 意图/cleanup journal/状态；密文创建前持久登记，失败立即不可水合，补偿验证前不删登记 |
 
 Event/Evidence/Revision 有效分类经关联 Payload 与完整来源图 join，不从 assertion_kind/source_kind 或旧快照推定。Memory.source_blocked 表示来源擦除使旧 Revision 永久不可用；新来源只能合法追加修订，不能恢复原事实。独立来源不由 Memory 隐式拥有。见 [删除范围](DELETION_SCOPE.md)、[Payload 保护](PAYLOAD_PROTECTION.md) 与 ADR-010/011；旧无范围/保护记录不可默认补安全标志迁移。
+
+## R1 图投影类型校验补充（2026-10-29）
+
+删除 oracle 的端点/字段矩阵见 [DELETION_SCOPE](DELETION_SCOPE.md) 与 contracts/security/graph-relations.json。Evidence→Event、Revision→Evidence、Revision→Memory 不可因 UUID 存在而互换；Memory 版本必须是正整数而非 bool。当前 derived_from 投影表示 Event/Evidence/Revision 内容间的派生（含模型产物 Evidence），Memory 聚合引用需落到具体 Revision；来源捕获、聚合归属与受控副本仍各走其明确关系。Payload owner 保留 Event/Evidence/Revision/Memory 的既有归属边界。全图检查包括不在本次闭包路径上的行，未知类型/关系拒绝而非忽略。这里补足前版未展开的强类型投影约束，不改 R14 分类/加密接口，也不把合成 ID/布尔观察当真实 FK 或快照证明。

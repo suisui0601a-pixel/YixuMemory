@@ -11,6 +11,91 @@ OPERATIONS = {"memory_graph": "memory", "evidence_graph": "evidence", "source_gr
 STORES = {"payload", "key_backend", "index", "cache", "export", "staging", "backup", "jobs", "metadata_mappings", "temporary"}
 SURFACES = {"search", "hydrate", "history", "cache", "index", "export", "context", "count"}
 
+NODE_KINDS = frozenset({"event", "evidence", "revision", "memory"})
+# Content derivation includes captured/model output content, not mutable aggregates.
+# Source capture and aggregate membership retain their separate typed tables.
+RELATION_TYPES = {
+    "evidence_events": (frozenset({"evidence"}), frozenset({"event"})),
+    "revision_evidence": (frozenset({"revision"}), frozenset({"evidence"})),
+    "revision_memory": (frozenset({"revision"}), frozenset({"memory"})),
+    "derived_from": (frozenset({"event", "evidence", "revision"}),
+                     frozenset({"event", "evidence", "revision"})),
+}
+PAYLOAD_OWNER_KINDS = frozenset({"event", "evidence", "revision", "memory"})
+GRAPH_FIELDS = frozenset({"tenant_id", "space_id", "nodes", "snapshot_complete",
+                          "evidence_events", "revision_evidence", "revision_memory",
+                          "derived_from", "payload_owners", "memory_versions"})
+
+
+def _graph_violation(graph: Mapping[str, Any]) -> str | None:
+    """Validate the entire projection before traversal; never repair/drop an edge."""
+    if set(graph) - GRAPH_FIELDS:
+        return "invalid_graph"
+    if GRAPH_FIELDS - set(graph) or graph["snapshot_complete"] is not True:
+        return "incomplete_graph"
+    if any(not isinstance(graph[k], str) or not graph[k] for k in ("tenant_id", "space_id")):
+        return "invalid_graph"
+    nodes = graph["nodes"]
+    if (not isinstance(nodes, Mapping)
+            or any(not isinstance(k, str) or not k or not isinstance(v, str) or v not in NODE_KINDS
+                   for k, v in nodes.items())):
+        return "invalid_graph"
+
+    def endpoint(ref: Any, kinds: frozenset[str]) -> str | None:
+        if not isinstance(ref, str) or not ref:
+            return "invalid_graph"
+        if ref not in nodes:
+            return "incomplete_graph"
+        return None if nodes[ref] in kinds else "invalid_graph"
+
+    for relation, (dependent_kinds, source_kinds) in RELATION_TYPES.items():
+        table = graph[relation]
+        if not isinstance(table, Mapping):
+            return "invalid_graph"
+        for dependent, sources in table.items():
+            error = endpoint(dependent, dependent_kinds)
+            if error:
+                return error
+            if relation in {"evidence_events", "revision_memory"}:
+                sources = [sources]
+            elif not isinstance(sources, list):
+                return "invalid_graph"
+            if not sources and relation == "revision_evidence":
+                return "incomplete_graph"
+            for source in sources:
+                error = endpoint(source, source_kinds)
+                if error:
+                    return error
+            if len(set(sources)) != len(sources):
+                return "invalid_graph"
+
+    owners, versions = graph["payload_owners"], graph["memory_versions"]
+    if not isinstance(owners, Mapping) or not isinstance(versions, Mapping):
+        return "invalid_graph"
+    for payload, refs in owners.items():
+        if not isinstance(payload, str) or not payload or not isinstance(refs, list):
+            return "invalid_graph"
+        if not refs:
+            return "incomplete_graph"
+        for owner in refs:
+            error = endpoint(owner, PAYLOAD_OWNER_KINDS)
+            if error:
+                return error
+        if len(set(refs)) != len(refs):
+            return "invalid_graph"
+    for memory, version in versions.items():
+        error = endpoint(memory, frozenset({"memory"}))
+        if error:
+            return error
+        if type(version) is not int or version < 1:
+            return "invalid_graph"
+    # A declared complete projection cannot omit mandatory FK/version rows.
+    for table, kind in (("evidence_events", "evidence"), ("revision_evidence", "revision"),
+                        ("revision_memory", "revision"), ("memory_versions", "memory")):
+        if set(graph[table]) != {ref for ref, value in nodes.items() if value == kind}:
+            return "incomplete_graph"
+    return None
+
 
 def deletion_plan(intent: Mapping[str, Any], graph: Mapping[str, Any],
                   authorized_ids: set[str], *, expected_version: int | None = None) -> dict[str, Any]:
@@ -21,26 +106,19 @@ def deletion_plan(intent: Mapping[str, Any], graph: Mapping[str, Any],
     operation = intent["operation"]
     if intent["requested_scope"] != "space" or operation not in OPERATIONS:
         return rejected("unsupported_erasure_scope")
-    if any(intent[k] != graph[k] for k in ("tenant_id", "space_id")):
+    if any(intent[k] != graph.get(k) for k in ("tenant_id", "space_id")):
         return rejected("scope_mismatch")
-    nodes = graph["nodes"]
     target = intent["target_id"]
     if target not in authorized_ids:
         return rejected("denied")
+    error = _graph_violation(graph)
+    if error:
+        return rejected(error)
+    nodes = graph["nodes"]
     if intent["target_type"] != OPERATIONS[operation] or nodes.get(target) != intent["target_type"]:
         return rejected("invalid_target")
-    if graph["snapshot_complete"] is not True:
-        return rejected("incomplete_graph")
-    # References and ownership must be complete before any fence can be published.
     evidence, revisions, memories = (graph["evidence_events"], graph["revision_evidence"],
                                      graph["revision_memory"])
-    refs = set(evidence) | set(evidence.values()) | set(revisions) | set(memories) | set(memories.values())
-    refs |= {v for values in revisions.values() for v in values}
-    refs |= set(graph["derived_from"]) | {v for values in graph["derived_from"].values() for v in values}
-    refs |= {v for values in graph["payload_owners"].values() for v in values}
-    if (not refs <= nodes.keys() or revisions.keys() != memories.keys()
-            or any(not owners for owners in graph["payload_owners"].values())):
-        return rejected("incomplete_graph")
     if operation == "memory_graph":
         if expected_version is None:
             return rejected("precondition_required")
@@ -51,8 +129,8 @@ def deletion_plan(intent: Mapping[str, Any], graph: Mapping[str, Any],
         erased |= {r for r, m in memories.items() if m == target}
     for _ in range(len(nodes) + 1):
         previous = set(erased)
+        erased |= {e for e, event in evidence.items() if event in erased}
         if operation != "memory_graph":
-            erased |= {e for e, event in evidence.items() if event in erased}
             for owners in graph["payload_owners"].values():
                 if set(owners) & erased:
                     erased.update(owners)
