@@ -9,3 +9,7 @@
 - [005 版本、时间与契约](005-contracts.md)
 
 - [006 仓库与验证基线](006-repository.md)
+
+- [008 自托管与 AI 原生接入](008-self-hosting-agent-native.md) — 设计扩展，运行验收待完成
+
+- [009 PR #3 定点修复](009-pr3-remediation.md) — 待 Luna 独立重审

@@ -1,0 +1,332 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yixumemory.org/contracts/deployment/v1/client-config.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "contract_version": {
+      "const": "1.0"
+    },
+    "client_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "audience": {
+      "const": "yixumemory-memory"
+    },
+    "tenant_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "space_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "minItems": 1,
+      "uniqueItems": true,
+      "maxItems": 1
+    },
+    "transport": {
+      "enum": [
+        "rest",
+        "mcp-stdio",
+        "mcp-http"
+      ]
+    },
+    "endpoint": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "uri"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "connection_ref": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^connectionref://[a-z0-9/_-]+$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "credential_ref": {
+      "type": "string",
+      "pattern": "^secretref://[a-z0-9][a-z0-9/._-]*$"
+    },
+    "scopes": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "capabilities.read",
+          "payload.stage",
+          "event.append",
+          "event.read",
+          "evidence.read",
+          "memory.append",
+          "memory.read",
+          "memory.revise",
+          "memory.history",
+          "memory.search",
+          "memory.context",
+          "memory.erase",
+          "deletion.read"
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "api_major": {
+      "const": "v1"
+    },
+    "mcp_protocol": {
+      "anyOf": [
+        {
+          "enum": [
+            "2026-07-28",
+            "2025-11-25"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "mcp_compatibility": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "enum": [
+                "modern-only",
+                "legacy-only",
+                "dual-era"
+              ]
+            },
+            "legacy_fallback_allowed": {
+              "type": "boolean",
+              "description": "Permission to evaluate conservative compatibility policy, not automatic downgrade. Unknown/ambiguous peers require explicit legacy-only config; never replay business calls."
+            }
+          },
+          "required": [
+            "mode",
+            "legacy_fallback_allowed"
+          ],
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "mode": {
+                    "const": "dual-era"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "legacy_fallback_allowed": {
+                    "const": true,
+                    "description": "Permission to evaluate conservative compatibility policy, not automatic downgrade. Unknown/ambiguous peers require explicit legacy-only config; never replay business calls."
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "legacy_fallback_allowed": {
+                    "const": false,
+                    "description": "Permission to evaluate conservative compatibility policy, not automatic downgrade. Unknown/ambiguous peers require explicit legacy-only config; never replay business calls."
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "contract_version",
+    "client_id",
+    "audience",
+    "tenant_id",
+    "space_ids",
+    "transport",
+    "endpoint",
+    "connection_ref",
+    "credential_ref",
+    "scopes",
+    "api_major",
+    "mcp_protocol",
+    "mcp_compatibility"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "transport": {
+            "const": "mcp-stdio"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "endpoint": {
+            "type": "null"
+          },
+          "connection_ref": {
+            "type": "string"
+          },
+          "mcp_protocol": {
+            "enum": [
+              "2026-07-28",
+              "2025-11-25"
+            ]
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "endpoint": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^(https://[^/?#@\\s]+(?:/[^?#\\s]*)?|http://127\\.0\\.0\\.1(?::[0-9]+)?(?:/[^?#\\s]*)?|http://\\[::1\\](?::[0-9]+)?(?:/[^?#\\s]*)?)$"
+          },
+          "connection_ref": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "transport": {
+            "const": "rest"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "mcp_protocol": {
+            "type": "null"
+          },
+          "mcp_compatibility": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "mcp_protocol": {
+            "enum": [
+              "2026-07-28",
+              "2025-11-25"
+            ]
+          },
+          "mcp_compatibility": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "mode": {
+                "enum": [
+                  "modern-only",
+                  "legacy-only",
+                  "dual-era"
+                ]
+              },
+              "legacy_fallback_allowed": {
+                "type": "boolean",
+                "description": "Permission to evaluate conservative compatibility policy, not automatic downgrade. Unknown/ambiguous peers require explicit legacy-only config; never replay business calls."
+              }
+            },
+            "required": [
+              "mode",
+              "legacy_fallback_allowed"
+            ],
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "mode": {
+                      "const": "dual-era"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "legacy_fallback_allowed": {
+                      "const": true,
+                      "description": "Permission to evaluate conservative compatibility policy, not automatic downgrade. Unknown/ambiguous peers require explicit legacy-only config; never replay business calls."
+                    }
+                  }
+                },
+                "else": {
+                  "properties": {
+                    "legacy_fallback_allowed": {
+                      "const": false,
+                      "description": "Permission to evaluate conservative compatibility policy, not automatic downgrade. Unknown/ambiguous peers require explicit legacy-only config; never replay business calls."
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "mcp_compatibility": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "const": "legacy-only"
+              }
+            },
+            "required": [
+              "mode"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "mcp_protocol": {
+            "const": "2025-11-25"
+          }
+        }
+      },
+      "else": {
+        "if": {
+          "properties": {
+            "transport": {
+              "enum": [
+                "mcp-http",
+                "mcp-stdio"
+              ]
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "mcp_protocol": {
+              "const": "2026-07-28"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

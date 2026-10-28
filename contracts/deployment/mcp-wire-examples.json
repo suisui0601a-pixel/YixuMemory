@@ -1,0 +1,2003 @@
+{
+  "fixture_only": true,
+  "runtime_executed": false,
+  "requests": [
+    {
+      "name": "modern-stdio-server/discover",
+      "case": {
+        "era": "modern",
+        "transport": "stdio",
+        "http_method": "POST",
+        "headers": [],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "server/discover",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 200,
+        "outcome": "stateless_accept"
+      }
+    },
+    {
+      "name": "modern-stdio-tools/list",
+      "case": {
+        "era": "modern",
+        "transport": "stdio",
+        "http_method": "POST",
+        "headers": [],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/list",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 200,
+        "outcome": "stateless_accept"
+      }
+    },
+    {
+      "name": "modern-stdio-tools/call",
+      "case": {
+        "era": "modern",
+        "transport": "stdio",
+        "http_method": "POST",
+        "headers": [],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/call",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            },
+            "name": "memories_search",
+            "arguments": {
+              "query": "demo"
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 200,
+        "outcome": "stateless_accept"
+      }
+    },
+    {
+      "name": "legacy-stdio-initialize",
+      "case": {
+        "era": "legacy",
+        "transport": "stdio",
+        "http_method": "POST",
+        "headers": [],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "initialize",
+          "params": {
+            "protocolVersion": "2025-11-25",
+            "capabilities": {},
+            "clientInfo": {
+              "name": "fixture",
+              "version": "1"
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 200,
+        "outcome": "legacy_selected",
+        "selected_version": "2025-11-25"
+      }
+    },
+    {
+      "name": "legacy-stdio-tools/list",
+      "case": {
+        "era": "legacy",
+        "transport": "stdio",
+        "http_method": "POST",
+        "headers": [],
+        "state": {
+          "legacy_initialized": true,
+          "legacy_protocol": "2025-11-25",
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/list",
+          "params": {}
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 200,
+        "outcome": "legacy_accept"
+      }
+    },
+    {
+      "name": "legacy-stdio-tools/call",
+      "case": {
+        "era": "legacy",
+        "transport": "stdio",
+        "http_method": "POST",
+        "headers": [],
+        "state": {
+          "legacy_initialized": true,
+          "legacy_protocol": "2025-11-25",
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/call",
+          "params": {
+            "name": "memories_search",
+            "arguments": {
+              "query": "demo"
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 200,
+        "outcome": "legacy_accept"
+      }
+    },
+    {
+      "name": "legacy-stdio-initialized",
+      "case": {
+        "era": "legacy",
+        "transport": "stdio",
+        "http_method": "POST",
+        "headers": [],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": "2025-11-25",
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "method": "notifications/initialized",
+          "params": {}
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 200,
+        "outcome": "legacy_ready_notification"
+      }
+    },
+    {
+      "name": "modern-stdio-missing-meta",
+      "case": {
+        "era": "modern",
+        "transport": "stdio",
+        "http_method": "POST",
+        "headers": [],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/list",
+          "params": {}
+        }
+      },
+      "schema_valid": false,
+      "expected": {
+        "code": -32602,
+        "http_status": 400,
+        "outcome": "invalid_meta"
+      }
+    },
+    {
+      "name": "modern-stdio-unsupported-version",
+      "case": {
+        "era": "modern",
+        "transport": "stdio",
+        "http_method": "POST",
+        "headers": [],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/list",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "1900-01-01",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": -32022,
+        "http_status": 400,
+        "outcome": "unsupported_modern_version",
+        "error_data": {
+          "supported": [
+            "2026-07-28",
+            "2025-11-25"
+          ],
+          "requested": "1900-01-01"
+        }
+      }
+    },
+    {
+      "name": "legacy-stdio-unsupported-client-must-abort",
+      "case": {
+        "era": "legacy",
+        "transport": "stdio",
+        "http_method": "POST",
+        "headers": [],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "initialize",
+          "params": {
+            "protocolVersion": "1900-01-01",
+            "capabilities": {},
+            "clientInfo": {
+              "name": "fixture",
+              "version": "1"
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 200,
+        "outcome": "legacy_offer_client_must_check",
+        "selected_version": "2025-11-25"
+      }
+    },
+    {
+      "name": "legacy-stdio-before-initialized",
+      "case": {
+        "era": "legacy",
+        "transport": "stdio",
+        "http_method": "POST",
+        "headers": [],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/list",
+          "params": {}
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": -32600,
+        "http_status": 400,
+        "outcome": "legacy_not_initialized"
+      }
+    },
+    {
+      "name": "legacy-stdio-modern-metadata",
+      "case": {
+        "era": "legacy",
+        "transport": "stdio",
+        "http_method": "POST",
+        "headers": [],
+        "state": {
+          "legacy_initialized": true,
+          "legacy_protocol": "2025-11-25",
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/list",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": -32602,
+        "http_status": 400,
+        "outcome": "cross_era_rejected"
+      }
+    },
+    {
+      "name": "modern-stdio-legacy-date-no-handshake",
+      "case": {
+        "era": "modern",
+        "transport": "stdio",
+        "http_method": "POST",
+        "headers": [],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/list",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "2025-11-25",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": -32602,
+        "http_status": 400,
+        "outcome": "legacy_version_requires_handshake"
+      }
+    },
+    {
+      "name": "modern-http-server/discover",
+      "case": {
+        "era": "modern",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2026-07-28"
+          },
+          {
+            "name": "Mcp-Method",
+            "value": "server/discover"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "server/discover",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 200,
+        "outcome": "stateless_accept"
+      }
+    },
+    {
+      "name": "modern-http-tools/list",
+      "case": {
+        "era": "modern",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2026-07-28"
+          },
+          {
+            "name": "Mcp-Method",
+            "value": "tools/list"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/list",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 200,
+        "outcome": "stateless_accept"
+      }
+    },
+    {
+      "name": "modern-http-tools/call",
+      "case": {
+        "era": "modern",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2026-07-28"
+          },
+          {
+            "name": "Mcp-Method",
+            "value": "tools/call"
+          },
+          {
+            "name": "Mcp-Name",
+            "value": "memories_search"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/call",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            },
+            "name": "memories_search",
+            "arguments": {
+              "query": "demo"
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 200,
+        "outcome": "stateless_accept"
+      }
+    },
+    {
+      "name": "legacy-http-initialize",
+      "case": {
+        "era": "legacy",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2025-11-25"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "initialize",
+          "params": {
+            "protocolVersion": "2025-11-25",
+            "capabilities": {},
+            "clientInfo": {
+              "name": "fixture",
+              "version": "1"
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 200,
+        "outcome": "legacy_selected",
+        "selected_version": "2025-11-25"
+      }
+    },
+    {
+      "name": "legacy-http-tools/list",
+      "case": {
+        "era": "legacy",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2025-11-25"
+          },
+          {
+            "name": "Mcp-Session-Id",
+            "value": "demo-session"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": true,
+          "legacy_protocol": "2025-11-25",
+          "legacy_session_id": "demo-session"
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/list",
+          "params": {}
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 200,
+        "outcome": "legacy_accept"
+      }
+    },
+    {
+      "name": "legacy-http-tools/call",
+      "case": {
+        "era": "legacy",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2025-11-25"
+          },
+          {
+            "name": "Mcp-Session-Id",
+            "value": "demo-session"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": true,
+          "legacy_protocol": "2025-11-25",
+          "legacy_session_id": "demo-session"
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/call",
+          "params": {
+            "name": "memories_search",
+            "arguments": {
+              "query": "demo"
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 200,
+        "outcome": "legacy_accept"
+      }
+    },
+    {
+      "name": "legacy-http-initialized",
+      "case": {
+        "era": "legacy",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2025-11-25"
+          },
+          {
+            "name": "Mcp-Session-Id",
+            "value": "demo-session"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": "2025-11-25",
+          "legacy_session_id": "demo-session"
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "method": "notifications/initialized",
+          "params": {}
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 202,
+        "outcome": "legacy_ready_notification"
+      }
+    },
+    {
+      "name": "modern-http-missing-meta",
+      "case": {
+        "era": "modern",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2026-07-28"
+          },
+          {
+            "name": "Mcp-Method",
+            "value": "tools/list"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/list",
+          "params": {}
+        }
+      },
+      "schema_valid": false,
+      "expected": {
+        "code": -32602,
+        "http_status": 400,
+        "outcome": "invalid_meta"
+      }
+    },
+    {
+      "name": "modern-http-unsupported-version",
+      "case": {
+        "era": "modern",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "1900-01-01"
+          },
+          {
+            "name": "Mcp-Method",
+            "value": "tools/list"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/list",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "1900-01-01",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": -32022,
+        "http_status": 400,
+        "outcome": "unsupported_modern_version",
+        "error_data": {
+          "supported": [
+            "2026-07-28",
+            "2025-11-25"
+          ],
+          "requested": "1900-01-01"
+        }
+      }
+    },
+    {
+      "name": "legacy-http-unsupported-client-must-abort",
+      "case": {
+        "era": "legacy",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2025-11-25"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "initialize",
+          "params": {
+            "protocolVersion": "1900-01-01",
+            "capabilities": {},
+            "clientInfo": {
+              "name": "fixture",
+              "version": "1"
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 200,
+        "outcome": "legacy_offer_client_must_check",
+        "selected_version": "2025-11-25"
+      }
+    },
+    {
+      "name": "legacy-http-before-initialized",
+      "case": {
+        "era": "legacy",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2025-11-25"
+          },
+          {
+            "name": "Mcp-Session-Id",
+            "value": "demo-session"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": "demo-session"
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/list",
+          "params": {}
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": -32600,
+        "http_status": 400,
+        "outcome": "legacy_not_initialized"
+      }
+    },
+    {
+      "name": "legacy-http-modern-metadata",
+      "case": {
+        "era": "legacy",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2025-11-25"
+          },
+          {
+            "name": "Mcp-Session-Id",
+            "value": "demo-session"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": true,
+          "legacy_protocol": "2025-11-25",
+          "legacy_session_id": "demo-session"
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/list",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": -32020,
+        "http_status": 400,
+        "outcome": "cross_era_rejected"
+      }
+    },
+    {
+      "name": "modern-http-legacy-date-no-handshake",
+      "case": {
+        "era": "modern",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2025-11-25"
+          },
+          {
+            "name": "Mcp-Method",
+            "value": "tools/list"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/list",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "2025-11-25",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": -32602,
+        "http_status": 400,
+        "outcome": "legacy_version_requires_handshake"
+      }
+    },
+    {
+      "name": "modern-http-version",
+      "case": {
+        "era": "modern",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "wrong"
+          },
+          {
+            "name": "Mcp-Method",
+            "value": "tools/call"
+          },
+          {
+            "name": "Mcp-Name",
+            "value": "memories_search"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/call",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            },
+            "name": "memories_search",
+            "arguments": {
+              "query": "demo"
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": -32020,
+        "http_status": 400,
+        "outcome": "header_mismatch"
+      }
+    },
+    {
+      "name": "modern-http-method",
+      "case": {
+        "era": "modern",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2026-07-28"
+          },
+          {
+            "name": "Mcp-Method",
+            "value": "wrong"
+          },
+          {
+            "name": "Mcp-Name",
+            "value": "memories_search"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/call",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            },
+            "name": "memories_search",
+            "arguments": {
+              "query": "demo"
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": -32020,
+        "http_status": 400,
+        "outcome": "header_mismatch"
+      }
+    },
+    {
+      "name": "modern-http-name",
+      "case": {
+        "era": "modern",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2026-07-28"
+          },
+          {
+            "name": "Mcp-Method",
+            "value": "tools/call"
+          },
+          {
+            "name": "Mcp-Name",
+            "value": "wrong"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/call",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            },
+            "name": "memories_search",
+            "arguments": {
+              "query": "demo"
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": -32020,
+        "http_status": 400,
+        "outcome": "header_mismatch"
+      }
+    },
+    {
+      "name": "modern-http-missing-version",
+      "case": {
+        "era": "modern",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "Mcp-Method",
+            "value": "tools/call"
+          },
+          {
+            "name": "Mcp-Name",
+            "value": "memories_search"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/call",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            },
+            "name": "memories_search",
+            "arguments": {
+              "query": "demo"
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": -32020,
+        "http_status": 400,
+        "outcome": "header_mismatch"
+      }
+    },
+    {
+      "name": "modern-http-missing-method",
+      "case": {
+        "era": "modern",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2026-07-28"
+          },
+          {
+            "name": "Mcp-Name",
+            "value": "memories_search"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/call",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            },
+            "name": "memories_search",
+            "arguments": {
+              "query": "demo"
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": -32020,
+        "http_status": 400,
+        "outcome": "header_mismatch"
+      }
+    },
+    {
+      "name": "modern-http-missing-name",
+      "case": {
+        "era": "modern",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2026-07-28"
+          },
+          {
+            "name": "Mcp-Method",
+            "value": "tools/call"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/call",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            },
+            "name": "memories_search",
+            "arguments": {
+              "query": "demo"
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": -32020,
+        "http_status": 400,
+        "outcome": "header_mismatch"
+      }
+    },
+    {
+      "name": "modern-http-duplicate-header",
+      "case": {
+        "era": "modern",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2026-07-28"
+          },
+          {
+            "name": "Mcp-Method",
+            "value": "tools/call"
+          },
+          {
+            "name": "Mcp-Name",
+            "value": "memories_search"
+          },
+          {
+            "name": "mcp-method",
+            "value": "tools/call"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/call",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            },
+            "name": "memories_search",
+            "arguments": {
+              "query": "demo"
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": -32020,
+        "http_status": 400,
+        "outcome": "reject_duplicate_header"
+      }
+    },
+    {
+      "name": "modern-http-bad-encoding",
+      "case": {
+        "era": "modern",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2026-07-28"
+          },
+          {
+            "name": "Mcp-Method",
+            "value": "tools/call"
+          },
+          {
+            "name": "Mcp-Name",
+            "value": "=?base64?!bad?="
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/call",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            },
+            "name": "memories_search",
+            "arguments": {
+              "query": "demo"
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": -32020,
+        "http_status": 400,
+        "outcome": "header_mismatch"
+      }
+    },
+    {
+      "name": "modern-http-base64-name",
+      "case": {
+        "era": "modern",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2026-07-28"
+          },
+          {
+            "name": "Mcp-Method",
+            "value": "tools/call"
+          },
+          {
+            "name": "Mcp-Name",
+            "value": "=?base64?bWVtb3JpZXNfc2VhcmNo?="
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/call",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            },
+            "name": "memories_search",
+            "arguments": {
+              "query": "demo"
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 200,
+        "outcome": "stateless_accept"
+      }
+    },
+    {
+      "name": "modern-ignores-old-session-and-resumption",
+      "case": {
+        "era": "modern",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2026-07-28"
+          },
+          {
+            "name": "Mcp-Method",
+            "value": "tools/list"
+          },
+          {
+            "name": "Mcp-Session-Id",
+            "value": "old"
+          },
+          {
+            "name": "Last-Event-ID",
+            "value": "old-event"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": true,
+          "legacy_protocol": "2025-11-25",
+          "legacy_session_id": "old"
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/list",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 200,
+        "outcome": "stateless_accept"
+      }
+    },
+    {
+      "name": "modern-http-reject-GET",
+      "case": {
+        "era": "modern",
+        "transport": "http",
+        "http_method": "GET",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2026-07-28"
+          },
+          {
+            "name": "Mcp-Method",
+            "value": "tools/list"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": null
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 405,
+        "outcome": "method_not_allowed"
+      }
+    },
+    {
+      "name": "modern-http-reject-DELETE",
+      "case": {
+        "era": "modern",
+        "transport": "http",
+        "http_method": "DELETE",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2026-07-28"
+          },
+          {
+            "name": "Mcp-Method",
+            "value": "tools/list"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": null
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 405,
+        "outcome": "method_not_allowed"
+      }
+    },
+    {
+      "name": "legacy-http-wrong-session",
+      "case": {
+        "era": "legacy",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2025-11-25"
+          },
+          {
+            "name": "Mcp-Session-Id",
+            "value": "wrong"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": true,
+          "legacy_protocol": "2025-11-25",
+          "legacy_session_id": "demo-session"
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/list",
+          "params": {}
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 404,
+        "outcome": "invalid_legacy_session"
+      }
+    },
+    {
+      "name": "legacy-malformed-initialize",
+      "case": {
+        "era": "legacy",
+        "transport": "stdio",
+        "http_method": "POST",
+        "headers": [],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "initialize",
+          "params": {
+            "protocolVersion": "2025-11-25",
+            "capabilities": {}
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": -32602,
+        "http_status": 400,
+        "outcome": "invalid_initialize"
+      }
+    },
+    {
+      "name": "modern-initialize-is-not-handshake",
+      "case": {
+        "era": "modern",
+        "transport": "stdio",
+        "http_method": "POST",
+        "headers": [],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "initialize",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": -32601,
+        "http_status": 200,
+        "outcome": "unknown_modern_method"
+      }
+    },
+    {
+      "name": "modern-http-missing-Accept",
+      "case": {
+        "era": "modern",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2026-07-28"
+          },
+          {
+            "name": "Mcp-Method",
+            "value": "tools/list"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/list",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 406,
+        "outcome": "invalid_accept"
+      }
+    },
+    {
+      "name": "modern-http-missing-Content-Type",
+      "case": {
+        "era": "modern",
+        "transport": "http",
+        "http_method": "POST",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2026-07-28"
+          },
+          {
+            "name": "Mcp-Method",
+            "value": "tools/list"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": false,
+          "legacy_protocol": null,
+          "legacy_session_id": null
+        },
+        "request": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "tools/list",
+          "params": {
+            "_meta": {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {}
+            }
+          }
+        }
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 415,
+        "outcome": "unsupported_media_type"
+      }
+    },
+    {
+      "name": "legacy-http-session-GET",
+      "case": {
+        "era": "legacy",
+        "transport": "http",
+        "http_method": "GET",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2025-11-25"
+          },
+          {
+            "name": "Mcp-Session-Id",
+            "value": "demo-session"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": true,
+          "legacy_protocol": "2025-11-25",
+          "legacy_session_id": "demo-session"
+        },
+        "request": null
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 200,
+        "outcome": "legacy_session_transport"
+      }
+    },
+    {
+      "name": "legacy-http-session-DELETE",
+      "case": {
+        "era": "legacy",
+        "transport": "http",
+        "http_method": "DELETE",
+        "headers": [
+          {
+            "name": "MCP-Protocol-Version",
+            "value": "2025-11-25"
+          },
+          {
+            "name": "Mcp-Session-Id",
+            "value": "demo-session"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Accept",
+            "value": "application/json, text/event-stream"
+          }
+        ],
+        "state": {
+          "legacy_initialized": true,
+          "legacy_protocol": "2025-11-25",
+          "legacy_session_id": "demo-session"
+        },
+        "request": null
+      },
+      "schema_valid": true,
+      "expected": {
+        "code": 0,
+        "http_status": 200,
+        "outcome": "legacy_session_transport"
+      }
+    }
+  ],
+  "results": [
+    {
+      "era": "modern",
+      "method": "server/discover",
+      "result": {
+        "resultType": "complete",
+        "supportedVersions": [
+          "2026-07-28",
+          "2025-11-25"
+        ],
+        "capabilities": {
+          "tools": {}
+        },
+        "_meta": {
+          "io.modelcontextprotocol/serverInfo": {
+            "name": "YixuMemory-fixture",
+            "version": "0.0.0-p0-design"
+          }
+        },
+        "ttlMs": 0,
+        "cacheScope": "private"
+      }
+    },
+    {
+      "era": "modern",
+      "method": "tools/list",
+      "result": {
+        "resultType": "complete",
+        "tools": [],
+        "ttlMs": 0,
+        "cacheScope": "private"
+      }
+    },
+    {
+      "era": "legacy",
+      "method": "initialize",
+      "result": {
+        "protocolVersion": "2025-11-25",
+        "capabilities": {
+          "tools": {}
+        },
+        "serverInfo": {
+          "name": "YixuMemory-fixture",
+          "version": "0.0.0-p0-design"
+        }
+      }
+    },
+    {
+      "era": "legacy",
+      "method": "tools/list",
+      "result": {
+        "tools": []
+      }
+    },
+    {
+      "era": "modern",
+      "method": "tools/call",
+      "result": {
+        "resultType": "complete",
+        "content": []
+      }
+    },
+    {
+      "era": "modern",
+      "method": "ping",
+      "result": {
+        "resultType": "complete"
+      }
+    },
+    {
+      "era": "legacy",
+      "method": "tools/call",
+      "result": {
+        "content": []
+      }
+    },
+    {
+      "era": "legacy",
+      "method": "ping",
+      "result": {}
+    }
+  ],
+  "http_cache_policy": {
+    "Cache-Control": "private, no-store",
+    "Vary": "Authorization",
+    "authorization_context_shared": false
+  }
+}

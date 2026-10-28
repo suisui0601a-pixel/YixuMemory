@@ -1,0 +1,1987 @@
+{
+  "contract_version": "1.0",
+  "tool_result_encoding": "structuredContent is receipt; resource is a separate resource content block matching operation response; no resource secrets",
+  "tools": [
+    {
+      "name": "memory_capabilities",
+      "description": "YixuMemory authorized discoverCapabilities",
+      "operation_id": "discoverCapabilities",
+      "required_capabilities": [
+        "capabilities.read"
+      ],
+      "side_effect": false,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "space_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "space_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "enum": [
+              "ok",
+              "invalid_input",
+              "unauthenticated",
+              "not_visible",
+              "denied",
+              "conflict",
+              "erased",
+              "stale_version",
+              "precondition_required",
+              "rate_limited",
+              "unavailable"
+            ]
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "result_ref": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "commit_token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          }
+        },
+        "required": [
+          "request_id",
+          "code",
+          "retryable",
+          "result_ref",
+          "commit_token"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "const": "ok"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                },
+                "result_ref": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "not": {
+                    "enum": [
+                      "unavailable",
+                      "rate_limited"
+                    ]
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                }
+              }
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "payload_stage",
+      "description": "YixuMemory authorized stagePayload",
+      "operation_id": "stagePayload",
+      "required_capabilities": [
+        "payload.stage"
+      ],
+      "side_effect": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "space_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "purpose": {
+            "enum": [
+              "content",
+              "locator"
+            ]
+          },
+          "classification": {
+            "enum": [
+              "synthetic",
+              "personal",
+              "sensitive"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 65536
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "tenant_id",
+          "space_id",
+          "purpose",
+          "classification",
+          "text",
+          "idempotency_key"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "enum": [
+              "ok",
+              "invalid_input",
+              "unauthenticated",
+              "not_visible",
+              "denied",
+              "conflict",
+              "erased",
+              "stale_version",
+              "precondition_required",
+              "rate_limited",
+              "unavailable"
+            ]
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "result_ref": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "commit_token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          }
+        },
+        "required": [
+          "request_id",
+          "code",
+          "retryable",
+          "result_ref",
+          "commit_token"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "const": "ok"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                },
+                "result_ref": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "not": {
+                    "enum": [
+                      "unavailable",
+                      "rate_limited"
+                    ]
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                }
+              }
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "events_ingest",
+      "description": "YixuMemory authorized ingestEvent",
+      "operation_id": "ingestEvent",
+      "required_capabilities": [
+        "event.append"
+      ],
+      "side_effect": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "space_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "enum": [
+              "raw_event",
+              "external_document",
+              "user_statement",
+              "system_action"
+            ]
+          },
+          "payload_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "source_kind": {
+            "enum": [
+              "raw_event",
+              "external_document",
+              "user_statement",
+              "model_output",
+              "fictional_setting"
+            ]
+          },
+          "source_locator": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "tenant_id",
+          "space_id",
+          "kind",
+          "payload_id",
+          "occurred_at",
+          "source_kind",
+          "source_locator",
+          "idempotency_key"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "enum": [
+              "ok",
+              "invalid_input",
+              "unauthenticated",
+              "not_visible",
+              "denied",
+              "conflict",
+              "erased",
+              "stale_version",
+              "precondition_required",
+              "rate_limited",
+              "unavailable"
+            ]
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "result_ref": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "commit_token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          }
+        },
+        "required": [
+          "request_id",
+          "code",
+          "retryable",
+          "result_ref",
+          "commit_token"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "const": "ok"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                },
+                "result_ref": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "not": {
+                    "enum": [
+                      "unavailable",
+                      "rate_limited"
+                    ]
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                }
+              }
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "events_get",
+      "description": "YixuMemory authorized getEvent",
+      "operation_id": "getEvent",
+      "required_capabilities": [
+        "event.read"
+      ],
+      "side_effect": false,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "space_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "space_id",
+          "event_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "enum": [
+              "ok",
+              "invalid_input",
+              "unauthenticated",
+              "not_visible",
+              "denied",
+              "conflict",
+              "erased",
+              "stale_version",
+              "precondition_required",
+              "rate_limited",
+              "unavailable"
+            ]
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "result_ref": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "commit_token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          }
+        },
+        "required": [
+          "request_id",
+          "code",
+          "retryable",
+          "result_ref",
+          "commit_token"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "const": "ok"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                },
+                "result_ref": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "not": {
+                    "enum": [
+                      "unavailable",
+                      "rate_limited"
+                    ]
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                }
+              }
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "evidence_get",
+      "description": "YixuMemory authorized getEvidence",
+      "operation_id": "getEvidence",
+      "required_capabilities": [
+        "evidence.read"
+      ],
+      "side_effect": false,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "space_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "evidence_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "space_id",
+          "evidence_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "enum": [
+              "ok",
+              "invalid_input",
+              "unauthenticated",
+              "not_visible",
+              "denied",
+              "conflict",
+              "erased",
+              "stale_version",
+              "precondition_required",
+              "rate_limited",
+              "unavailable"
+            ]
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "result_ref": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "commit_token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          }
+        },
+        "required": [
+          "request_id",
+          "code",
+          "retryable",
+          "result_ref",
+          "commit_token"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "const": "ok"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                },
+                "result_ref": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "not": {
+                    "enum": [
+                      "unavailable",
+                      "rate_limited"
+                    ]
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                }
+              }
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "memories_create",
+      "description": "YixuMemory authorized createMemory",
+      "operation_id": "createMemory",
+      "required_capabilities": [
+        "memory.append"
+      ],
+      "side_effect": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "space_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assertion_kind": {
+            "enum": [
+              "extracted_fact",
+              "model_inference",
+              "fictional_setting",
+              "user_assertion"
+            ]
+          },
+          "content_payload_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "valid_from": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "Z$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence_ids": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "tenant_id",
+          "space_id",
+          "assertion_kind",
+          "content_payload_id",
+          "valid_from",
+          "valid_to",
+          "evidence_ids",
+          "idempotency_key"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "enum": [
+              "ok",
+              "invalid_input",
+              "unauthenticated",
+              "not_visible",
+              "denied",
+              "conflict",
+              "erased",
+              "stale_version",
+              "precondition_required",
+              "rate_limited",
+              "unavailable"
+            ]
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "result_ref": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "commit_token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          }
+        },
+        "required": [
+          "request_id",
+          "code",
+          "retryable",
+          "result_ref",
+          "commit_token"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "const": "ok"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                },
+                "result_ref": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "not": {
+                    "enum": [
+                      "unavailable",
+                      "rate_limited"
+                    ]
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                }
+              }
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "memories_get",
+      "description": "YixuMemory authorized getMemory",
+      "operation_id": "getMemory",
+      "required_capabilities": [
+        "memory.read"
+      ],
+      "side_effect": false,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "space_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "memory_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "space_id",
+          "memory_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "enum": [
+              "ok",
+              "invalid_input",
+              "unauthenticated",
+              "not_visible",
+              "denied",
+              "conflict",
+              "erased",
+              "stale_version",
+              "precondition_required",
+              "rate_limited",
+              "unavailable"
+            ]
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "result_ref": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "commit_token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          }
+        },
+        "required": [
+          "request_id",
+          "code",
+          "retryable",
+          "result_ref",
+          "commit_token"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "const": "ok"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                },
+                "result_ref": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "not": {
+                    "enum": [
+                      "unavailable",
+                      "rate_limited"
+                    ]
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                }
+              }
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "memories_revise",
+      "description": "YixuMemory authorized appendRevision",
+      "operation_id": "appendRevision",
+      "required_capabilities": [
+        "memory.revise"
+      ],
+      "side_effect": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "space_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "memory_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assertion_kind": {
+            "enum": [
+              "extracted_fact",
+              "model_inference",
+              "fictional_setting",
+              "user_assertion"
+            ]
+          },
+          "content_payload_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "valid_from": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "Z$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence_ids": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 128
+          },
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "tenant_id",
+          "space_id",
+          "memory_id",
+          "assertion_kind",
+          "content_payload_id",
+          "valid_from",
+          "valid_to",
+          "evidence_ids",
+          "idempotency_key",
+          "expected_version"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "enum": [
+              "ok",
+              "invalid_input",
+              "unauthenticated",
+              "not_visible",
+              "denied",
+              "conflict",
+              "erased",
+              "stale_version",
+              "precondition_required",
+              "rate_limited",
+              "unavailable"
+            ]
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "result_ref": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "commit_token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          }
+        },
+        "required": [
+          "request_id",
+          "code",
+          "retryable",
+          "result_ref",
+          "commit_token"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "const": "ok"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                },
+                "result_ref": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "not": {
+                    "enum": [
+                      "unavailable",
+                      "rate_limited"
+                    ]
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                }
+              }
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "memories_history",
+      "description": "YixuMemory authorized listRevisions",
+      "operation_id": "listRevisions",
+      "required_capabilities": [
+        "memory.history"
+      ],
+      "side_effect": false,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "space_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "memory_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "tenant_id",
+          "space_id",
+          "memory_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "enum": [
+              "ok",
+              "invalid_input",
+              "unauthenticated",
+              "not_visible",
+              "denied",
+              "conflict",
+              "erased",
+              "stale_version",
+              "precondition_required",
+              "rate_limited",
+              "unavailable"
+            ]
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "result_ref": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "commit_token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          }
+        },
+        "required": [
+          "request_id",
+          "code",
+          "retryable",
+          "result_ref",
+          "commit_token"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "const": "ok"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                },
+                "result_ref": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "not": {
+                    "enum": [
+                      "unavailable",
+                      "rate_limited"
+                    ]
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                }
+              }
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "memories_search",
+      "description": "YixuMemory authorized searchMemories",
+      "operation_id": "searchMemories",
+      "required_capabilities": [
+        "memory.search"
+      ],
+      "side_effect": false,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "space_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "domain": {
+            "enum": [
+              "real",
+              "fiction"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "cursor": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "min_commit_token": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "tenant_id",
+          "space_id",
+          "query",
+          "domain",
+          "limit"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "enum": [
+              "ok",
+              "invalid_input",
+              "unauthenticated",
+              "not_visible",
+              "denied",
+              "conflict",
+              "erased",
+              "stale_version",
+              "precondition_required",
+              "rate_limited",
+              "unavailable"
+            ]
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "result_ref": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "commit_token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          }
+        },
+        "required": [
+          "request_id",
+          "code",
+          "retryable",
+          "result_ref",
+          "commit_token"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "const": "ok"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                },
+                "result_ref": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "not": {
+                    "enum": [
+                      "unavailable",
+                      "rate_limited"
+                    ]
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                }
+              }
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "transport_mapping": {
+        "min_commit_token": "header:X-Min-Commit-Token"
+      }
+    },
+    {
+      "name": "memories_context",
+      "description": "YixuMemory authorized hydrateContext",
+      "operation_id": "hydrateContext",
+      "required_capabilities": [
+        "memory.context",
+        "memory.read",
+        "evidence.read"
+      ],
+      "side_effect": false,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "space_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "memory_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "uniqueItems": true,
+            "maxItems": 100
+          },
+          "domain": {
+            "enum": [
+              "real",
+              "fiction"
+            ]
+          },
+          "max_bytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65536
+          },
+          "min_commit_token": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "tenant_id",
+          "space_id",
+          "memory_ids",
+          "domain",
+          "max_bytes",
+          "min_commit_token"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "enum": [
+              "ok",
+              "invalid_input",
+              "unauthenticated",
+              "not_visible",
+              "denied",
+              "conflict",
+              "erased",
+              "stale_version",
+              "precondition_required",
+              "rate_limited",
+              "unavailable"
+            ]
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "result_ref": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "commit_token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          }
+        },
+        "required": [
+          "request_id",
+          "code",
+          "retryable",
+          "result_ref",
+          "commit_token"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "const": "ok"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                },
+                "result_ref": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "not": {
+                    "enum": [
+                      "unavailable",
+                      "rate_limited"
+                    ]
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                }
+              }
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "memories_erase",
+      "description": "YixuMemory authorized eraseMemory",
+      "operation_id": "eraseMemory",
+      "required_capabilities": [
+        "memory.erase"
+      ],
+      "side_effect": true,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "space_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "memory_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "idempotency_key": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 128
+          },
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "tenant_id",
+          "space_id",
+          "memory_id",
+          "idempotency_key",
+          "expected_version"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "enum": [
+              "ok",
+              "invalid_input",
+              "unauthenticated",
+              "not_visible",
+              "denied",
+              "conflict",
+              "erased",
+              "stale_version",
+              "precondition_required",
+              "rate_limited",
+              "unavailable"
+            ]
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "result_ref": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "commit_token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          }
+        },
+        "required": [
+          "request_id",
+          "code",
+          "retryable",
+          "result_ref",
+          "commit_token"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "const": "ok"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                },
+                "result_ref": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "not": {
+                    "enum": [
+                      "unavailable",
+                      "rate_limited"
+                    ]
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                }
+              }
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "deletions_get",
+      "description": "YixuMemory authorized getDeletion",
+      "operation_id": "getDeletion",
+      "required_capabilities": [
+        "deletion.read"
+      ],
+      "side_effect": false,
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "space_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deletion_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "space_id",
+          "deletion_id"
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "enum": [
+              "ok",
+              "invalid_input",
+              "unauthenticated",
+              "not_visible",
+              "denied",
+              "conflict",
+              "erased",
+              "stale_version",
+              "precondition_required",
+              "rate_limited",
+              "unavailable"
+            ]
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "result_ref": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "commit_token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          }
+        },
+        "required": [
+          "request_id",
+          "code",
+          "retryable",
+          "result_ref",
+          "commit_token"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "const": "ok"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                },
+                "result_ref": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "code": {
+                  "not": {
+                    "enum": [
+                      "unavailable",
+                      "rate_limited"
+                    ]
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "retryable": {
+                  "const": false
+                }
+              }
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    }
+  ],
+  "mcp_protocols": [
+    "2026-07-28",
+    "2025-11-25"
+  ],
+  "wire_contract": "mcp-wire.schema.json",
+  "protocol_methods": {
+    "modern": [
+      "server/discover",
+      "tools/list",
+      "tools/call",
+      "ping"
+    ],
+    "legacy": [
+      "initialize",
+      "notifications/initialized",
+      "tools/list",
+      "tools/call",
+      "ping"
+    ]
+  },
+  "wire_result_encoding": {
+    "modern": "JSON-RPC resultType=complete; DiscoverResult/ListToolsResult also require ttlMs=0/cacheScope=private; structuredContent receipt unchanged",
+    "legacy": "result has no required resultType; adapter may normalize absence to complete internally only",
+    "session_state_shared_between_eras": false,
+    "runtime_verified": false
+  },
+  "response_schema": "mcp-response.schema.json",
+  "cache_policy": "mcp-cache-policy.json"
+}

@@ -33,3 +33,15 @@ python checks/security_scan.py
 所有数据示例均为合成数据；不上传真实聊天、密钥、数据库或环境文件。基线标签采用 `arch/p0-baseline-001`，与未来软件发布标签分离。
 
 License: [MIT](LICENSE). 开源许可不意味着生产验收已完成。
+
+## 自托管与 AI 接入设计扩展
+
+部署目标覆盖个人电脑、NAS、VPS 和独立服务器，采用 desktop/container/server/postgres Profile。安装助手与记忆客户端分权；无模型模式无需第三方 LLM。符合未来许可条件的个人非商业使用永久免费、不限个人设备、无需官方注册/激活/周期联网或上传真实记忆；当前仓库仍为 MIT。
+
+- [部署与七命令 CLI 契约](docs/DEPLOYMENT_CONTRACT.md)
+- [REST、MCP、SDK 与合成接入](docs/AGENT_INTEGRATION.md)
+- [自托管安全与恢复](docs/SELF_HOSTED_SECURITY.md)
+- [设计检查与未来运行验收](docs/SELF_HOSTED_ACCEPTANCE.md)
+- [ADR-008](docs/adr/008-self-hosting-agent-native.md) 与 [机器契约](contracts/deployment/README.md)
+
+这些是架构、接口与合成测试，当前没有可安装发行包、CLI、服务或生产部署；CI 通过不等于实机部署通过。授权 PR #2 仍未实施。

@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yixumemory.org/contracts/deployment/v1/tool-result.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "request_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "code": {
+      "enum": [
+        "ok",
+        "invalid_input",
+        "unauthenticated",
+        "not_visible",
+        "denied",
+        "conflict",
+        "erased",
+        "stale_version",
+        "precondition_required",
+        "rate_limited",
+        "unavailable"
+      ]
+    },
+    "retryable": {
+      "type": "boolean"
+    },
+    "result_ref": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "commit_token": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    }
+  },
+  "required": [
+    "request_id",
+    "code",
+    "retryable",
+    "result_ref",
+    "commit_token"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "code": {
+            "const": "ok"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "retryable": {
+            "const": false
+          },
+          "result_ref": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "code": {
+            "not": {
+              "enum": [
+                "unavailable",
+                "rate_limited"
+              ]
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "retryable": {
+            "const": false
+          }
+        }
+      }
+    }
+  ]
+}

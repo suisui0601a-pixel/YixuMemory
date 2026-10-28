@@ -1,0 +1,35 @@
+{
+  "source_repository": "https://github.com/modelcontextprotocol/modelcontextprotocol",
+  "commit": "271ecc9accafdd9b83a3c869fa67c22953b2af80",
+  "selection": "transitive local $defs closure; selected definitions unchanged; packaging and provenance added",
+  "sources": {
+    "modern": {
+      "url": "https://raw.githubusercontent.com/modelcontextprotocol/modelcontextprotocol/271ecc9accafdd9b83a3c869fa67c22953b2af80/schema/2026-07-28/schema.json",
+      "source_sha256": "ef70b61f99b6d2e5e3b46863822eab08dff6a45bedc7a08914e0e5b133f40203",
+      "roots": [
+        "DiscoverResult",
+        "ListToolsResult",
+        "CallToolResult",
+        "EmptyResult",
+        "JSONRPCErrorResponse",
+        "UnsupportedProtocolVersionError",
+        "MissingRequiredClientCapabilityError",
+        "HeaderMismatchError"
+      ],
+      "definition_count": 31,
+      "definitions_sha256": "b39bac7c314874215603442ee4220010c0e109ad88ce5906a77cbd51ba78dba9"
+    },
+    "legacy": {
+      "url": "https://raw.githubusercontent.com/modelcontextprotocol/modelcontextprotocol/271ecc9accafdd9b83a3c869fa67c22953b2af80/schema/2025-11-25/schema.json",
+      "source_sha256": "268a5f82ba70fd7e4b6dc4aa1e64f116f74b4d0edcb69dc046829c79dd4e97e7",
+      "roots": [
+        "InitializeResult",
+        "ListToolsResult",
+        "CallToolResult",
+        "EmptyResult"
+      ],
+      "definition_count": 21,
+      "definitions_sha256": "de69982ad294d0f4eee79bfcce7d68997b26fcc34429fa1773f9c4b19ba80059"
+    }
+  }
+}

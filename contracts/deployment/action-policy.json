@@ -1,0 +1,57 @@
+{
+  "contract_version": "1.0",
+  "rules": {
+    "create_directories": [
+      "filesystem.create"
+    ],
+    "write_config": [
+      "config.write"
+    ],
+    "provision_secret_ref": [
+      "secrets.provision"
+    ],
+    "install_artifact": [
+      "artifact.install"
+    ],
+    "start_service": [
+      "service.start"
+    ],
+    "register_service": [
+      "service.register"
+    ],
+    "configure_proxy": [
+      "network.expose"
+    ],
+    "configure_firewall": [
+      "network.expose"
+    ],
+    "create_backup": [
+      "backup.create"
+    ],
+    "restore_backup": [
+      "backup.restore"
+    ],
+    "migrate_schema": [
+      "schema.migrate"
+    ],
+    "rotate_client_credential": [
+      "credentials.rotate"
+    ],
+    "rotate_payload_key": [
+      "keys.rotate"
+    ],
+    "write_client_config": [
+      "client.config.write"
+    ],
+    "synthetic_verify": [
+      "synthetic.write"
+    ],
+    "stop_service": [
+      "service.stop"
+    ],
+    "verify_backup": [
+      "backup.verify"
+    ]
+  },
+  "note": "Reference contract validation only. Scope in JSON is not a verified authorization grant."
+}

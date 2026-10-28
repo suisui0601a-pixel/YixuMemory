@@ -1,0 +1,408 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yixumemory.org/contracts/deployment/mcp-response.schema.json",
+  "description": "Outgoing product profile over pinned official MCP definitions; modern cacheable results are always zero-TTL/private. Not a generic third-party client restriction.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "era": {
+      "enum": [
+        "modern",
+        "legacy"
+      ]
+    },
+    "method": {
+      "type": "string"
+    },
+    "result": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "era",
+    "method",
+    "result"
+  ],
+  "oneOf": [
+    {
+      "properties": {
+        "era": {
+          "const": "modern"
+        },
+        "method": {
+          "const": "server/discover"
+        },
+        "result": {
+          "allOf": [
+            {
+              "$ref": "upstream/mcp-modern-results.schema.json#/$defs/DiscoverResult"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "resultType": {
+                  "const": "complete"
+                },
+                "ttlMs": {
+                  "const": 0
+                },
+                "cacheScope": {
+                  "const": "private"
+                }
+              },
+              "required": [
+                "resultType",
+                "ttlMs",
+                "cacheScope"
+              ],
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "protocolVersion"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "serverInfo"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "properties": {
+        "era": {
+          "const": "modern"
+        },
+        "method": {
+          "const": "tools/list"
+        },
+        "result": {
+          "allOf": [
+            {
+              "$ref": "upstream/mcp-modern-results.schema.json#/$defs/ListToolsResult"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "resultType": {
+                  "const": "complete"
+                },
+                "ttlMs": {
+                  "const": 0
+                },
+                "cacheScope": {
+                  "const": "private"
+                }
+              },
+              "required": [
+                "resultType",
+                "ttlMs",
+                "cacheScope"
+              ],
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "protocolVersion"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "serverInfo"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "properties": {
+        "era": {
+          "const": "modern"
+        },
+        "method": {
+          "const": "tools/call"
+        },
+        "result": {
+          "allOf": [
+            {
+              "$ref": "upstream/mcp-modern-results.schema.json#/$defs/CallToolResult"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "resultType": {
+                  "const": "complete"
+                }
+              },
+              "required": [
+                "resultType"
+              ],
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "protocolVersion"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "serverInfo"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "ttlMs"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "cacheScope"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "properties": {
+        "era": {
+          "const": "modern"
+        },
+        "method": {
+          "const": "ping"
+        },
+        "result": {
+          "allOf": [
+            {
+              "$ref": "upstream/mcp-modern-results.schema.json#/$defs/EmptyResult"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "resultType": {
+                  "const": "complete"
+                }
+              },
+              "required": [
+                "resultType"
+              ],
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "protocolVersion"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "serverInfo"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "ttlMs"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "cacheScope"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "properties": {
+        "era": {
+          "const": "legacy"
+        },
+        "method": {
+          "const": "initialize"
+        },
+        "result": {
+          "allOf": [
+            {
+              "$ref": "upstream/mcp-legacy-results.schema.json#/$defs/InitializeResult"
+            },
+            {
+              "type": "object",
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "resultType"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "ttlMs"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "cacheScope"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "supportedVersions"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "properties": {
+        "era": {
+          "const": "legacy"
+        },
+        "method": {
+          "const": "tools/list"
+        },
+        "result": {
+          "allOf": [
+            {
+              "$ref": "upstream/mcp-legacy-results.schema.json#/$defs/ListToolsResult"
+            },
+            {
+              "type": "object",
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "resultType"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "ttlMs"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "cacheScope"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "supportedVersions"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "properties": {
+        "era": {
+          "const": "legacy"
+        },
+        "method": {
+          "const": "tools/call"
+        },
+        "result": {
+          "allOf": [
+            {
+              "$ref": "upstream/mcp-legacy-results.schema.json#/$defs/CallToolResult"
+            },
+            {
+              "type": "object",
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "resultType"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "ttlMs"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "cacheScope"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "supportedVersions"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "properties": {
+        "era": {
+          "const": "legacy"
+        },
+        "method": {
+          "const": "ping"
+        },
+        "result": {
+          "allOf": [
+            {
+              "$ref": "upstream/mcp-legacy-results.schema.json#/$defs/EmptyResult"
+            },
+            {
+              "type": "object",
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "resultType"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "ttlMs"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "cacheScope"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "supportedVersions"
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

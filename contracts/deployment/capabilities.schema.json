@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yixumemory.org/contracts/deployment/v1/capabilities.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "contract_version": {
+      "const": "1.0"
+    },
+    "api_major": {
+      "const": "v1"
+    },
+    "data_schema": {
+      "const": "1.0"
+    },
+    "tenant_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "space_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "policy_epoch": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "transports": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "rest",
+          "mcp-stdio",
+          "mcp-http"
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "mcp_protocols": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "2026-07-28",
+          "2025-11-25"
+        ]
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0,
+      "uniqueItems": true
+    },
+    "model_mode": {
+      "const": "none"
+    },
+    "external_model_calls": {
+      "const": false
+    },
+    "read_your_writes": {
+      "const": true
+    },
+    "context_hydration": {
+      "const": true
+    },
+    "mcp_support": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "const": "design-only"
+        },
+        "first_release_target": {
+          "const": "2026-07-28"
+        },
+        "legacy_target": {
+          "const": "2025-11-25"
+        },
+        "wire_runtime_verified": {
+          "const": false
+        }
+      },
+      "required": [
+        "status",
+        "first_release_target",
+        "legacy_target",
+        "wire_runtime_verified"
+      ]
+    }
+  },
+  "required": [
+    "contract_version",
+    "api_major",
+    "data_schema",
+    "tenant_id",
+    "space_id",
+    "policy_epoch",
+    "transports",
+    "mcp_protocols",
+    "tools",
+    "model_mode",
+    "external_model_calls",
+    "read_your_writes",
+    "context_hydration",
+    "mcp_support"
+  ]
+}

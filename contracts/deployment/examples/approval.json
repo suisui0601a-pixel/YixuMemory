@@ -1,0 +1,18 @@
+{
+  "contract_version": "1.0",
+  "approval_id": "00000000-0000-4000-8000-000000000009",
+  "issuer_ref": "approvalbroker://local-owner",
+  "proof_ref": "proofref://synthetic-signature",
+  "plan_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "instance_id": "00000000-0000-4000-8000-000000000010",
+  "host_id": "synthetic-host",
+  "valid_until": "2026-10-28T01:00:00Z",
+  "action_ids": [
+    "init-dirs"
+  ],
+  "scopes": [
+    "filesystem.create"
+  ],
+  "allow_elevation": false,
+  "approval_kind": "single-plan"
+}

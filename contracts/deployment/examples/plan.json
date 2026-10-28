@@ -1,0 +1,51 @@
+{
+  "contract_version": "1.0",
+  "plan_id": "00000000-0000-4000-8000-000000000010",
+  "plan_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "instance_id": "00000000-0000-4000-8000-000000000010",
+  "host_id": "synthetic-host",
+  "config_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "preflight_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "artifact_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "target_version": "0.0.0-p0-design",
+  "valid_until": "2026-10-28T01:00:00Z",
+  "identity_ref": "principalref://installer",
+  "preserve_existing_data": true,
+  "path_bindings": [
+    {
+      "ref": "pathref://default-data",
+      "absolute_path": "/synthetic/yixumemory",
+      "preimage_digest": null,
+      "owned": false,
+      "anchor_ref": "anchorref://synthetic-owner-root",
+      "relative_components": [
+        "instances",
+        "demo"
+      ],
+      "anchor_identity": "demo-anchor-1",
+      "volume_identity": "demo-volume-1",
+      "owner_ref": "principalref://installer-helper",
+      "acl_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "expected_type": "directory"
+    }
+  ],
+  "actions": [
+    {
+      "id": "init-dirs",
+      "kind": "create_directories",
+      "target_ref": "pathref://default-data",
+      "required_scopes": [
+        "filesystem.create"
+      ],
+      "requires_elevation": false,
+      "idempotency_key": "synthetic-init-dirs-0001"
+    }
+  ],
+  "upgrade": {
+    "required": false,
+    "backup_verified": false,
+    "restore_drill_verified": false,
+    "migration_compatible": false,
+    "deletion_watermark_verified": false
+  }
+}
