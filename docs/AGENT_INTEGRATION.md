@@ -84,3 +84,7 @@ apply 将中立 manifest 转为特定客户端格式前检查 transport/时代�
 以下为 legacy 固定版本参考；modern 正式版本及差异以 MCP_COMPATIBILITY 的来源矩阵为准：[MCP transports](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)、[authorization](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)、[lifecycle](https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle)、[tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)。具体兼容行为必须跑实际客户端套件；仅对齐文本不算协议实现。
 
 PR #3 修复依据与状态：[ADR-009](adr/009-pr3-remediation.md)。旧协议固定描述由双时代矩阵取代，未改变 L2 业务规则或宣称真实协议支持。
+
+## PR #3 第三轮 A1 约束
+
+modern discover/tools/list 输出经固定官方 Schema 校验，必填 resultType、ttlMs、cacheScope 及方法字段；首轮 complete/0/private，HTTP private, no-store + Vary: Authorization，代理不缓存，跨主体/Space/Grant 不复用能力。tools/call、ping 不强加缓存字段，legacy 保持原结构。能力发现不是授权证明。dual-era 仅初次无副作用 discover 探测，普通 JSON-RPC error、空 body、内部错误、超时和旧 legacy 缓存均不能证明当前时代；无法确认则失败并提示显式 legacy-only。详见 MCP_COMPATIBILITY 与机器契约 mcp-response/mcp-cache-policy/mcp-fallback-cases。没有新增运行支持声明。

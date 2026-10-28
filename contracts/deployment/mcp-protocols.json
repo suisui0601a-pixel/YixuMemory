@@ -46,5 +46,15 @@
     "MethodNotFound": -32601,
     "InvalidParams": -32602
   },
-  "notes": "Actual advertised versions must be filtered by installed adapter acceptance, not copied blindly from this design matrix."
+  "notes": "Actual advertised versions must be filtered by installed adapter acceptance, not copied blindly from this design matrix.",
+  "response_schema": "mcp-response.schema.json",
+  "cache_policy": "mcp-cache-policy.json",
+  "fallback_policy": {
+    "strategy": "fail-closed-explicit-legacy",
+    "probe_method": "server/discover",
+    "probe_phase": "initial-probe",
+    "automatic_legacy_downgrade": false,
+    "legacy_cache_proves_current_era": false,
+    "cases": "mcp-fallback-cases.json"
+  }
 }

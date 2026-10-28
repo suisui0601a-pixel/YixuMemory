@@ -52,3 +52,9 @@ git diff --check
 - A3：精确 action/scope 集合、重复/额外/admin scope、额外动作、提权相等及受信安全策略；原 137 个 node ID 保留并继续执行。真实 broker/IPC/签名验证仍未实现，不能由此把 caller bool 当真实审批。
 
 提交检查还须比对被审查 SHA 的 pytest collection，报告新增 node ID 数与原用例保留情况；不得删除/skip 原用例掩盖审查发现。最终只报告 remediation ready，等待 Luna 对新 HEAD 再审。
+
+## PR #3 第三轮 A1 追加检查
+
+固定前序 15b12a0 的 245 个测试 ID 全部保留；A1 原宽松响应断言改为官方 Schema+产品 profile，原 12 个降级向量保留，仅纠正 5 个不安全的历史预期。A2/A3 测试函数及实现不改动。新增测试验证必填字段删除的实际 ValidationError、修复后的通过、类型/枚举/负 TTL/跨时代、官方与产品限制差异、原 -32603 反例及结构化错误矩阵。当前只运行离线契约检查。
+
+RUN-05 追加：真实 SDK 在两时代/两传输下验证 Schema、SSE 最终帧、阶段状态机、缓存的当前认证绑定；discover/tools/list 的 HTTP header、代理缓存禁用、撤权/轮换/切换主体后不得复用过期能力；故障不得自动触发旧握手或写请求重放。仍须执行全部既定 OS 竞态/Windows 目录持久化、真实审批 broker 等运行门槛，不把既往 A2/A3 契约通过当成运行通过。

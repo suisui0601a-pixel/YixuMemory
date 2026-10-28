@@ -1,0 +1,27 @@
+{
+  "contract_version": "1.0",
+  "modern_cacheable_methods": {
+    "server/discover": "DiscoverResult",
+    "tools/list": "ListToolsResult"
+  },
+  "modern_noncacheable_methods": {
+    "tools/call": "CallToolResult",
+    "ping": "EmptyResult"
+  },
+  "not_advertised": [
+    "prompts/get",
+    "prompts/list",
+    "resources/read",
+    "resources/list",
+    "resources/templates/list"
+  ],
+  "outgoing_ttl_ms": 0,
+  "outgoing_cache_scope": "private",
+  "http_headers": {
+    "Cache-Control": "private, no-store",
+    "Vary": "Authorization"
+  },
+  "reverse_proxy_cache": "disabled",
+  "cache_reuse_across_auth_contexts": false,
+  "runtime_verified": false
+}

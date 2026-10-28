@@ -11,7 +11,10 @@ import pytest
 from jsonschema import Draft202012Validator, FormatChecker
 
 from checks.deployment_contracts import filesystem_violations, plan_violations
-from checks.mcp_wire_contracts import LEGACY, MODERN, fallback_decision, wire_decision
+from checks.mcp_responses import response_validator
+from checks.mcp_wire_contracts import (
+    LEGACY, MODERN, fallback_decision, parse_probe_response, wire_decision,
+)
 
 ROOT = Path(__file__).resolve().parents[1] / "contracts/deployment"
 NOW = datetime.fromisoformat("2026-10-28T00:00:00+00:00")
@@ -36,6 +39,7 @@ def test_two_era_wire_vectors(entry: dict[str, Any]) -> None:
 @pytest.mark.parametrize("entry", read("mcp-wire-examples.json")["results"],
                          ids=lambda e: e["era"] + ":" + e["method"])
 def test_two_era_response_contract(entry: dict[str, Any]) -> None:
+    response_validator().validate(entry)
     result = entry["result"]
     if entry["era"] == "modern":
         assert result["resultType"] == "complete"
@@ -51,16 +55,24 @@ def test_two_era_response_contract(entry: dict[str, Any]) -> None:
 @pytest.mark.parametrize("transport", ["stdio", "http"])
 @pytest.mark.parametrize("code", [-32020, -32021, -32022])
 def test_modern_errors_never_select_legacy(transport: str, code: int) -> None:
+    error: dict[str, Any] = {"code": code, "message": "synthetic protocol error"}
+    if code == -32021:
+        error["data"] = {"requiredCapabilities": {"tools": {}}}
+    if code == -32022:
+        error["data"] = {"supported": [MODERN], "requested": "future-version"}
+    parsed = parse_probe_response(transport, 400, json.dumps(
+        {"jsonrpc": "2.0", "id": "probe-1", "error": error}))
     assert fallback_decision(transport, "dual-era", None, 400, code,
-                             "non-modern-error") == "stay-modern"
+                             "non-modern-error", parsed=parsed) == "stay-modern"
 
 
+# Preserve historical node IDs; the expected results below reflect the hardened policy.
 @pytest.mark.parametrize("transport,status,code,kind,cached,mode,expected", [
-    ("stdio", 200, -32601, "non-modern-error", None, "dual-era", "fresh-legacy-handshake"),
-    ("stdio", 200, -32602, "non-modern-error", None, "dual-era", "fresh-legacy-handshake"),
-    ("stdio", 0, None, "timeout", None, "dual-era", "fresh-legacy-handshake"),
-    ("http", 400, None, "empty", None, "dual-era", "fresh-legacy-handshake"),
-    ("http", 400, None, "non-modern-error", None, "dual-era", "fresh-legacy-handshake"),
+    ("stdio", 200, -32601, "non-modern-error", None, "dual-era", "fail-no-downgrade"),
+    ("stdio", 200, -32602, "non-modern-error", None, "dual-era", "fail-no-downgrade"),
+    ("stdio", 0, None, "timeout", None, "dual-era", "fail-no-downgrade"),
+    ("http", 400, None, "empty", None, "dual-era", "fail-no-downgrade"),
+    ("http", 400, None, "non-modern-error", None, "dual-era", "fail-no-downgrade"),
     ("http", 401, None, "empty", None, "dual-era", "authenticate-or-fail"),
     ("http", 403, None, "empty", None, "dual-era", "authenticate-or-fail"),
     ("http", 404, -32601, "non-modern-error", None, "dual-era", "stay-modern"),
@@ -68,11 +80,30 @@ def test_modern_errors_never_select_legacy(transport: str, code: int) -> None:
     ("http", 400, None, "empty", "modern", "dual-era", "fail-no-downgrade"),
     ("stdio", 0, None, "timeout", "modern", "dual-era", "fail-no-downgrade"),
     ("stdio", 200, -32601, "non-modern-error", None, "modern-only", "fail-no-downgrade"),
+], ids=[
+    'stdio-200--32601-non-modern-error-None-dual-era-fresh-legacy-handshake',
+    'stdio-200--32602-non-modern-error-None-dual-era-fresh-legacy-handshake',
+    'stdio-0-None-timeout-None-dual-era-fresh-legacy-handshake',
+    'http-400-None-empty-None-dual-era-fresh-legacy-handshake',
+    'http-400-None-non-modern-error-None-dual-era-fresh-legacy-handshake',
+    'http-401-None-empty-None-dual-era-authenticate-or-fail',
+    'http-403-None-empty-None-dual-era-authenticate-or-fail',
+    'http-404--32601-non-modern-error-None-dual-era-stay-modern',
+    'http-404-None-empty-None-dual-era-fail-no-downgrade',
+    'http-400-None-empty-modern-dual-era-fail-no-downgrade',
+    'stdio-0-None-timeout-modern-dual-era-fail-no-downgrade',
+    'stdio-200--32601-non-modern-error-None-modern-only-fail-no-downgrade',
 ])
 def test_transport_detection_boundaries(transport: str, status: int, code: int | None,
                                         kind: str, cached: str | None, mode: str,
                                         expected: str) -> None:
-    assert fallback_decision(transport, mode, cached, status, code, kind) == expected
+    body = json.dumps({"jsonrpc": "2.0", "id": "probe-1",
+                       "error": {"code": code, "message": "synthetic rejection"}}) if code else None
+    parsed = parse_probe_response(transport, status, body,
+                                  transport_error="timeout" if kind == "timeout" else None)
+    assert fallback_decision(transport, mode, cached, status, code, kind,
+                             parsed=parsed, phase="initial-probe",
+                             probe_method="server/discover") == expected
 
 
 @pytest.mark.parametrize("version,mode,fallback", [(MODERN, "modern-only", False),

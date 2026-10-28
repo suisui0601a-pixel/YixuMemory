@@ -113,7 +113,8 @@
               ]
             },
             "legacy_fallback_allowed": {
-              "type": "boolean"
+              "type": "boolean",
+              "description": "Permission to evaluate conservative compatibility policy, not automatic downgrade. Unknown/ambiguous peers require explicit legacy-only config; never replay business calls."
             }
           },
           "required": [
@@ -132,14 +133,16 @@
               "then": {
                 "properties": {
                   "legacy_fallback_allowed": {
-                    "const": true
+                    "const": true,
+                    "description": "Permission to evaluate conservative compatibility policy, not automatic downgrade. Unknown/ambiguous peers require explicit legacy-only config; never replay business calls."
                   }
                 }
               },
               "else": {
                 "properties": {
                   "legacy_fallback_allowed": {
-                    "const": false
+                    "const": false,
+                    "description": "Permission to evaluate conservative compatibility policy, not automatic downgrade. Unknown/ambiguous peers require explicit legacy-only config; never replay business calls."
                   }
                 }
               }
@@ -243,7 +246,8 @@
                 ]
               },
               "legacy_fallback_allowed": {
-                "type": "boolean"
+                "type": "boolean",
+                "description": "Permission to evaluate conservative compatibility policy, not automatic downgrade. Unknown/ambiguous peers require explicit legacy-only config; never replay business calls."
               }
             },
             "required": [
@@ -262,14 +266,16 @@
                 "then": {
                   "properties": {
                     "legacy_fallback_allowed": {
-                      "const": true
+                      "const": true,
+                      "description": "Permission to evaluate conservative compatibility policy, not automatic downgrade. Unknown/ambiguous peers require explicit legacy-only config; never replay business calls."
                     }
                   }
                 },
                 "else": {
                   "properties": {
                     "legacy_fallback_allowed": {
-                      "const": false
+                      "const": false,
+                      "description": "Permission to evaluate conservative compatibility policy, not automatic downgrade. Unknown/ambiguous peers require explicit legacy-only config; never replay business calls."
                     }
                   }
                 }

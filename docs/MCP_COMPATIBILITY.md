@@ -9,7 +9,7 @@ Status: design only / awaiting independent re-review。首发协议**目标**为
 | 版本/连接开始 | initialize 请求含 protocolVersion、capabilities、clientInfo；服务返回选择版本，客户端检查可接受后发送 notifications/initialized | 每请求 params._meta 必含 io.modelcontextprotocol/protocolVersion 和 io.modelcontextprotocol/clientCapabilities；clientInfo 可选；没有 initialize/initialized 握手 |
 | 协商失败 | 服务可返回自身支持的另一 legacy 版本，客户端不支持须结束，不直接带旧状态继续 | 不支持版本用 -32022 UnsupportedProtocolVersionError，data.supported/requested；只能选择确实支持的版本并重新构造正确时代请求 |
 | 服务能力 | initialize result；tools/list 经授权过滤 | server/discover 为服务端必实现方法；客户端可以直接调用其他 RPC，不要求每次调用前 discover；tools/list 经授权过滤 |
-| 结果 | 旧结果无 resultType；内部统一表示时可视为 complete | result.resultType 必须存在，本产品当前业务仅 complete；structuredContent 仍是业务 receipt，正文 resource block 另行校验 |
+| 结果 | 旧结果无 resultType；内部统一表示时可视为 complete | result.resultType 必须存在，本产品当前业务仅 complete；DiscoverResult/ListToolsResult 还必含 ttlMs、cacheScope（本产品输出 0/private）；structuredContent 仍是业务 receipt，正文 resource block 另行校验 |
 | 状态边界 | stdio 进程连接状态；HTTP 独立 legacy session registry | 无 legacy session 状态；协议元数据不是认证或权限 grant |
 | 通知 | 本产品首发不宣告 listChanged，客户端可重新 tools/list | 首发不实现 subscriptions/listen、MRTR、roots/sampling/elicitation，不宣告这些能力；不能用旧 GET 流伪装现代订阅 |
 
@@ -32,19 +32,33 @@ Status: design only / awaiting independent re-review。首发协议**目标**为
 
 ## 双时代检测与降级规则
 
-显式 legacy-only 只走旧握手。modern-only 可直接发送 RPC；对已知现代服务不强制 discover。为了首次识别未知旧服务，dual-era 的 stdio 建议先发带完整现代 metadata 的 server/discover 探针；HTTP 首次检测使用无业务副作用的 discover/ping，不以 memories_create 等写调用试探时代。
+显式 legacy-only 配置从独立入口走旧握手，不先发送 modern 业务调用。modern-only 可以直接调用 RPC；已知现代服务不强制 discover。dual-era **仅在首次识别阶段**用带完整 metadata 的 server/discover 作无业务副作用探测；不使用 tools/call、写入记忆或其他业务操作探测，不自动重放业务请求。ping 可作为已选时代的存活检查，不是本产品的跨时代识别探针。
 
-| 探测结果 | stdio dual-era | HTTP dual-era |
+| 已解析、与探测 ID 关联的结果 | stdio 项目策略 | HTTP 项目策略 |
 |---|---|---|
-| DiscoverResult | 缓存 modern，选择共同版本 | 同左 |
-| -32022 | 已识别 modern，选择 supported 中的兼容版本或报错 | HTTP 400 的同类 error 不代表旧服务器 |
-| -32020/-32021 | 留在 modern 修正请求/能力，不能旧握手绕过 | HTTP 400 也不得降级 |
-| generic -32601/-32602 或超时 | 只在尚未识别时代的 discover 探针中可进入新 legacy 握手；超时重启受限子进程以隔离迟到结果 | 只对首次检测的 HTTP 400 且 body 不是可识别 modern error，允许新 legacy 握手 |
-| HTTP 404 + JSON-RPC -32601 | 不适用 | 留在 modern，表示方法不存在；404 空 body 是路径/配置问题，本产品不回退已废弃 HTTP+SSE |
-| 401/403/429、TLS/网络异常 | 修复认证或报错，不能借降级获取权限 | 同左；不得将认证失败解释成协议时代不兼容 |
-| 已缓存 modern 后的异常 | 不自动切换 legacy；失败或经显式配置重新探测 | 同左 |
+| 完整且经官方 Schema 校验的 DiscoverResult，支持 modern | 保持 modern，记录时代；能力内容仍不构成认证证明 | 仅 HTTP 200 的合法 JSON 最终帧可作该观察 |
+| 合法 -32022，含 data.supported/requested | 保持 modern，选择确实支持的版本或报错 | 对应 HTTP 400；不得触发旧握手 |
+| 合法 -32020/-32021（后者含 requiredCapabilities） | 保持 modern，修正错误 | 对应 HTTP 400，不能降级绕过 |
+| 合法 generic -32601/-32602 | **不足以证明 legacy**，失败并提示显式 legacy-only 配置 | HTTP 400 同样不足以证明 legacy；空/不识别 body 也失败 |
+| -32603/-32700/-32600、其他普通 error | 报错，不推定旧时代 | 同左；不能把服务器故障当成协议识别信号 |
+| HTTP 404 + 合法 JSON-RPC -32601 | 不适用 | 留在 modern（官方绑定的未知方法语义）；空 body 不作识别 |
+| 401/403/429 | stdio 不套 HTTP 状态，凭据失败由 adapter 报错 | 认证/限流失败，不触发降级 |
+| 5xx、TLS/网络异常、超时、畸形 JSON、重复键、非法 envelope/body、错误 content-type、ID 不匹配 | 失败，保留诊断；禁止新旧帧猜测 | 同左；重定向或代理 HTML 页面不作旧时代信号 |
+| 已识别 modern 后任何异常，或仅有旧 legacy 缓存 | modern 绝不自动降级；旧缓存也不能证明当前端点仍是 legacy | 同左，须显式配置并重新验证认证绑定 |
 
-缓存隔离：stdio 绑定进程 generation；HTTP 至少 origin+endpoint+issuer/信任配置，不能只按域名跨实例复用。旧 session、capabilities、请求 ID 和读取缓存不可转入 modern；modern metadata、订阅状态也不可转入 legacy。双时代服务器按 wire 入口选择独立 handler，可共享 L2 业务/权限系统；同端点并行时不能用一个全局 initialized 标志。session ID 的存在不能覆盖 body 的 modern 标记。发现时代从不改变认证、tenant/Space、幂等键、CAS、证据和删除栅栏。
+解析顺序：传输失败/HTTP 状态与 media type → JSON 唯一键、JSON-RPC envelope、匹配 ID → 固定官方结果/error 类型 → 阶段/探针 allowlist、模式与受保护时代状态。HTTP oracle 仅接受 application/json 单个最终响应；text/event-stream 不是合法 JSON body，未来真实 adapter 必须正确解码 SSE、校验最终帧与关联 ID，不能因此推定 legacy。旧的 response_kind 字符串只保留为历史调用标签，完全不作为识别证据；只传 error code/标签也失败。ParsedProbe 是纯测试解析观察，不是可信授权、TLS 验证或真实 transport 的实现。
+
+**官方建议与项目取舍**：官方 [stdio Backward Compatibility](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/stdio) 对首次 discover 收到非现代错误或超时给出更宽泛 fallback 建议；官方 [HTTP Backward Compatibility](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http) 也允许对不识别/空 body 的 HTTP 400 尝试旧初始化。本项目主动不采用该宽泛自动回退，**官方并非只允许 -32601/-32602**。这些码现代服务也会使用，无法安全证明 legacy 时选择失败，要求用户显式 legacy-only 配置，代价是未知旧服务需要一次人工配置、容错与自动发现能力较低。当前 oracle 不会在 dual-era 返回 fresh-legacy-handshake；显式配置是新的独立连接/进程，不搬移旧状态、不重放业务请求。legacy_fallback_allowed=true 只允许进入兼容策略，不是自动回退保证，更不是越过安全门槛的授权。
+
+时代识别状态隔离：stdio 绑定进程 generation、启动配置与可执行文件 digest；HTTP 至少 origin+endpoint+issuer/resource/信任配置及当前认证主体。重启、二进制/配置变化、实例或信任绑定变化后重新识别；不能只按域名跨实例复用，也不接受远端 JSON 自报 cached_era。旧 session、capabilities、请求 ID 和读取缓存不可转入 modern；modern metadata、订阅状态也不可转入 legacy。双时代服务器按 wire 入口选择独立 handler，可共享 L2 业务/权限系统；同端点并行时不能用一个全局 initialized 标志。session ID 的存在不能覆盖 body 的 modern 标记。发现时代从不改变认证、tenant/Space、幂等键、CAS、证据和删除栅栏。
+
+## 响应与缓存契约
+
+mcp-response.schema.json 对输出采用两层校验：固定官方 Schema 的原样 $defs（见 upstream/provenance.json 的源 URL、commit、SHA-256 和上游许可证），再叠加本产品限制。DiscoverResult 必填 resultType/ttlMs/cacheScope/capabilities/supportedVersions，ListToolsResult 必填 resultType/ttlMs/cacheScope/tools；ttlMs 官方为非负整数，cacheScope 官方可 private/public。首轮本产品对这两个响应输出 resultType=complete、ttlMs=0、cacheScope=private，不输出 public 或正 TTL。非缓存的 tools/call、ping 仍要求 modern resultType，产品输出拒绝额外 ttlMs/cacheScope 修饰。modern 输出也拒绝根层 protocolVersion/serverInfo 旧握手字段；合法业务嵌套数据不受该限制。没有宣告 prompts、resources 等可选方法，不扩大其支持范围。legacy initialize/tools/list/tools/call/ping 按旧版官方定义校验，产品输出禁止混入 modern 字段；这是本产品防混用约束，并非声称 legacy 官方 Schema 禁止所有额外属性。
+
+mcp-cache-policy.json 指定：HTTP discover/tools/list 无论成功或失败均设置 Cache-Control: private, no-store、Vary: Authorization，反向代理禁用缓存（Vary 本身不是隔离保证），也不缓存错误或未经授权结果。完整授权上下文必须包括 Principal、tenant/Space、resource/audience、凭据/Grant 版本及策略快照；不可跨主体复用能力、工具列表或过期结果。撤权、轮换、切换 Space 或策略变化时丢弃旧结果并重新授权获取。ttlMs=0 也禁止 SDK 保留能力结果供后续业务决策，时代识别标记不是能力缓存；每个工具调用仍由服务端重新授权。stdio 遵循同样的主体隔离及零 TTL。安装管理凭据仍不得交给记忆客户端。
+
+接收第三方 modern discover 的解析器按官方允许的 public/正 TTL 识别其协议时代；不能把本产品的输出偏好误当成官方互通限制，但本项目客户端对授权相关发现仍不复用缓存，不因第三方 public 指示绕过隔离。测试验证官方允许与产品输出限制的区别。HTTP/proxy/SDK 真实缓存行为和跨主体泄露测试仍是运行验收，Schema 不能证明这些 header 已被服务或代理执行。
 
 ## 错误与授权
 
@@ -56,6 +70,6 @@ legacy 不支持版本时的应答选择与客户端终止检查由旧握手规�
 
 ## 可复现契约与运行门槛
 
-mcp-protocols.json 是设计矩阵，mcp-wire.schema.json 是本产品请求 fixture 子集，mcp-wire-examples.json 提供两时代请求与结果。checks/mcp_wire_contracts.py 只计算规范化模型决策，不执行网络、握手、OAuth、会话注册、SDK 或业务调用。测试包括直接 modern 业务请求不经 discover、legacy 握手/initialized、错误版本、header/body/name/method 不同、缺 metadata、现代错误不得降级及旧 session 不得污染 modern。
+mcp-protocols.json 是设计矩阵，mcp-wire.schema.json 是本产品请求 fixture 子集，mcp-wire-examples.json 提供两时代请求与结果。checks/mcp_responses.py 离线使用固定官方类型及产品输出 Schema；mcp-fallback-cases.json 与 tests/test_pr3_a1_round3.py 验证错误分类、缺字段与保守 fallback。checks/mcp_wire_contracts.py 只计算规范化模型决策，不执行网络、握手、OAuth、会话注册、SDK 或业务调用。测试包括直接 modern 业务请求不经 discover、legacy 握手/initialized、错误版本、header/body/name/method 不同、缺 metadata、现代错误不得降级及旧 session 不得污染 modern。
 
 未来必须用真实 SDK/服务对两传输和两时代各自执行初始化或逐请求调用、SSE、错误矩阵、认证、撤权、幂等写和重连。实际支持版本仍为空，直至该运行套件通过；不得以这些 fixture 将任一时代标为已支持。

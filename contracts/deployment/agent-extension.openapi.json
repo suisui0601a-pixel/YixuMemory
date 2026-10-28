@@ -982,6 +982,9 @@
     "primary_target": "2026-07-28",
     "legacy_target": "2025-11-25",
     "runtime_implemented": false,
-    "note": "MCP JSON-RPC wire endpoint is distinct from REST API; era-specific header/session validation is normative in MCP_COMPATIBILITY.md. No REST bearer credential passthrough across audience."
+    "note": "MCP JSON-RPC wire endpoint is distinct from REST API; era-specific header/session validation is normative in MCP_COMPATIBILITY.md. No REST bearer credential passthrough across audience.",
+    "response_schema": "mcp-response.schema.json",
+    "cache_policy": "mcp-cache-policy.json",
+    "fallback_strategy": "fail-closed-explicit-legacy"
   }
 }

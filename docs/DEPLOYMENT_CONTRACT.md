@@ -76,3 +76,7 @@ SQLite 使用一致性 backup API/受控维护快照，不能仅复制运行中�
 MCP 连接必须区分 modern/legacy wire 与 session，见 [MCP_COMPATIBILITY](MCP_COMPATIBILITY.md)。部署 oracle 的 broker_proof_verified 是合成可信观察占位，调用者提供 true 永不构成真实授权；生产签发者认证及受保护 IPC 尚未实现。
 
 审批集合规范化忽略列表排列但不允许重复；实际动作执行顺序属于 plan hash，不能通过重排 approval 改变计划。proof_ref 必须由受信 broker 校验其绑定的完整审批记录、签发者、期限与权限；只是引用字符串或 true 标记不足以授权。
+
+## PR #3 第三轮 A1 接入约束
+
+connect 生成的 legacy_fallback_allowed 只是兼容策略许可，不能授权自动降级或业务重放。未知 MCP 端点仅初次无副作用 server/discover 探测；模糊结果要求显式 legacy-only 配置，已识别 modern 不因异常降级。现代 discover/tools/list 采用 complete/ttlMs=0/cacheScope=private，代理禁用缓存，HTTP private, no-store + Vary: Authorization，按主体/Space/Grant 重新授权获取；部署凭据仍与记忆客户端分离。详见 MCP_COMPATIBILITY；真实 CLI、HTTP 和 SDK 验证仍待执行。

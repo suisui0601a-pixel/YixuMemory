@@ -1931,7 +1931,9 @@
             "name": "YixuMemory-fixture",
             "version": "0.0.0-p0-design"
           }
-        }
+        },
+        "ttlMs": 0,
+        "cacheScope": "private"
       }
     },
     {
@@ -1939,7 +1941,9 @@
       "method": "tools/list",
       "result": {
         "resultType": "complete",
-        "tools": []
+        "tools": [],
+        "ttlMs": 0,
+        "cacheScope": "private"
       }
     },
     {
@@ -1962,6 +1966,38 @@
       "result": {
         "tools": []
       }
+    },
+    {
+      "era": "modern",
+      "method": "tools/call",
+      "result": {
+        "resultType": "complete",
+        "content": []
+      }
+    },
+    {
+      "era": "modern",
+      "method": "ping",
+      "result": {
+        "resultType": "complete"
+      }
+    },
+    {
+      "era": "legacy",
+      "method": "tools/call",
+      "result": {
+        "content": []
+      }
+    },
+    {
+      "era": "legacy",
+      "method": "ping",
+      "result": {}
     }
-  ]
+  ],
+  "http_cache_policy": {
+    "Cache-Control": "private, no-store",
+    "Vary": "Authorization",
+    "authorization_context_shared": false
+  }
 }
