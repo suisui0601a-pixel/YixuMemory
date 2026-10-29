@@ -27,7 +27,7 @@ Windows 根目录 `%LOCALAPPDATA%\YixuMemory\instances\<id>`；macOS `~/Library/
 
 实例结构：`instance.json`（实例 ID、schema、owned-path manifest，无秘密）、`config/`、`db/`、`payloads/`、`outbox/`（外部派生暂存，不另建写入真相）、`indexes/`、`diagnostics/`、`audit/`、`staging/`。DB 内 outbox 仍与写入同事务。备份位置须与活动数据分开，并检查故障域；仅另一子目录不算独立备份。
 
-配置只存 `credential_ref`、`key_ref`，不用明文 DSN/password/token；秘密经 OS secret broker、继承句柄/受限 FD 或受 ACL 保护的文件传递。POSIX 目录目标 0700、secret 文件 0600；Windows 禁止 Everyone/其他非授权主体读取。容器 Linux 目标非 root UID、只读 rootfs、临时 tmpfs、无 Docker socket/host network；挂载卷 ACL 必须 doctor 验证。若 keychain 不可用，可由用户明确授权独立加密 keyfile+解锁机制；不能自动降为明文。无安全 key backend 时敏感写入 unavailable，符合原 P0 删除设计。
+配置只存 `credential_ref`、`key_ref`，不用明文 DSN/password/token；秘密经 OS secret broker、继承句柄/受限 FD 或受 ACL 保护的文件传递。POSIX 目录目标 0700、secret 文件 0600；Windows 禁止 Everyone/其他非授权主体读取。容器 Linux 目标非 root UID、只读 rootfs、临时 tmpfs、无 Docker socket/host network；挂载卷 ACL 必须 doctor 验证。若 keychain 不可用，可由用户明确授权独立加密 keyfile+解锁机制；不能自动降为明文。无安全 key backend 时全部生产内容写入 unavailable（含 synthetic 声明和 NoModel），符合原 P0 删除设计。
 
 ## CLI 命令与稳定输出
 

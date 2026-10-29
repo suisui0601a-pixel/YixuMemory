@@ -27,7 +27,7 @@
       ],
       "post": {
         "operationId": "stagePayload",
-        "description": "Design extension only; authorize target and scope using server AuthContext; never trust client-claimed grants.",
+        "description": "Design extension only; authorize target and scope using server AuthContext; never trust client-claimed grants. Production content/locator encryption before durable staging is mandatory even for synthetic declarations. Missing/unavailable key backend or seal failure returns 503 key_backend_unavailable/encryption_failed without plaintext staging; reauthorize/reclassify on attach/retry.",
         "parameters": [
           {
             "$ref": "#/components/parameters/IdempotencyKey"
@@ -627,7 +627,8 @@
               "synthetic",
               "personal",
               "sensitive"
-            ]
+            ],
+            "description": "Untrusted declaration; cannot lower Space/source/Evidence/derived protection. Unknown/unverified -> sensitive; all production payloads encrypted."
           },
           "text": {
             "type": "string",
@@ -639,7 +640,8 @@
           "purpose",
           "classification",
           "text"
-        ]
+        ],
+        "description": "Untrusted content request. classification is a declaration only; server policy computes effective protection. synthetic never permits plaintext in production."
       },
       "StagedPayload": {
         "type": "object",
@@ -666,6 +668,22 @@
           "expires_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "effective_classification": {
+            "enum": [
+              "personal",
+              "sensitive"
+            ],
+            "readOnly": true
+          },
+          "protection_policy_epoch": {
+            "type": "integer",
+            "minimum": 1,
+            "readOnly": true
+          },
+          "encrypted": {
+            "const": true,
+            "readOnly": true
           }
         },
         "required": [
@@ -673,7 +691,10 @@
           "tenant_id",
           "space_id",
           "purpose",
-          "expires_at"
+          "expires_at",
+          "effective_classification",
+          "protection_policy_epoch",
+          "encrypted"
         ]
       },
       "Capabilities": {

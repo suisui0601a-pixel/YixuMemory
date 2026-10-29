@@ -4,7 +4,7 @@
 
 ## 写入事务
 
-T1：认证上下文解析 → BEGIN → 锁 tenant/space 的 policy epoch 与删除栅栏 → 鉴权 → reserve 幂等键 → 校验证据/FK → 插入 Event/Evidence/Payload 元数据 → 插入 Revision → CAS Memory.current/version → Outbox/Audit → 幂等结果引用 → COMMIT。首次 Memory/current 循环引用使用事务内延迟 FK 或 staged insert+提交前 invariant 检查，禁止中间提交。外部大对象先写隔离 staging；T1 关联其 generation，未关联对象按 TTL 清理。模型/外部网络不在 T1。
+T1：认证上下文解析 → BEGIN → 锁 tenant/space 的 policy epoch 与删除栅栏 → 鉴权 → reserve 幂等键 → 校验证据/FK → 插入 Event/Evidence/Payload 元数据 → 插入 Revision → CAS Memory.current/version → Outbox/Audit → 幂等结果引用 → COMMIT。首次 Memory/current 循环引用使用事务内延迟 FK 或 staged insert+提交前 invariant 检查，禁止中间提交。外部内容先经安全 KeyVault 加密后写隔离 staging；Tstage 先持久登记无内容补偿意图，Tseal 记录密文元数据，T1 重验当前分类/权限/保护 epoch 并关联 generation。原文不进入持久 staging，未关联对象立即不可读，TTL 调度清理但无回执不视为已清理。模型/外部网络不在 T1。
 
 幂等键作用域 `(tenant,actor,operation,key)`，保留 30 天并在 API 返回有效期；相同 key+相同规范化 digest 返回同一资源引用，相同 key+不同请求 409。超过有效期是新命令，客户端不可假设永久去重。重放结果重新授权，不缓存敏感明文；被删除后返回 410（仅对仍有权限的原操作者），不得复活。请求摘要用服务端 HMAC 并可销毁关联 key，避免低熵内容字典攻击；记录不携带内容。
 
@@ -18,11 +18,11 @@ T1：认证上下文解析 → BEGIN → 锁 tenant/space 的 policy epoch 与�
 
 ## 删除协调
 
-Tdel 原子标记 deletion_pending、冻结目标及所有派生 Revision/Index/缓存/导出/作业引用，撤销读取能力，写 tombstone/outbox。共享 Evidence 删除不是直接破坏其他记忆：先闭包计算，所有依赖记忆标为不可用并调度重新验证；可用替代证据需追加版本，未有替代不得继续断言。Memory 删除擦除它独占及派生内容，保留被其他合法目标共享的原始证据；如请求删除的是敏感来源/主体，必须扩大到该来源的全部副本和依赖，并在授权不足时走隐私管理员审批，不能假称已删除来源。
+Tdel 原子标记 deletion_pending、冻结目标及所有派生 Revision/Index/缓存/导出/作业引用，撤销读取能力，写 tombstone/outbox。共享 Evidence/受控来源删除先计算同 Space 全部明确依赖与共享物理 Payload 闭包，完整授权后原子栅栏，所有依赖 Revision 追加永久失效记录、Memory 进入 source_blocked。替代证据不能自动恢复原 Revision，须相关删除 completed 后显式追加有效新版本。Memory 删除擦除独占及显式派生内容，保留独立 Event/Evidence 与其他合法目标共享的原始来源。来源/主体全面擦除的“全部副本和依赖”安全要求不撤销：P1 首版无法枚举跨 Space 独立副本，故 source_all_copies/subject_all_copies 执行前明确拒绝；不得缩为当前 Space 再返回 completed。局部 source_graph 仅指当前 Space 的 Event 根及完整受控副本，必须以新范围回执明确表述。
 
-Worker 擦除 Payload 明文/密文、密钥（包括 key 备份）、索引、日志映射、缓存、导出、附件、临时文件及 staged 内容；扫描旧 generation，确认无在途 worker 后验证。Event/Evidence 最小信封不含原文、原始 URI、可识别人名或稳定内容 hash。用户映射擦除或不可逆去关联；审计的残余元数据仍有再识别风险，须最小化并受访问控制。
+Worker 擦除 Payload 密文（若检测到遗留明文则按安全事件隔离处理）、密钥（包括 key 备份）、索引、日志映射、缓存、导出、附件、临时文件及 staged 内容；扫描旧 generation，确认无在途 worker 后验证。Event/Evidence 最小信封不含原文、原始 URI、可识别人名或稳定内容 hash。用户映射擦除或不可逆去关联；审计的残余元数据仍有再识别风险，须最小化并受访问控制。
 
-备份采用租户内可独立删除的 payload key；元数据备份包含 tombstone 但不能恢复已销毁 key。可恢复的明文备份/密钥副本未清理时不得 completed；若提供商不能证明密钥撤销和副本清除，保持 blocked，直到备份到期与实际清理回执。SSD/VACUUM 不保证物理介质消磁；仅承诺经测试的应用可恢复范围，介质由运维销毁策略覆盖。SQLite 生产敏感模式需加密 Payload，DB/WAL/临时区只放无内容结构；无 KeyVault 时拒绝敏感分类写入，不降级存明文。
+备份采用租户内可独立删除的 payload key；元数据备份包含 tombstone 但不能恢复已销毁 key。可恢复的明文备份/密钥副本未清理时不得 completed；若提供商不能证明密钥撤销和副本清除，保持 blocked，直到备份到期与实际清理回执。SSD/VACUUM 不保证物理介质消磁；仅承诺经测试的应用可恢复范围，介质由运维销毁策略覆盖。P1 全部生产内容型 Payload 都先加密，包括客户端 synthetic 声明；DB/WAL/临时区、索引元数据、日志、审计和备份不放可恢复内容明文。无安全 KeyVault、key 不可用或 seal 失败拒绝内容写入，不降级存明文；NoModel 也须安全离线或在线 backend。客户端 classification 不可信，绑定/重试重新 join 当前服务端保护；rollback 后密文孤儿不可读且保留补偿登记至清理回执验证。
 
 ## 迁移、重建、恢复
 
@@ -39,3 +39,5 @@ COMMIT 前 kill→无半个版本；COMMIT 后响应前 kill→重放同结果�
 Tenant.knowledge_seq 是事务内更新的计数器，所有权威写锁定该 tenant 根至 COMMIT，分配 Event/Revision 的 knowledge_seq；回滚不消耗已提交值。不能用数据库 sequence 的分配顺序冒充提交顺序。此选择牺牲单租户并发度以获得 P0 可验证顺序，性能未测量。多租户没有全局排序。
 
 recorded_at 在根锁内由服务端 Clock 分配，表示事务接纳时刻，**不保证等于物理提交时刻**。as_of 是签名的 tenant/knowledge_seq token，不接受任意墙钟来伪造精确历史可见性；时间展示与业务有效区间仍用 UTC。无 as_of 时读取当前一致快照。后续若增加墙钟历史查询，必须定义时间到提交序的映射及不确定窗口并附 ADR。历史删除/撤权永远应用当前策略，不因 as_of 绕过。
+
+P0-SC 操作类别、闭包快照/完成覆盖、共享来源归属和跨 Space 拒绝见 [DELETION_SCOPE](DELETION_SCOPE.md)。生产分类与 KeyVault/staging 故障边界见 [PAYLOAD_PROTECTION](PAYLOAD_PROTECTION.md)。这是明确限定可接受操作，并未把任何受控副本排除在已接受请求的“全部副本”门槛外；缺登记/证据时拒绝或 blocked。

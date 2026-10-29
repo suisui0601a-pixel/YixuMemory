@@ -29,7 +29,7 @@ flowchart LR
 |---|---|---|
 | deployment approval | 独立 broker/OS 认证，绑定计划、host、路径、动作和期限 | 非交互无 approval、伪造/过期/扩大范围均拒绝；不自动提权 |
 | data client credential | 每 Agent/Space 独立，memory audience，有 expiry 与撤销 epoch | 安装凭据跨 audience 拒绝；不缓存 Token 到日志或配置 |
-| payload encryption key | 安全 backend，独立可擦除 key ID，不写 DB/WAL 内容 | key backend 不可用拒绝敏感写；不能降级明文 |
+| payload encryption key | 安全 backend，独立可擦除 key ID，不写 DB/WAL 内容 | key backend 不可用拒绝全部生产内容写（含 synthetic/NoModel）；不能降级明文 |
 | PG 运行/迁移/备份秘密 | credential refs；运行角色无 DDL/superuser，迁移需独立授权 | 池连接不沿用旧 tenant；拒绝 DSN 明文输出 |
 | TLS/OAuth signing key | 专用受限身份，显式轮换、旧 key 退休窗口 | 证书过期 fail closed；不关闭校验临时恢复连通 |
 

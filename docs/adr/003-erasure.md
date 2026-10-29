@@ -3,3 +3,5 @@
 Status: Accepted (design only) · Date: 2026-10-28
 
 候选：永久原文事件（可追溯但无法删除）/直接删证据（破坏依赖）/不可变最小信封+可擦除 Payload（协调复杂）。选择第三项；删除共享来源需闭包失效、清副本、销毁所有可恢复 key，备份未处理不得 completed。兼容影响：历史读取可能返回 erased；事件重放不能恢复原文。验证：旧快照+旧 worker+旧 key+共享 evidence 反例，P1-04/05。
+
+P0-SC 补充提案见 [ADR-010](010-deletion-scope-boundary.md) 与 [ADR-011](011-payload-protection.md)。它们明确初版只接纳同 Space 显式图删除，广义来源/主体全部副本请求不能满足时拒绝；已接纳操作的全部受控副本/key/备份完成门槛不变。生产全部内容加密，不以客户端 synthetic 或仅 sensitive 判定放行明文。仍待独立审查与真实运行验收。

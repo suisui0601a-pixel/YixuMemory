@@ -1,0 +1,92 @@
+{
+  "profile": "r1-normalized-graph-v1",
+  "runtime_verified": false,
+  "node_kinds": [
+    "event",
+    "evidence",
+    "revision",
+    "memory"
+  ],
+  "graph_fields": [
+    "tenant_id",
+    "space_id",
+    "nodes",
+    "snapshot_complete",
+    "evidence_events",
+    "revision_evidence",
+    "revision_memory",
+    "derived_from",
+    "payload_owners",
+    "memory_versions"
+  ],
+  "unknown_graph_fields": "reject",
+  "relations": {
+    "evidence_events": {
+      "dependent_kinds": [
+        "evidence"
+      ],
+      "source_kinds": [
+        "event"
+      ],
+      "value_shape": "single-id"
+    },
+    "revision_evidence": {
+      "dependent_kinds": [
+        "revision"
+      ],
+      "source_kinds": [
+        "evidence"
+      ],
+      "value_shape": "nonempty-unique-id-list"
+    },
+    "revision_memory": {
+      "dependent_kinds": [
+        "revision"
+      ],
+      "source_kinds": [
+        "memory"
+      ],
+      "value_shape": "single-id"
+    },
+    "derived_from": {
+      "dependent_kinds": [
+        "event",
+        "evidence",
+        "revision"
+      ],
+      "source_kinds": [
+        "event",
+        "evidence",
+        "revision"
+      ],
+      "value_shape": "unique-id-list",
+      "meaning": "Explicit content derivation between Event/Evidence/Revision, including model-output content. Memory is a mutable aggregate; capture and aggregate membership have separate typed tables."
+    }
+  },
+  "payload_owner_kinds": [
+    "event",
+    "evidence",
+    "revision",
+    "memory"
+  ],
+  "payload_owner_shape": "nonempty-unique-id-list",
+  "payload_sharing": "Registered owners remain supported; retain existing memory_graph ambiguous-ownership refusal. Never infer purpose/ownership from fixture ID names.",
+  "memory_versions": {
+    "key_kind": "memory",
+    "value_type": "integer-excluding-boolean",
+    "minimum": 1
+  },
+  "complete_rows": {
+    "evidence_events": "evidence",
+    "revision_evidence": "revision",
+    "revision_memory": "revision",
+    "memory_versions": "memory"
+  },
+  "validation_scope": "entire supplied Space projection before traversal/fencing",
+  "not_proven": [
+    "real foreign keys",
+    "concurrent snapshot completeness",
+    "actual erasure coordination",
+    "per-copy generation receipts"
+  ]
+}

@@ -21,9 +21,9 @@ REST `GET /v1/tenants/{tenant_id}/spaces/{space_id}/capabilities` 返回经授�
 
 MCP 首发目标 modern `2026-07-28`，兼容目标 legacy `2025-11-25`；实际两者均未运行实现。两时代的 metadata、握手、检测、HTTP headers、错误、会话和工具发现见 [双时代矩阵](MCP_COMPATIBILITY.md)，禁止只替换版本字符串。现代服务必须实现 server/discover，但客户端可不经 discover 直接调用；旧客户端独立 initialize/initialized。tools/list 经授权过滤，调用时重验；首发不宣告 listChanged/subscriptions、sampling、elicitation 等未实现能力。工具目录与 capabilities 只记录设计目标，不能当作实际 SDK 认证。
 
-API major 为 v1，deployment contract 为 1.0、MCP protocol 为日期版本，SDK 软件版本独立。schema 形状沿用 2020-12；新增写字段不默许接受，不支持版本或未知工具返回稳定错误。原 Event/Memory/Revision/Evidence schema 本轮不变。`agent-extension.openapi.json` 为可合并主草案的三个新增端点及一个只读搜索 header 扩展，现有端点不改语义：
+API major 为 v1，deployment contract 为 1.0、MCP protocol 为日期版本，SDK 软件版本独立。schema 形状沿用 2020-12；新增写字段不默许接受，不支持版本或未知工具返回稳定错误。部署/MCP 扩展本身沿用原事实 DTO；后续 P0-SC 的 Memory.source_blocked 与 Deletion/staging 字段修订以 ADR-010/011 为准。`agent-extension.openapi.json` 为可合并主草案的三个新增端点及一个只读搜索 header 扩展，现有端点不改语义：
 
-- authorized `POST .../payloads`：显式 staging，最大 UTF-8 65536 bytes，classification、purpose(content/locator)、纯文本；禁任意 URL 拉取。返回 UUID、TTL 及用途，幂等写；大文件/二进制上传另行设计。staged Payload 的 actor/tenant/space/purpose/generation 必须匹配引用用例；10 分钟到期清孤儿，已在事务引用的 Payload 不按 staging TTL 擦除。
+- authorized `POST .../payloads`：显式 staging，最大 UTF-8 65536 bytes，不可信 classification 声明、purpose(content/locator)、纯文本；禁任意 URL 拉取。返回 UUID、TTL、用途及服务端 effective_classification/protection_policy_epoch/encrypted，幂等写；大文件/二进制上传另行设计。staged Payload 的 actor/tenant/space/purpose/generation 必须匹配引用用例；仅密文 staging，10 分钟到期调度清孤儿（清理未验证不报成功），已在事务引用的 Payload 不按 staging TTL 擦除。
 - authorized `GET .../capabilities`：对该 tenant/Space 与当前主体过滤的能力。
 
 - authorized `POST .../context`：显式 memory IDs、domain、max_bytes≤65536、min_commit_token，返回 context-bundle.schema.json。需要 memory.context、memory.read、evidence.read，v1 只投影当前版本，历史上下文需另行契约扩展与 memory.history；每一对象/来源/正文重验权限。metadata 与可擦除正文同一知识快照对应，读取后在输出前检查当前 auth epoch、删除 generation；变化则中止或重试，不能混入其他版本正文。只返回满足预算的完整片段，不截断为失真事实；超预算标 partial/reason。
@@ -88,3 +88,5 @@ PR #3 修复依据与状态：[ADR-009](adr/009-pr3-remediation.md)。旧协议�
 ## PR #3 第三轮 A1 约束
 
 modern discover/tools/list 输出经固定官方 Schema 校验，必填 resultType、ttlMs、cacheScope 及方法字段；首轮 complete/0/private，HTTP private, no-store + Vary: Authorization，代理不缓存，跨主体/Space/Grant 不复用能力。tools/call、ping 不强加缓存字段，legacy 保持原结构。能力发现不是授权证明。dual-era 仅初次无副作用 discover 探测，普通 JSON-RPC error、空 body、内部错误、超时和旧 legacy 缓存均不能证明当前时代；无法确认则失败并提示显式 legacy-only。详见 MCP_COMPATIBILITY 与机器契约 mcp-response/mcp-cache-policy/mcp-fallback-cases。没有新增运行支持声明。
+
+P0-SC 合成闭环分别 stage 来源正文、locator 和 Revision 正文三个 Payload，不能让 Memory 正文与独立来源复用同一删除/key 单元；即使文本相同也不默认去重。fixture 仅为预期形状，encrypted=true 不是实际加密执行证据。
