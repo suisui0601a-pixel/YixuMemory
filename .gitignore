@@ -1,0 +1,7 @@
+/target/
+/verification/
+.mypy_cache/
+.ruff_cache/
+__pycache__/
+*.sqlite*
+*.db*

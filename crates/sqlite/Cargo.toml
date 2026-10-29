@@ -1,0 +1,22 @@
+[package]
+name = "yixu-sqlite-foundation"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+[features]
+fault-injection = []
+[[bin]]
+name = "foundation-fault"
+path = "src/bin/foundation-fault.rs"
+required-features = ["fault-injection"]
+[dependencies]
+yixu-domain.workspace = true
+yixu-ports.workspace = true
+rusqlite.workspace = true
+sha2.workspace = true
+[dev-dependencies]
+tempfile.workspace = true
+yixu-application = { path = "../application" }
+[lints]
+workspace = true
