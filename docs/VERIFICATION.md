@@ -17,6 +17,11 @@ Public baseline remains `85f033e646b5446d02a0fdc9a3bf92a0ee8dd0e0`.
   repository scan (110 paths, zero findings) passed. Source is unchanged by this prototype.
 - Local audit helper: strict mypy and ruff passed; dependency direction validated.
 - Live OSV batch audit: exact versions of **42 registry packages**, zero returned advisories.
+- Additional audit of the unchanged public Python lock: **29 packages**, pytest 8.4.2 matches
+  GHSA-6w46-j5rx-g56g / PYSEC-2026-1845 (the same UNIX temporary-directory issue,
+  fixed in pytest 9.0.3). This Windows run does not reproduce that exploit. The public dependency
+  lock is unchanged; a separately approved maintenance update and regression run are required.
+  Do not describe the combined dependency audit as having no findings.
 - Gitleaks source directory scan: zero findings. Final diff and local history checks are recorded
   in the delivery report after snapshot creation.
 
@@ -69,6 +74,8 @@ from deliverables. This report does not replace rights/contributor/legal review.
 
 1. Review the exact source manifest and decide the licensing/publication treatment. Do not push
    this source or a public work branch until expressly approved.
+   Separately approve an update of the existing pytest development dependency to a fixed version,
+   then rerun the public contract suite; do not hide that issue inside a core implementation PR.
 2. Independently review the real migration, evidence witness, NULL regression, UoW poisoning
    and metadata-only restrictions. Preserve the existing P0 contract suite.
 3. Before production integration, implement trusted authentication/Policy/UoW wiring and finalize
