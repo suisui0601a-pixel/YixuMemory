@@ -128,12 +128,23 @@ fn interpreted(c: &Connection, objects: &[Object]) -> Result<Vec<String>> {
     Ok(result)
 }
 pub(crate) fn validate(actual: &Connection) -> Result<()> {
+    validate_definitions(actual, MIGRATION, "")
+}
+// Private trusted-code inputs only; never accept request- or database-supplied DDL.
+pub(crate) fn validate_definitions(
+    actual: &Connection,
+    foundation: &str,
+    extension: &str,
+) -> Result<()> {
     let expected = Connection::open_in_memory().map_err(|_| Error::Database)?;
     expected
         .execute_batch(MIGRATION_RECORD)
         .map_err(|_| Error::Database)?;
     expected
-        .execute_batch(MIGRATION)
+        .execute_batch(foundation)
+        .map_err(|_| Error::Database)?;
+    expected
+        .execute_batch(extension)
         .map_err(|_| Error::Database)?;
     let got = objects(actual)?;
     // ANALYZE may create engine-owned statistics tables. Accept only definitions

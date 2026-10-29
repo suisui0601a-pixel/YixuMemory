@@ -107,3 +107,6 @@ mod ingress_tests {
         );
     }
 }
+
+/// Direct authorization logic and the unified metadata facade.
+pub mod metadata;

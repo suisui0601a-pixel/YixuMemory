@@ -62,3 +62,14 @@ See `docs/DOMAIN_MODEL_MAP.md`, `docs/LOCAL_DECISIONS.md`, and `docs/PUBLICATION
 Startup compares actual sqlite_schema and interpreted constraints against a trusted in-memory DB
 rebuilt from compiled migration SQL, then runs integrity/FK checks. Unknown drift is rejected,
 not repaired. See docs/FOUNDATION_REMEDIATION.md for trust boundaries and normalization limits.
+
+
+## P1 Auth local prototype
+
+See docs/AUTH_ADR_001.md and docs/AUTH_FOUNDATION.md. The private `cfg(test)` Auth adapter
+executes real SQLite identity mapping, direct Grant authorization, revocation epochs and atomic
+metadata marker commands. It is not a public credential issuer or production authenticated service.
+Application adds a narrow AuthorizedMetadata Port; production NoContentRuntime remains fail-closed.
+Auth profile v2 uses fresh C: synthetic databases and refuses automatic v1 upgrades. No public
+feature (including all-features) can mint its AuthContext or BootstrapAuthority. External compilation
+probes verify these boundaries. Existing Foundation migration and 58 tests remain preserved.

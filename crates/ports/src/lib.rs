@@ -108,3 +108,6 @@ pub trait Index {
 pub trait DeletionCoordinator {
     fn resume(&self, scope: Scope, deletion: Id) -> Result<()>;
 }
+
+/// Atomic metadata authorization Port; opaque identity is selected by each trusted backend.
+pub mod authorized_metadata;

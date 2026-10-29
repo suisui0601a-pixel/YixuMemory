@@ -4,14 +4,18 @@
 //! ```compile_fail
 //! use yixu_sqlite_foundation::MetadataLab;
 //! ```
-#[cfg(feature = "metadata-lab")]
+#[cfg(any(test, feature = "metadata-lab"))]
 mod schema;
-#[cfg(feature = "metadata-lab")]
+#[cfg(any(test, feature = "metadata-lab"))]
 mod storage;
 /// Synthetic metadata experiments only; NEVER an authenticated ingress.
-#[cfg(feature = "metadata-lab")]
+#[cfg(any(test, feature = "metadata-lab"))]
 pub mod experimental {
     pub use crate::storage::{
         APPLICATION_ID, MIGRATION, MetadataLab, MetadataTx, SCHEMA_VERSION, migration_checksum,
     };
 }
+
+// No feature, including --all-features, can activate identity or bootstrap issuance.
+#[cfg(test)]
+mod auth;

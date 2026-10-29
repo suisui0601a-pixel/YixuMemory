@@ -13,6 +13,8 @@ pub enum Error {
     IncompatibleSchema,
     CapabilityUnavailable,
     UnsupportedScope,
+    AuthorizationDenied,
+    IdempotencyConflict,
 }
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
