@@ -38,9 +38,11 @@ Changes before implementation:
   knowledge_seq is incremented only in the same successful transaction; failures roll back all.
 
 Alternatives: exposing a context constructor or allow-all injection was rejected (F1 regression).
-Public test-support Cargo feature was rejected (feature unification/all-features). Migrating the
-accepted v1 DB was deferred until a separately reviewed real upgrade contract. Group inheritance,
-network credentials, content encryption, deletion and production filesystem protections stay closed.
+Putting test support behind a feature on the formal SQLite crate was rejected because of feature
+unification and `--all-features`; R2 moves it into an unpublished workspace crate instead (see
+AUTH_ADR_003). Migrating the accepted v1 DB was deferred until a separately reviewed real upgrade
+contract. Group inheritance, network credentials, content encryption, deletion and production
+filesystem protections stay closed.
 
 Validation: real temporary SQLite, two connections and process contention, commit-order evidence,
 expired/revoked/disabled/foreign identities, idempotency/CAS/rollback, compile-negative public surfaces,

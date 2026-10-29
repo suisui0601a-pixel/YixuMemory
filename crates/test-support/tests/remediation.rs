@@ -1,6 +1,6 @@
 use std::time::Duration;
 use yixu_domain::Id;
-use yixu_sqlite_foundation::experimental::MetadataLab;
+use yixu_sqlite_test_support::MetadataLab;
 #[test]
 fn f1_explicit_lab_retains_synthetic_bootstrap_only() {
     let d = tempfile::tempdir().unwrap();

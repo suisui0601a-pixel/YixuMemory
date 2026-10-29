@@ -780,14 +780,14 @@ fn auth_schema_drift_and_profile_confusion_are_rejected() {
     ));
     let dir = tempdir().unwrap();
     let path = dir.path().join("foundation.sqlite");
-    drop(crate::storage::MetadataLab::open(&path, Duration::from_millis(100)).unwrap());
+    drop(yixu_sqlite_test_support::MetadataLab::open(&path, Duration::from_millis(100)).unwrap());
     assert!(matches!(
         AuthDatabase::open(&path, TestClock::new()),
         Err(Error::IncompatibleSchema)
     ));
     let valid = Fixture::new(true);
     assert!(matches!(
-        crate::storage::MetadataLab::open(&valid.path, Duration::from_millis(100)),
+        yixu_sqlite_test_support::MetadataLab::open(&valid.path, Duration::from_millis(100)),
         Err(Error::IncompatibleSchema)
     ));
 }

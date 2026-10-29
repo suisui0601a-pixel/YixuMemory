@@ -1,6 +1,5 @@
 //! Private real SQLite authorization adapter. Compiled ONLY by Rust's test harness.
 //! No feature, public factory, network credential issuer or production ingress exists.
-use crate::storage::{APPLICATION_ID, MIGRATION, MIGRATION_RECORD};
 use rusqlite::{Connection, OptionalExtension, Transaction, TransactionBehavior, params};
 use sha2::{Digest, Sha256};
 use std::{path::Path, time::Duration};
@@ -11,6 +10,9 @@ use yixu_ports::{
     authorized_metadata::{
         AuthorizationState, AuthorizedMetadata, MarkerTarget, MarkerWrite, MetadataReceipt,
     },
+};
+use yixu_sqlite_test_support::{
+    APPLICATION_ID, MIGRATION, MIGRATION_RECORD, validate_schema_definitions,
 };
 const AUTH_DDL: &str = include_str!("../migrations/0002_auth_profile.sql");
 const R1_DDL: &str = include_str!("../migrations/0003_auth_r1.sql");
@@ -143,7 +145,7 @@ impl<C: Clock> AuthDatabase<C> {
         if history[0].1 != checksum_text() {
             return Err(Error::MigrationChecksum);
         }
-        crate::schema::validate_definitions(&tx, MIGRATION, &format!("{AUTH_DDL}\n{R1_DDL}"))?;
+        validate_schema_definitions(&tx, MIGRATION, &format!("{AUTH_DDL}\n{R1_DDL}"))?;
         let integrity: String = tx
             .query_row("PRAGMA integrity_check", [], |r| r.get(0))
             .map_err(sql_error)?;

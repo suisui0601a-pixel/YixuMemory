@@ -8,8 +8,8 @@ use yixu_ports::{MemoryRepository, MetadataTransaction, UnitOfWork};
 
 pub const SCHEMA_VERSION: i64 = 1;
 pub const APPLICATION_ID: i64 = 0x59495855;
-pub const MIGRATION: &str = include_str!("../migrations/0001_foundation.sql");
-pub(crate) const MIGRATION_RECORD: &str = "CREATE TABLE migration_record(version INTEGER PRIMARY KEY, checksum TEXT NOT NULL, phase TEXT NOT NULL CHECK(phase='applied')) STRICT;";
+pub const MIGRATION: &str = include_str!("../../sqlite/migrations/0001_foundation.sql");
+pub const MIGRATION_RECORD: &str = "CREATE TABLE migration_record(version INTEGER PRIMARY KEY, checksum TEXT NOT NULL, phase TEXT NOT NULL CHECK(phase='applied')) STRICT;";
 pub fn migration_checksum() -> String {
     Sha256::digest(MIGRATION.as_bytes())
         .iter()

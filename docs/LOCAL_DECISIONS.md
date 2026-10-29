@@ -13,8 +13,10 @@
 7. Blocked metadata fixtures may refer to opaque nonexistent key/blob identifiers. Their profile
    explicitly denies encryption. No production import path, active assertion or availability result exists.
 8. Standard SQLite VFS is a lab limitation. File ACL/handle race acceptance is not implied.
-9. Test-only process-kill entrypoint is gated by `fault-injection`, has no remote interface, and only
-   appends opaque synthetic metadata. This is actual process termination, not physical power loss.
+9. Test-only process-kill entrypoint is gated by `fault-injection` in the separate unpublished
+   `yixu-sqlite-test-support` crate. The formal SQLite crate has no such feature or API, and neither
+   Application nor its normal dependency graph includes test-support. The helper only appends opaque
+   synthetic metadata. This is actual process termination, not physical power loss.
 
 No new fundamental architecture requires 6A escalation for this restricted foundation. Before
 production integration, KeyVault/witness anti-rollback, Tguard, read release gates and native VFS

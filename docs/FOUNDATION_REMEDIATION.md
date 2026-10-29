@@ -8,12 +8,13 @@ rights are not revoked; no LICENSE, public branch, tag or PR #2 changes are auth
 
 ## F1: assembly boundary
 
-- SQLite implementation is in private `storage`. Root MetadataLab/MetadataTx exports are removed.
-- Only opt-in, non-default `metadata-lab` exposes `experimental::MetadataLab/MetadataTx`.
-  `fault-injection` implies this lab feature. External default builds cannot import the lab;
-  even all-feature builds cannot import storage or the old root write API.
-- Lab open/bootstrap/UoW writes are intentionally unauthenticated synthetic infrastructure tests,
-  not safe ingress. All existing SQL tests continue through this explicit experimental surface.
+- Historical F1 implementation placed synthetic writes behind a public Cargo feature. That was
+  insufficient: a distributable `metadata-lab` build still exposed caller-selected Event IDs and
+  the reproduced cross-Space existence oracle. R2 supersedes that boundary.
+- The current formal SQLite crate exports no lab API or enabling feature. Synthetic storage,
+  migration fixtures and fault helpers live in separate `yixu-sqlite-test-support` with
+  `publish = false`; only controlled tests depend on it. Application and formal SQLite normal
+  dependency graphs exclude it. The helper remains unauthenticated and unsafe for untrusted input.
 - Application has no SQLite dependency, adapter setter, Policy injection or successful metadata
   write path. `NoContentRuntime::write_metadata` always returns CapabilityUnavailable. Bootstrap
   takes a separate, unconstructible BootstrapAuthority and is also unavailable. Ordinary memory
@@ -92,7 +93,8 @@ parent_number=NULL insertion rejection test remains. Controlled writable_schema 
 synthetic destructive test fixtures, never the runtime implementation.
 
 External compilation checks assert specific Rust diagnostics, not merely any build failure.
-Run both default production-surface checks and all-feature lab tests. Runtime tests use synthetic
+Run default/all-feature formal API checks, a feature-unification negative probe, and test-support
+synthetic tests. Runtime tests use synthetic
 C: NTFS temporary databases and SQLite 3.54.1, not D: exFAT. No tests prove production encryption,
 key revocation, secure erase, backup anti-rollback, real Grant/revocation or safe D: deployment.
 
@@ -101,3 +103,20 @@ SQLite WAL/TEMP/log/backup plaintext inspections; generation receipts; deletion 
 crash/restore/old-worker anti-resurrection and actual production filesystem race tests. pytest
 8.4.2 security update remains a separate maintenance task; public Python lockfile is unchanged.
 No fundamental Rust/Ports/SQLite redesign or 6A escalation is identified by these two fixes.
+
+## R2: remove lab writes from the distributable crate
+
+The formal SQLite crate no longer contains or re-exports MetadataLab, MetadataTx, schema fixture
+builders, or fault injection. These synthetic facilities moved to the workspace-only, unpublished
+`yixu-sqlite-test-support` crate. Formal SQLite unit tests use it only as a dev-dependency; normal
+Application and SQLite dependency graphs do not include it. The old feature-gated API could not be
+made safe merely by a warning or runtime switch, because its caller-supplied Event ID had a
+cross-Space existence oracle. Keeping deterministic synthetic fixture support separate preserves
+database tests while removing that API from the distributable SQLite package. This intentionally
+breaks consumers of the former `metadata-lab` feature; there is no production data migration.
+
+The test-support crate is not a release artifact and is not a production adapter. `publish = false`
+is a Cargo publication safeguard, not an access-control boundary or license decision. Any future
+production packaging must exclude workspace test-support by package selection and verify its normal
+dependency graph. This local change does not claim authentication, encryption, deletion or production
+runtime acceptance.

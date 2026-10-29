@@ -17,9 +17,12 @@ and the applicable license. No LICENSE replacement or custom legal terms are inc
 
 ## Important boundary
 
-`experimental::MetadataLab` exists only with the non-default `metadata-lab` Cargo feature.
-The old root API and internal storage module are inaccessible. The opt-in surface exposes privileged
-synthetic experiment writes, NEVER authenticated ingress. NoContentRuntime cannot load this adapter.
+The formal `yixu-sqlite-foundation` crate exports no experimental write adapter or lab feature.
+Synthetic Foundation fixtures live in the separate `yixu-sqlite-test-support` workspace crate,
+which is `publish = false`; it is a dev-dependency for controlled tests and is absent from the
+normal dependency graphs of both the formal SQLite crate and Application. Its interfaces are
+privileged synthetic test infrastructure, NEVER authenticated ingress. NoContentRuntime cannot
+load this adapter.
 Formal metadata writes and bootstrap remain unavailable. AuthContext and BootstrapAuthority have
 private fields and no issuer or constructor; live Grant/revocation authorization is unimplemented.
 Test Payload rows are blocked, opaque placeholders with the fixed profile
@@ -52,7 +55,8 @@ cargo test --workspace --doc --all-features --locked
 python scripts/check_surface.py
 ```
 
-`fault-injection` implies `metadata-lab` and only enables a process-kill child binary; it cannot enable content or keys.
+`fault-injection` exists only on the unpublished test-support crate and enables a process-kill
+test helper. No feature on the formal SQLite crate enables test-support or experimental writes.
 `Cargo.lock` pins transitive dependencies; compiler, bundled SQLite version and audit results belong
 in the verification report. Dependencies must be re-audited before any approved publication.
 
@@ -78,3 +82,8 @@ R1: creation IDs are server-assigned UUIDv4; MarkerWrite uses Create or a scoped
 never caller-selected creation marker/event IDs. Receipts preserve generated IDs for idempotent
 replay. See docs/AUTH_ADR_002.md. Revocation/concurrency remains conditional runtime acceptance;
 this R1 remediation does not assert a production or independent Auth PASS.
+
+R2: synthetic metadata storage and its caller-supplied opaque fixture IDs are isolated in the
+unpublished test-support crate. The released SQLite crate has no lab API under default,
+all-features, or feature-unification builds. This is a local release-boundary fix, not a production
+authentication or data safety certification. See docs/AUTH_ADR_003.md.

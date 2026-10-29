@@ -382,4 +382,17 @@ dependencies = [
  "yixu-application",
  "yixu-domain",
  "yixu-ports",
+ "yixu-sqlite-test-support",
+]
+
+[[package]]
+name = "yixu-sqlite-test-support"
+version = "0.1.0-foundation.1"
+dependencies = [
+ "rusqlite",
+ "sha2",
+ "tempfile",
+ "yixu-application",
+ "yixu-domain",
+ "yixu-ports",
 ]

@@ -28,7 +28,10 @@ def main() -> int:
             assert not deps, "Domain must have no external dependencies"
         if crate.name in {"ports", "application"}:
             assert set(deps) <= {"yixu-domain", "yixu-ports"}
-        assert cfg["package"]["publish"]["workspace"] is True
+        if crate.name == "test-support":
+            assert cfg["package"]["publish"] is False, "Test support must remain unpublished"
+        else:
+            assert cfg["package"]["publish"]["workspace"] is True
         assert not any("plaintext" in key for key in cfg.get("features", {}))
     (OUT / "dependency-direction.json").write_text(json.dumps(graph, indent=2) + "\n")
 
