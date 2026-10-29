@@ -1,7 +1,11 @@
 # Process-local setup only; does not edit global PATH or install system components.
-param([Parameter(Mandatory = $true)][string]$BuildRoot)
+param(
+    [Parameter(Mandatory = $true)][string]$BuildRoot,
+    [string]$ToolRoot
+)
 $ErrorActionPreference = 'Stop'
-$protoToolRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..\p1-tooling'))
+if (-not $ToolRoot) { $ToolRoot = Join-Path $PSScriptRoot '..\..\p1-tooling' }
+$protoToolRoot = [IO.Path]::GetFullPath($ToolRoot)
 $protoRustBin = Join-Path $protoToolRoot 'rustup\toolchains\1.99.1-x86_64-pc-windows-gnu\bin'
 $protoCcBin = Join-Path $protoToolRoot 'devkit\w64devkit\bin'
 $env:RUSTUP_HOME = Join-Path $protoToolRoot 'rustup'

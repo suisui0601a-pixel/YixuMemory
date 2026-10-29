@@ -6,7 +6,7 @@ use std::{
 };
 use yixu_domain::{Id, Result};
 use yixu_ports::{MetadataTransaction, UnitOfWork};
-use yixu_sqlite_foundation::MetadataLab;
+use yixu_sqlite_foundation::experimental::MetadataLab;
 fn id(n: u8) -> Id {
     let mut b = [0; 16];
     b[6] = 0x40;

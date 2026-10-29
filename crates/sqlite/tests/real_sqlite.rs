@@ -7,7 +7,9 @@ use std::{
 use tempfile::{TempDir, tempdir};
 use yixu_domain::{Error, EvidenceEnvelope, Id, RevisionEnvelope, Scope};
 use yixu_ports::{MemoryRepository, MetadataTransaction, UnitOfWork};
-use yixu_sqlite_foundation::{APPLICATION_ID, MetadataLab, MetadataTx, SCHEMA_VERSION};
+use yixu_sqlite_foundation::experimental::{
+    APPLICATION_ID, MetadataLab, MetadataTx, SCHEMA_VERSION,
+};
 
 fn id(n: u64) -> Id {
     let mut bytes = [0; 16];

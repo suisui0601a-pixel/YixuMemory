@@ -5,7 +5,9 @@ edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 [features]
-fault-injection = []
+default = []
+metadata-lab = []
+fault-injection = ["metadata-lab"]
 [[bin]]
 name = "foundation-fault"
 path = "src/bin/foundation-fault.rs"
@@ -20,3 +22,10 @@ tempfile.workspace = true
 yixu-application = { path = "../application" }
 [lints]
 workspace = true
+
+[[test]]
+name = "real_sqlite"
+required-features = ["metadata-lab"]
+[[test]]
+name = "remediation"
+required-features = ["metadata-lab"]

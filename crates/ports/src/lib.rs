@@ -1,9 +1,32 @@
 //! Interfaces, not evidence that a cryptographic or security operation ran.
 use yixu_domain::{Id, Result, Scope};
 
+/// Trusted server context. No issuer/constructor exists in this foundation.
+/// Request claims are not an AuthContext; external construction must fail.
+/// ```compile_fail
+/// use yixu_ports::AuthContext;
+/// use yixu_domain::{Id, Scope};
+/// let id = Id::from_bytes([1;16]);
+/// let forged = AuthContext { principal:id, scope:Scope{tenant:id,space:id} };
+/// ```
 pub struct AuthContext {
-    pub principal: Id,
-    pub scope: Scope,
+    principal: Id,
+    scope: Scope,
+}
+impl AuthContext {
+    pub fn principal(&self) -> Id {
+        self.principal
+    }
+    pub fn scope(&self) -> Scope {
+        self.scope
+    }
+}
+/// Separate server-issued administration authority; ordinary writer grants cannot mint it.
+/// ```compile_fail
+/// let forged = yixu_ports::BootstrapAuthority { _private: () };
+/// ```
+pub struct BootstrapAuthority {
+    _private: (),
 }
 pub trait Policy {
     fn authorize(&self, ctx: &AuthContext, capability: Capability) -> Result<()>;

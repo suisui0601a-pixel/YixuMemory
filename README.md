@@ -17,7 +17,11 @@ and the applicable license. No LICENSE replacement or custom legal terms are inc
 
 ## Important boundary
 
-`MetadataLab` is a low-level infrastructure laboratory, NOT an authenticated production repository.
+`experimental::MetadataLab` exists only with the non-default `metadata-lab` Cargo feature.
+The old root API and internal storage module are inaccessible. The opt-in surface exposes privileged
+synthetic experiment writes, NEVER authenticated ingress. NoContentRuntime cannot load this adapter.
+Formal metadata writes and bootstrap remain unavailable. AuthContext and BootstrapAuthority have
+private fields and no issuer or constructor; live Grant/revocation authorization is unimplemented.
 Test Payload rows are blocked, opaque placeholders with the fixed profile
 `metadata-fixture-not-encrypted`. There is no content column, encrypted body, DEK or successful
 cryptographic observation. Memory envelopes remain `source_blocked`; they are not valid assertions.
@@ -35,20 +39,26 @@ This database is not a production migration/import format; never import its fixt
 ## Verification
 
 Use the pinned compiler in `rust-toolchain.toml`, a C compiler, and a private Cargo cache.
-On this machine source remains on D:, but D: reports an unknown filesystem and cannot preserve
+The reviewed original remains on D:; remediation source and tests run on C:, but D: reports an unknown filesystem and cannot preserve
 some package archive timestamps. Build/cache and actual SQLite temporary tests use C: NTFS.
 This is not an acceptance of D: for production SQLite or trusted file operations.
-For the prepared local toolchain, dot-source `scripts/enter-toolchain.ps1 -BuildRoot <private-NTFS-build-directory>`.
+For the prepared local toolchain, dot-source `scripts/enter-toolchain.ps1 -BuildRoot <private-NTFS-build-directory> -ToolRoot <prepared-private-tools>`.
 
 ```text
 cargo fmt --all --check
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 cargo test --workspace --all-targets --all-features --locked
-cargo test --workspace --doc --locked
+cargo test --workspace --doc --all-features --locked
+python scripts/check_surface.py
 ```
 
-`fault-injection` only enables a process-kill child binary; it cannot enable content or keys.
+`fault-injection` implies `metadata-lab` and only enables a process-kill child binary; it cannot enable content or keys.
 `Cargo.lock` pins transitive dependencies; compiler, bundled SQLite version and audit results belong
 in the verification report. Dependencies must be re-audited before any approved publication.
 
 See `docs/DOMAIN_MODEL_MAP.md`, `docs/LOCAL_DECISIONS.md`, and `docs/PUBLICATION_GATE.md`.
+
+
+Startup compares actual sqlite_schema and interpreted constraints against a trusted in-memory DB
+rebuilt from compiled migration SQL, then runs integrity/FK checks. Unknown drift is rejected,
+not repaired. See docs/FOUNDATION_REMEDIATION.md for trust boundaries and normalization limits.
