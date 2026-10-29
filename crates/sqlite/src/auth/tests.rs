@@ -45,11 +45,17 @@ fn scope() -> Scope {
 fn command(n: u8) -> MarkerWrite {
     MarkerWrite {
         scope: scope(),
-        marker: id(10),
-        event: id(n),
+        target: MarkerTarget::Create,
         expected_version: 0,
         idempotency: id(n + 1),
         capability: MetadataCapability::Append,
+    }
+}
+fn update_command(n: u8, marker: Id, expected_version: u64) -> MarkerWrite {
+    MarkerWrite {
+        target: MarkerTarget::Existing(marker),
+        expected_version,
+        ..command(n)
     }
 }
 struct Fixture {
@@ -264,7 +270,7 @@ fn valid_foreign_space_idor_is_denied() {
     assert_eq!(f.db.apply(Some(&ctx), cmd), Err(Error::AuthorizationDenied));
     f.assert_empty();
     // Even an authenticated context with a valid Grant for Space B cannot mutate A's marker.
-    f.db.apply(Some(&f.context()), command(20)).unwrap();
+    let created = f.db.apply(Some(&f.context()), command(20)).unwrap();
     f.db.administer(
         &f.authority,
         AdminChange::Grant {
@@ -280,6 +286,7 @@ fn valid_foreign_space_idor_is_denied() {
             .unwrap();
     let mut valid_other_command = command(30);
     valid_other_command.scope = other;
+    valid_other_command.target = MarkerTarget::Existing(created.marker);
     assert_eq!(
         f.db.apply(Some(&other_ctx), valid_other_command),
         Err(Error::AuthorizationDenied)
@@ -516,10 +523,14 @@ fn context_is_bound_to_database_realm() {
 fn cas_conflict_and_idempotency_mismatch_do_not_consume_sequence() {
     let mut f = Fixture::new(true);
     let ctx = f.context();
-    f.db.apply(Some(&ctx), command(20)).unwrap();
-    assert_eq!(f.db.apply(Some(&ctx), command(30)), Err(Error::CasConflict));
+    let created = f.db.apply(Some(&ctx), command(20)).unwrap();
+    assert_eq!(
+        f.db.apply(Some(&ctx), update_command(30, created.marker, 0)),
+        Err(Error::CasConflict)
+    );
     let mut altered = command(20);
     altered.expected_version = 1;
+    altered.target = MarkerTarget::Existing(created.marker);
     assert_eq!(
         f.db.apply(Some(&ctx), altered),
         Err(Error::IdempotencyConflict)
@@ -531,19 +542,26 @@ fn cas_conflict_and_idempotency_mismatch_do_not_consume_sequence() {
 fn real_constraint_failure_rolls_back_sequence_event_and_retry() {
     let mut f = Fixture::new(true);
     let ctx = f.context();
-    f.db.apply(Some(&ctx), command(20)).unwrap();
-    let mut cmd = command(30);
-    cmd.expected_version = 1;
-    cmd.event = id(20);
+    let created = f.db.apply(Some(&ctx), command(20)).unwrap();
+    let cmd = update_command(30, created.marker, 1);
+    // Real late SQLite constraint fault; event IDs can no longer be client selected.
+    f.db.connection.execute_batch("CREATE TEMP TRIGGER fail_retry BEFORE INSERT ON metadata_retry BEGIN SELECT RAISE(ABORT,'injected synthetic constraint'); END;").unwrap();
     assert_eq!(f.db.apply(Some(&ctx), cmd), Err(Error::Constraint));
     assert_eq!(f.seq(), 1);
-    assert_eq!(f.count("event"), 1);
-    assert_eq!(f.count("metadata_retry"), 1);
-    assert_eq!(f.count("metadata_outbox"), 1);
-    assert_eq!(f.count("metadata_audit"), 1);
-    cmd.event = id(30);
+    for table in [
+        "event",
+        "metadata_retry",
+        "metadata_outbox",
+        "metadata_audit",
+    ] {
+        assert_eq!(f.count(table), 1, "{table}");
+    }
+    f.db.connection
+        .execute_batch("DROP TRIGGER fail_retry")
+        .unwrap();
     let receipt = f.db.apply(Some(&ctx), cmd).unwrap();
     assert_eq!((receipt.version, receipt.knowledge_seq), (2, 2));
+    assert_eq!(receipt.marker, created.marker);
 }
 #[test]
 fn expiration_during_write_rolls_back_all_business_rows() {
@@ -593,8 +611,9 @@ fn authorization_epoch_invalidation_includes_added_grants() {
 }
 #[test]
 fn two_real_connections_same_cas_only_one_commits() {
-    let f = Fixture::new(true);
+    let mut f = Fixture::new(true);
     let ctx = f.context();
+    let created = f.db.apply(Some(&ctx), command(10)).unwrap();
     let barrier = Arc::new(Barrier::new(2));
     let mut handles = Vec::new();
     for n in [20, 30] {
@@ -603,13 +622,13 @@ fn two_real_connections_same_cas_only_one_commits() {
         let barrier = barrier.clone();
         handles.push(thread::spawn(move || {
             barrier.wait();
-            db.apply(Some(&ctx), command(n))
+            db.apply(Some(&ctx), update_command(n, created.marker, 1))
         }));
     }
     let results: Vec<_> = handles.into_iter().map(|h| h.join().unwrap()).collect();
     assert_eq!(results.iter().filter(|r| r.is_ok()).count(), 1);
     assert!(results.contains(&Err(Error::CasConflict)));
-    assert_eq!(f.seq(), 1);
+    assert_eq!(f.seq(), 2);
 }
 #[test]
 fn two_real_connections_same_idempotency_replay_only_once() {
@@ -963,3 +982,5 @@ fn partial_bootstrap_admin_failure_rolls_back_tenant_principal_and_binding() {
     }
     f.assert_empty();
 }
+
+mod r1;

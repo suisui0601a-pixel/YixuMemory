@@ -1,6 +1,8 @@
 # LOCAL ADR AUTH-001 — transactional metadata authorization prototype
 
-Status: proposed implementation for independent review; production activation NOT accepted.
+Status: historical Auth Foundation proposal; production activation NOT accepted.
+R1 creation-ID/receipt/profile details are superseded by AUTH_ADR_002. Retained to record the
+reviewed design history, not to authorize the removed caller-selected creation API.
 Parent: cedf6ee9e3674e05f79b67d80d3a7899086167bf. No public remote/push.
 
 Changes before implementation:

@@ -24,9 +24,17 @@ def main() -> None:
         ("auth_issuer_hidden_all_features", "yixu-sqlite-foundation", "crates/sqlite", ["metadata-lab", "fault-injection"],
          "use yixu_sqlite_foundation::auth::{AuthDatabase,AuthContext,BootstrapAuthority}; fn main() {}", "E0432"),
         ("claims_cannot_add_admin", "yixu-ports", "crates/ports", [],
-         "fn main(){let _=yixu_ports::authorized_metadata::MarkerWrite{scope:todo!(),marker:todo!(),event:todo!(),expected_version:0,idempotency:todo!(),capability:yixu_ports::authorized_metadata::MetadataCapability::Append,admin:true};}", "E0560"),
+         "fn main(){let _=yixu_ports::authorized_metadata::MarkerWrite{scope:todo!(),target:yixu_ports::authorized_metadata::MarkerTarget::Create,expected_version:0,idempotency:todo!(),capability:yixu_ports::authorized_metadata::MetadataCapability::Append,admin:true};}", "E0560"),
         ("ordinary_facade_has_no_bootstrap", "yixu-application", "crates/application", [],
          "use yixu_ports::authorized_metadata::AuthorizedMetadata; fn attempt<S:AuthorizedMetadata>(app:&mut yixu_application::metadata::MetadataApplication<S>,ctx:&S::Context){app.bootstrap(ctx);} fn main(){}", "E0599"),
+        ("create_marker_cannot_be_chosen", "yixu-ports", "crates/ports", [],
+         "fn main(){let _=yixu_ports::authorized_metadata::MarkerWrite{scope:todo!(),target:yixu_ports::authorized_metadata::MarkerTarget::Create,expected_version:0,idempotency:todo!(),capability:yixu_ports::authorized_metadata::MetadataCapability::Append,marker:todo!()};}", "E0560"),
+        ("create_event_cannot_be_chosen", "yixu-ports", "crates/ports", [],
+         "fn main(){let _=yixu_ports::authorized_metadata::MarkerWrite{scope:todo!(),target:yixu_ports::authorized_metadata::MarkerTarget::Create,expected_version:0,idempotency:todo!(),capability:yixu_ports::authorized_metadata::MetadataCapability::Append,event:todo!()};}", "E0560"),
+        ("request_cannot_inject_id_source", "yixu-ports", "crates/ports", [],
+         "fn main(){let _=yixu_ports::authorized_metadata::MarkerWrite{scope:todo!(),target:yixu_ports::authorized_metadata::MarkerTarget::Create,expected_version:0,idempotency:todo!(),capability:yixu_ports::authorized_metadata::MetadataCapability::Append,ids:todo!()};}", "E0560"),
+        ("id_source_hidden_all_features", "yixu-sqlite-foundation", "crates/sqlite", ["metadata-lab", "fault-injection"],
+         "use yixu_sqlite_foundation::auth::ids::{ResourceIds,OsResourceIds}; fn main(){}", "E0433"),
     ]
     for name, package, relative, features, source, diagnostic in cases:
         with tempfile.TemporaryDirectory(prefix="yixu-external-") as temp:
@@ -44,6 +52,9 @@ def main() -> None:
             result = subprocess.run(["cargo", "check", "--offline", "--manifest-path", str(path / "Cargo.toml")],
                                     text=True, capture_output=True, check=False)
             assert result.returncode != 0 and diagnostic in result.stderr, (name, result.stderr)
+            rejected_fields={"claims_cannot_add_admin":"admin", "create_marker_cannot_be_chosen":"marker", "create_event_cannot_be_chosen":"event", "request_cannot_inject_id_source":"ids"}
+            if name in rejected_fields:
+                assert f"has no field named `{rejected_fields[name]}`" in result.stderr, (name,result.stderr)
             results.append({"case": name, "exit": result.returncode, "expected_diagnostic": diagnostic,
                             "stderr": result.stderr})
     out = ROOT / "verification"

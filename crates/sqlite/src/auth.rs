@@ -8,10 +8,15 @@ use yixu_application::metadata::DirectMetadataPolicy;
 use yixu_domain::{Error, Id, Result, Scope};
 use yixu_ports::{
     Clock,
-    authorized_metadata::{AuthorizationState, AuthorizedMetadata, MarkerWrite, MetadataReceipt},
+    authorized_metadata::{
+        AuthorizationState, AuthorizedMetadata, MarkerTarget, MarkerWrite, MetadataReceipt,
+    },
 };
 const AUTH_DDL: &str = include_str!("../migrations/0002_auth_profile.sql");
-const VERSION: i64 = 2;
+const R1_DDL: &str = include_str!("../migrations/0003_auth_r1.sql");
+const VERSION: i64 = 3;
+mod ids;
+use ids::{OsResourceIds, ResourceIds};
 #[derive(Clone)]
 struct AuthContext {
     realm: Id,
@@ -32,6 +37,7 @@ struct TrustedIdentity {
 struct AuthDatabase<C: Clock> {
     connection: Connection,
     clock: C,
+    ids: Box<dyn ResourceIds>,
     before_commit: Option<Box<dyn FnOnce() + Send>>,
 }
 fn sql_error(e: rusqlite::Error) -> Error {
@@ -48,7 +54,7 @@ fn natural(n: i64) -> Result<u64> {
     u64::try_from(n).map_err(|_| Error::Constraint)
 }
 fn checksum() -> Vec<u8> {
-    Sha256::digest(format!("{MIGRATION}\n{AUTH_DDL}").as_bytes()).to_vec()
+    Sha256::digest(format!("{MIGRATION}\n{AUTH_DDL}\n{R1_DDL}").as_bytes()).to_vec()
 }
 fn checksum_text() -> String {
     checksum().iter().map(|b| format!("{b:02x}")).collect()
@@ -111,6 +117,7 @@ impl<C: Clock> AuthDatabase<C> {
             tx.execute_batch(MIGRATION_RECORD).map_err(sql_error)?;
             tx.execute_batch(MIGRATION).map_err(sql_error)?;
             tx.execute_batch(AUTH_DDL).map_err(sql_error)?;
+            tx.execute_batch(R1_DDL).map_err(sql_error)?;
             tx.execute(
                 "INSERT INTO migration_record VALUES(?1,?2,'applied')",
                 params![VERSION, checksum_text()],
@@ -136,7 +143,7 @@ impl<C: Clock> AuthDatabase<C> {
         if history[0].1 != checksum_text() {
             return Err(Error::MigrationChecksum);
         }
-        crate::schema::validate_definitions(&tx, MIGRATION, AUTH_DDL)?;
+        crate::schema::validate_definitions(&tx, MIGRATION, &format!("{AUTH_DDL}\n{R1_DDL}"))?;
         let integrity: String = tx
             .query_row("PRAGMA integrity_check", [], |r| r.get(0))
             .map_err(sql_error)?;
@@ -152,6 +159,7 @@ impl<C: Clock> AuthDatabase<C> {
         Ok(Self {
             connection: c,
             clock,
+            ids: Box::new(OsResourceIds),
             before_commit: None,
         })
     }
@@ -446,19 +454,52 @@ fn authorization(
     )
 }
 fn request_digest(cmd: MarkerWrite) -> Vec<u8> {
+    let target = match cmd.target {
+        MarkerTarget::Create => "create".to_owned(),
+        MarkerTarget::Existing(id) => format!("update:{id}"),
+    };
+    // No generated resource identifiers enter a Create request digest.
     Sha256::digest(
         format!(
-            "metadata.append/v1|{}|{}|{}|{}|{}|{}",
-            cmd.scope.tenant,
-            cmd.scope.space,
-            cmd.marker,
-            cmd.event,
-            cmd.expected_version,
-            cmd.idempotency
+            "metadata.append/v2|{}|{}|{}|{}|{}",
+            cmd.scope.tenant, cmd.scope.space, target, cmd.expected_version, cmd.idempotency
         )
         .as_bytes(),
     )
     .to_vec()
+}
+#[derive(Clone, Copy)]
+enum ResourceKind {
+    Marker,
+    Event,
+}
+fn allocate(
+    tx: &Transaction<'_>,
+    tenant: Id,
+    kind: ResourceKind,
+    ids: &mut dyn ResourceIds,
+) -> Result<Id> {
+    let sql = match kind {
+        ResourceKind::Marker => {
+            "SELECT EXISTS(SELECT 1 FROM metadata_marker WHERE tenant_id=?1 AND id=?2)"
+        }
+        ResourceKind::Event => "SELECT EXISTS(SELECT 1 FROM event WHERE tenant_id=?1 AND id=?2)",
+    };
+    // Candidate checking and insertion share the SQLite writer lock. No caller chooses candidates.
+    for _ in 0..8 {
+        let candidate = ids.next().map_err(|_| Error::ResourceUnavailable)?;
+        let occupied: bool = tx
+            .query_row(
+                sql,
+                params![tenant.to_string(), candidate.to_string()],
+                |r| r.get(0),
+            )
+            .map_err(sql_error)?;
+        if !occupied {
+            return Ok(candidate);
+        }
+    }
+    Err(Error::ResourceUnavailable)
 }
 impl<C: Clock> AuthorizedMetadata for AuthDatabase<C> {
     type Context = AuthContext;
@@ -474,39 +515,50 @@ impl<C: Clock> AuthorizedMetadata for AuthDatabase<C> {
             .map_err(sql_error)?;
         let start = time(&self.clock)?;
         authorization(&tx, ctx, &cmd, start)?;
+        let expected = i64::try_from(cmd.expected_version).map_err(|_| Error::InvalidInput)?;
+        if matches!(cmd.target, MarkerTarget::Create) && expected != 0 {
+            return Err(Error::InvalidInput);
+        }
         let digest = request_digest(cmd);
-        type Replay = (Vec<u8>, i64, i64, String);
-        let replay:Option<Replay>=tx.query_row("SELECT request_digest,version,knowledge_seq,event_id FROM metadata_retry WHERE tenant_id=?1 AND principal_id=?2 AND key_id=?3",params![ctx.scope.tenant.to_string(),ctx.principal.to_string(),cmd.idempotency.to_string()],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?))).optional().map_err(sql_error)?;
-        let receipt = if let Some((old_digest, version, knowledge_seq, event)) = replay {
+        type Replay = (Vec<u8>, i64, i64, String, String);
+        let replay:Option<Replay>=tx.query_row("SELECT request_digest,version,knowledge_seq,event_id,marker_id FROM metadata_retry WHERE tenant_id=?1 AND principal_id=?2 AND key_id=?3",params![ctx.scope.tenant.to_string(),ctx.principal.to_string(),cmd.idempotency.to_string()],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?))).optional().map_err(sql_error)?;
+        let receipt = if let Some((old_digest, version, knowledge_seq, event, marker)) = replay {
             if digest != old_digest {
                 return Err(Error::IdempotencyConflict);
             }
             MetadataReceipt {
+                marker: marker.parse()?,
                 version: natural(version)?,
                 knowledge_seq: natural(knowledge_seq)?,
                 event: event.parse()?,
                 replayed: true,
             }
         } else {
-            let current: Option<(String, i64)> = tx
-                .query_row(
-                    "SELECT space_id,version FROM metadata_marker WHERE tenant_id=?1 AND id=?2",
-                    params![ctx.scope.tenant.to_string(), cmd.marker.to_string()],
-                    |r| Ok((r.get(0)?, r.get(1)?)),
-                )
-                .optional()
-                .map_err(sql_error)?;
-            if current
-                .as_ref()
-                .is_some_and(|(space, _)| space != &ctx.scope.space.to_string())
-            {
-                return Err(Error::AuthorizationDenied);
-            }
-            let version = current.map_or(0, |(_, v)| v);
-            if version != i64::try_from(cmd.expected_version).map_err(|_| Error::InvalidInput)? {
-                return Err(Error::CasConflict);
-            }
-            let version = version.checked_add(1).ok_or(Error::Constraint)?;
+            let (marker, version) = match cmd.target {
+                MarkerTarget::Create => (
+                    allocate(
+                        &tx,
+                        ctx.scope.tenant,
+                        ResourceKind::Marker,
+                        self.ids.as_mut(),
+                    )?,
+                    1,
+                ),
+                MarkerTarget::Existing(marker) => {
+                    let current:Option<i64>=tx.query_row("SELECT version FROM metadata_marker WHERE tenant_id=?1 AND space_id=?2 AND id=?3",params![ctx.scope.tenant.to_string(),ctx.scope.space.to_string(),marker.to_string()],|r|r.get(0)).optional().map_err(sql_error)?;
+                    let current = current.ok_or(Error::AuthorizationDenied)?;
+                    if current != expected {
+                        return Err(Error::CasConflict);
+                    }
+                    (marker, current.checked_add(1).ok_or(Error::Constraint)?)
+                }
+            };
+            let event = allocate(
+                &tx,
+                ctx.scope.tenant,
+                ResourceKind::Event,
+                self.ids.as_mut(),
+            )?;
             let changed=tx.execute("UPDATE tenant SET knowledge_seq=knowledge_seq+1 WHERE id=?1 AND knowledge_seq<9223372036854775807",[ctx.scope.tenant.to_string()]).map_err(sql_error)?;
             if changed != 1 {
                 return Err(Error::Constraint);
@@ -528,32 +580,32 @@ impl<C: Clock> AuthorizedMetadata for AuthDatabase<C> {
                 params![
                     ctx.scope.tenant.to_string(),
                     ctx.scope.space.to_string(),
-                    cmd.event.to_string(),
+                    event.to_string(),
                     ctx.principal.to_string(),
                     start,
                     seq
                 ],
             )
             .map_err(sql_error)?;
-            if version == 1 {
+            if matches!(cmd.target, MarkerTarget::Create) {
                 tx.execute(
                     "INSERT INTO metadata_marker VALUES(?1,?2,?3,1,?4)",
                     params![
                         ctx.scope.tenant.to_string(),
                         ctx.scope.space.to_string(),
-                        cmd.marker.to_string(),
-                        cmd.event.to_string()
+                        marker.to_string(),
+                        event.to_string()
                     ],
                 )
                 .map_err(sql_error)?;
             } else {
-                let changed=tx.execute("UPDATE metadata_marker SET version=?3,current_event_id=?4 WHERE tenant_id=?1 AND id=?2 AND space_id=?5 AND version=?6",params![ctx.scope.tenant.to_string(),cmd.marker.to_string(),version,cmd.event.to_string(),ctx.scope.space.to_string(),i64::try_from(cmd.expected_version).map_err(|_|Error::InvalidInput)?]).map_err(sql_error)?;
+                let changed=tx.execute("UPDATE metadata_marker SET version=?3,current_event_id=?4 WHERE tenant_id=?1 AND id=?2 AND space_id=?5 AND version=?6",params![ctx.scope.tenant.to_string(),marker.to_string(),version,event.to_string(),ctx.scope.space.to_string(),expected]).map_err(sql_error)?;
                 if changed != 1 {
                     return Err(Error::CasConflict);
                 }
             }
             tx.execute(
-                "INSERT INTO metadata_retry VALUES(?1,?2,?3,?4,?5,?6,?7,?8)",
+                "INSERT INTO metadata_retry VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9)",
                 params![
                     ctx.scope.tenant.to_string(),
                     ctx.scope.space.to_string(),
@@ -562,7 +614,8 @@ impl<C: Clock> AuthorizedMetadata for AuthDatabase<C> {
                     digest,
                     version,
                     seq,
-                    cmd.event.to_string()
+                    event.to_string(),
+                    marker.to_string()
                 ],
             )
             .map_err(sql_error)?;
@@ -571,7 +624,7 @@ impl<C: Clock> AuthorizedMetadata for AuthDatabase<C> {
                 params![
                     ctx.scope.tenant.to_string(),
                     ctx.scope.space.to_string(),
-                    cmd.event.to_string()
+                    event.to_string()
                 ],
             )
             .map_err(sql_error)?;
@@ -580,15 +633,16 @@ impl<C: Clock> AuthorizedMetadata for AuthDatabase<C> {
                 params![
                     ctx.scope.tenant.to_string(),
                     ctx.scope.space.to_string(),
-                    cmd.event.to_string(),
+                    event.to_string(),
                     seq
                 ],
             )
             .map_err(sql_error)?;
             MetadataReceipt {
+                marker,
                 version: natural(version)?,
                 knowledge_seq: natural(seq)?,
-                event: cmd.event,
+                event,
                 replayed: false,
             }
         };

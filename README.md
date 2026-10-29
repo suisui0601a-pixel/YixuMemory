@@ -70,6 +70,11 @@ See docs/AUTH_ADR_001.md and docs/AUTH_FOUNDATION.md. The private `cfg(test)` Au
 executes real SQLite identity mapping, direct Grant authorization, revocation epochs and atomic
 metadata marker commands. It is not a public credential issuer or production authenticated service.
 Application adds a narrow AuthorizedMetadata Port; production NoContentRuntime remains fail-closed.
-Auth profile v2 uses fresh C: synthetic databases and refuses automatic v1 upgrades. No public
+Auth profile v3 uses fresh C: synthetic databases and refuses automatic v1/v2 upgrades. No public
 feature (including all-features) can mint its AuthContext or BootstrapAuthority. External compilation
 probes verify these boundaries. Existing Foundation migration and 58 tests remain preserved.
+
+R1: creation IDs are server-assigned UUIDv4; MarkerWrite uses Create or a scoped Existing target,
+never caller-selected creation marker/event IDs. Receipts preserve generated IDs for idempotent
+replay. See docs/AUTH_ADR_002.md. Revocation/concurrency remains conditional runtime acceptance;
+this R1 remediation does not assert a production or independent Auth PASS.
