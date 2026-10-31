@@ -3,7 +3,6 @@
 use rusqlite::{Connection, OptionalExtension, Transaction, TransactionBehavior, params};
 use sha2::{Digest, Sha256};
 use std::{path::Path, time::Duration};
-use yixu_application::metadata::DirectMetadataPolicy;
 use yixu_domain::{Error, Id, Result, Scope};
 use yixu_ports::{
     Clock,
@@ -17,7 +16,9 @@ use yixu_sqlite_test_support::{
 const AUTH_DDL: &str = include_str!("../migrations/0002_auth_profile.sql");
 const R1_DDL: &str = include_str!("../migrations/0003_auth_r1.sql");
 const VERSION: i64 = 3;
+const MEMORY_DDL: &str = include_str!("../migrations/0004_memory_lab.sql");
 mod ids;
+mod memory;
 use ids::{OsResourceIds, ResourceIds};
 #[derive(Clone)]
 struct AuthContext {
@@ -38,9 +39,11 @@ struct TrustedIdentity {
 }
 struct AuthDatabase<C: Clock> {
     connection: Connection,
+    profile: i64,
     clock: C,
     ids: Box<dyn ResourceIds>,
     before_commit: Option<Box<dyn FnOnce() + Send>>,
+    source_fixture: Option<yixu_sqlite_test_support::SyntheticSource>,
 }
 fn sql_error(e: rusqlite::Error) -> Error {
     match e {
@@ -58,8 +61,14 @@ fn natural(n: i64) -> Result<u64> {
 fn checksum() -> Vec<u8> {
     Sha256::digest(format!("{MIGRATION}\n{AUTH_DDL}\n{R1_DDL}").as_bytes()).to_vec()
 }
-fn checksum_text() -> String {
-    checksum().iter().map(|b| format!("{b:02x}")).collect()
+fn profile_checksum(profile: i64) -> String {
+    let bytes = if profile == VERSION {
+        checksum()
+    } else {
+        Sha256::digest(format!("{MIGRATION}\n{AUTH_DDL}\n{R1_DDL}\n{MEMORY_DDL}").as_bytes())
+            .to_vec()
+    };
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 fn time<C: Clock>(clock: &C) -> Result<i64> {
     let value = clock.utc_millis().map_err(|_| Error::AuthorizationDenied)?;
@@ -82,6 +91,12 @@ fn realm(c: &Connection) -> Result<Id> {
 }
 impl<C: Clock> AuthDatabase<C> {
     fn open(path: &Path, clock: C) -> Result<Self> {
+        Self::open_profile(path, clock, VERSION)
+    }
+    fn open_profile(path: &Path, clock: C, profile: i64) -> Result<Self> {
+        if ![VERSION, 4].contains(&profile) {
+            return Err(Error::IncompatibleSchema);
+        }
         let mut c = Connection::open(path).map_err(sql_error)?;
         c.busy_timeout(Duration::from_secs(5)).map_err(sql_error)?;
         let version: i64 = c
@@ -98,7 +113,7 @@ impl<C: Clock> AuthDatabase<C> {
             )
             .map_err(sql_error)?;
         if !((version == 0 && app == 0 && count == 0)
-            || (version == VERSION && app == APPLICATION_ID))
+            || (version == profile && app == APPLICATION_ID))
         {
             return Err(Error::IncompatibleSchema);
         }
@@ -120,12 +135,15 @@ impl<C: Clock> AuthDatabase<C> {
             tx.execute_batch(MIGRATION).map_err(sql_error)?;
             tx.execute_batch(AUTH_DDL).map_err(sql_error)?;
             tx.execute_batch(R1_DDL).map_err(sql_error)?;
+            if profile == 4 {
+                tx.execute_batch(MEMORY_DDL).map_err(sql_error)?;
+            }
             tx.execute(
                 "INSERT INTO migration_record VALUES(?1,?2,'applied')",
-                params![VERSION, checksum_text()],
+                params![profile, profile_checksum(profile)],
             )
             .map_err(sql_error)?;
-            tx.pragma_update(None, "user_version", VERSION)
+            tx.pragma_update(None, "user_version", profile)
                 .map_err(sql_error)?;
             tx.pragma_update(None, "application_id", APPLICATION_ID)
                 .map_err(sql_error)?;
@@ -139,13 +157,18 @@ impl<C: Clock> AuthDatabase<C> {
                 .collect::<std::result::Result<_, _>>()
                 .map_err(sql_error)?
         };
-        if history.len() != 1 || history[0].0 != VERSION || history[0].2 != "applied" {
+        if history.len() != 1 || history[0].0 != profile || history[0].2 != "applied" {
             return Err(Error::IncompatibleSchema);
         }
-        if history[0].1 != checksum_text() {
+        if history[0].1 != profile_checksum(profile) {
             return Err(Error::MigrationChecksum);
         }
-        validate_schema_definitions(&tx, MIGRATION, &format!("{AUTH_DDL}\n{R1_DDL}"))?;
+        let extension = if profile == 4 {
+            format!("{AUTH_DDL}\n{R1_DDL}\n{MEMORY_DDL}")
+        } else {
+            format!("{AUTH_DDL}\n{R1_DDL}")
+        };
+        validate_schema_definitions(&tx, MIGRATION, &extension)?;
         let integrity: String = tx
             .query_row("PRAGMA integrity_check", [], |r| r.get(0))
             .map_err(sql_error)?;
@@ -160,9 +183,11 @@ impl<C: Clock> AuthDatabase<C> {
         tx.commit().map_err(sql_error)?;
         Ok(Self {
             connection: c,
+            profile,
             clock,
             ids: Box::new(OsResourceIds),
             before_commit: None,
+            source_fixture: None,
         })
     }
     // Only protected internal test assembly can invoke these constructors.
@@ -201,7 +226,7 @@ impl<C: Clock> AuthDatabase<C> {
             AdminChange::Principal { .. } => "principal.state",
             AdminChange::TenantState { .. } => "tenant.state",
             AdminChange::Space { .. } => "space.state",
-            AdminChange::Grant { .. } => "grant.change",
+            AdminChange::Grant { .. } | AdminChange::MemoryGrant { .. } => "grant.change",
             AdminChange::Binding { .. } => "identity.state",
         };
         let (tenant, space) = match change {
@@ -315,6 +340,19 @@ impl<C: Clock> AuthDatabase<C> {
                 tx.execute("INSERT INTO direct_grant VALUES(?1,?2,?3,'metadata.append',?4,?5) ON CONFLICT(tenant_id,space_id,principal_id,capability) DO UPDATE SET enabled=excluded.enabled,expires_at_ms=excluded.expires_at_ms",params![scope.tenant.to_string(),scope.space.to_string(),principal.to_string(),enabled,expires_at_ms]).map_err(sql_error)?;
                 (scope.tenant, Some(scope.space))
             }
+            AdminChange::MemoryGrant {
+                scope,
+                principal,
+                capability,
+                enabled,
+                expires_at_ms,
+            } => {
+                if self.profile != 4 || !["memory.append", "memory.revise"].contains(&capability) {
+                    return Err(Error::AuthorizationDenied);
+                }
+                tx.execute("INSERT INTO memory_grant VALUES(?1,?2,?3,?4,?5,?6) ON CONFLICT(tenant_id,space_id,principal_id,capability) DO UPDATE SET enabled=excluded.enabled,expires_at_ms=excluded.expires_at_ms",params![scope.tenant.to_string(),scope.space.to_string(),principal.to_string(),capability,enabled,expires_at_ms]).map_err(sql_error)?;
+                (scope.tenant, Some(scope.space))
+            }
             AdminChange::Binding { subject, enabled } => {
                 let tenant: String = tx
                     .query_row(
@@ -409,6 +447,13 @@ enum AdminChange {
         enabled: bool,
         expires_at_ms: i64,
     },
+    MemoryGrant {
+        scope: Scope,
+        principal: Id,
+        capability: &'static str,
+        enabled: bool,
+        expires_at_ms: i64,
+    },
     Binding {
         subject: Id,
         enabled: bool,
@@ -420,11 +465,28 @@ fn authorization(
     cmd: &MarkerWrite,
     now: i64,
 ) -> Result<()> {
-    if ctx.scope != cmd.scope || realm(tx)? != ctx.realm {
+    if cmd.capability != yixu_ports::authorized_metadata::MetadataCapability::Append {
+        return Err(Error::AuthorizationDenied);
+    }
+    authorize_scope(tx, ctx, cmd.scope, "metadata.append", now)
+}
+fn authorize_scope(
+    tx: &Transaction<'_>,
+    ctx: &AuthContext,
+    scope: Scope,
+    capability: &str,
+    now: i64,
+) -> Result<()> {
+    let grant_table = match capability {
+        "metadata.append" => "direct_grant",
+        "memory.append" | "memory.revise" => "memory_grant",
+        _ => return Err(Error::AuthorizationDenied),
+    };
+    if ctx.scope != scope || realm(tx)? != ctx.realm {
         return Err(Error::AuthorizationDenied);
     }
     type Live = (bool, bool, bool, bool, i64, i64, Option<bool>, Option<i64>);
-    let live:Option<Live>=tx.query_row("SELECT t.status='active',p.status='active',z.enabled,b.enabled,t.auth_epoch,s.policy_epoch,g.enabled,g.expires_at_ms FROM tenant t JOIN principal p ON p.tenant_id=t.id AND p.id=?3 JOIN space s ON s.tenant_id=t.id AND s.id=?2 JOIN auth_space z ON z.tenant_id=t.id AND z.space_id=s.id JOIN identity_binding b ON b.subject_id=?4 AND b.tenant_id=t.id AND b.principal_id=p.id LEFT JOIN direct_grant g ON g.tenant_id=t.id AND g.space_id=s.id AND g.principal_id=p.id AND g.capability='metadata.append' WHERE t.id=?1",params![ctx.scope.tenant.to_string(),ctx.scope.space.to_string(),ctx.principal.to_string(),ctx.subject.to_string()],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?,r.get(5)?,r.get(6)?,r.get(7)?))).optional().map_err(sql_error)?;
+    let live:Option<Live>=tx.query_row(&format!("SELECT t.status='active',p.status='active',z.enabled,b.enabled,t.auth_epoch,s.policy_epoch,g.enabled,g.expires_at_ms FROM tenant t JOIN principal p ON p.tenant_id=t.id AND p.id=?3 JOIN space s ON s.tenant_id=t.id AND s.id=?2 JOIN auth_space z ON z.tenant_id=t.id AND z.space_id=s.id JOIN identity_binding b ON b.subject_id=?4 AND b.tenant_id=t.id AND b.principal_id=p.id LEFT JOIN {grant_table} g ON g.tenant_id=t.id AND g.space_id=s.id AND g.principal_id=p.id AND g.capability=?5 WHERE t.id=?1"),params![ctx.scope.tenant.to_string(),ctx.scope.space.to_string(),ctx.principal.to_string(),ctx.subject.to_string(),capability],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?,r.get(5)?,r.get(6)?,r.get(7)?))).optional().map_err(sql_error)?;
     let (
         tenant_active,
         principal_active,
@@ -435,7 +497,7 @@ fn authorization(
         grant_enabled,
         expires,
     ) = live.ok_or(Error::AuthorizationDenied)?;
-    DirectMetadataPolicy::check(
+    yixu_application::metadata::LiveAuthorizationPolicy::check(
         &AuthorizationState {
             realm_matches: true,
             scope_matches: true,
@@ -451,7 +513,6 @@ fn authorization(
             grant_expires_at_ms: expires.unwrap_or(0),
             identity_issued_at_ms: ctx.issued_at_ms,
         },
-        cmd.capability,
         now,
     )
 }
@@ -487,6 +548,14 @@ fn allocate(
         }
         ResourceKind::Event => "SELECT EXISTS(SELECT 1 FROM event WHERE tenant_id=?1 AND id=?2)",
     };
+    allocate_free(tx, tenant, sql, ids)
+}
+fn allocate_free(
+    tx: &Transaction<'_>,
+    tenant: Id,
+    sql: &str,
+    ids: &mut dyn ResourceIds,
+) -> Result<Id> {
     // Candidate checking and insertion share the SQLite writer lock. No caller chooses candidates.
     for _ in 0..8 {
         let candidate = ids.next().map_err(|_| Error::ResourceUnavailable)?;

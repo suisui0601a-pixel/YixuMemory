@@ -50,7 +50,7 @@ For the prepared local toolchain, dot-source `scripts/enter-toolchain.ps1 -Build
 ```text
 cargo fmt --all --check
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
-cargo test --workspace --all-targets --all-features --locked
+cargo test --workspace --all-targets --all-features --locked -- --test-threads=1
 cargo test --workspace --doc --all-features --locked
 python scripts/check_surface.py
 ```
@@ -87,3 +87,12 @@ R2: synthetic metadata storage and its caller-supplied opaque fixture IDs are is
 unpublished test-support crate. The released SQLite crate has no lab API under default,
 all-features, or feature-unification builds. This is a local release-boundary fix, not a production
 authentication or data safety certification. See docs/AUTH_ADR_003.md.
+
+## P1 Memory M1 local extension
+
+See docs/MEMORY_M1.md and docs/MEMORY_ADR_004.md. A separate fresh Profile v4 tests blocked-envelope
+Memory creation/revision through the private cfg(test) authorization adapter. Profile v3 is unchanged
+and old files are never automatically upgraded. memory.append and memory.revise are exact independent
+Grants. The public Memory facade uses an atomic Port; its supplied NoContentRuntime always refuses
+commands. There is no production Memory or source ingestion adapter, valid content or hydration.
+The accepted Auth-R2 parent is 17d6a62e6b7589f0f8b7b840361d36440d3d23eb; this delta awaits Luna review.

@@ -149,6 +149,35 @@ def main() -> None:
             "struct `MarkerWrite` has no field named `ids`",
         ),
     ]
+    # All new probes remain separate from runtime SQLite scenario counts.
+    for field in ("memory_id", "revision_id", "parent_revision", "revision_number", "ids", "body"):
+        cases.append((
+            f"memory_request_cannot_choose_{field}",
+            {"yixu-ports": (ports, 'default-features = false')},
+            f"fn attempt(c:&mut yixu_ports::memory::MemoryWrite){{c.{field}=todo!();}} fn main(){{}}",
+            [],
+            f"no field `{field}`",
+        ))
+    cases.append((
+        "memory_private_adapter_unavailable_even_with_support_unification",
+        {"yixu-sqlite-foundation": (sqlite, 'default-features = false'),
+         "yixu-sqlite-test-support": (support, 'features = ["synthetic-fixtures"]')},
+        "use yixu_sqlite_foundation::auth::AuthDatabase; fn main(){}",
+        ["--all-features"], "could not find `auth`",
+    ))
+    cases.append((
+        "memory_facade_has_no_repository_escape_hatch",
+        {"yixu-ports": (ports, 'default-features = false'), "yixu-application": (application, 'default-features = false')},
+        "use yixu_ports::memory::AuthorizedMemory; fn attempt<S:AuthorizedMemory>(a:&mut yixu_application::memory::MemoryApplication<S>){a.store=todo!();} fn main(){}",
+        [], "field `store`",
+    ))
+    for method in ("history", "resolve_conflict"):
+        cases.append((
+            f"unimplemented_memory_{method}_has_no_ingress",
+            {"yixu-ports": (ports, 'default-features = false'), "yixu-application": (application, 'default-features = false')},
+            f"use yixu_ports::memory::AuthorizedMemory; fn attempt<S:AuthorizedMemory>(a:&mut yixu_application::memory::MemoryApplication<S>){{a.{method}();}} fn main(){{}}",
+            [], f"no method named `{method}`",
+        ))
     results = [check_manifest(*case) for case in cases]
 
     metadata = json.loads(

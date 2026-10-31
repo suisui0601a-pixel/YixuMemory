@@ -12,8 +12,18 @@ impl DirectMetadataPolicy {
         capability: MetadataCapability,
         now_ms: i64,
     ) -> Result<()> {
-        if capability != MetadataCapability::Append
-            || now_ms < 0
+        if capability != MetadataCapability::Append {
+            return Err(Error::AuthorizationDenied);
+        }
+        LiveAuthorizationPolicy::check(state, now_ms)
+    }
+}
+/// Shared live-state checks, AFTER the trusted adapter selects the exact operation's Grant.
+/// These observations do not mint identity or authorize any operation by themselves.
+pub struct LiveAuthorizationPolicy;
+impl LiveAuthorizationPolicy {
+    pub fn check(state: &AuthorizationState, now_ms: i64) -> Result<()> {
+        if now_ms < 0
             || now_ms < state.identity_issued_at_ms
             || !state.realm_matches
             || !state.scope_matches

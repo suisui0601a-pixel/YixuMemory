@@ -2,9 +2,13 @@
 //! This crate is not a production storage adapter and is not a dependency of the application.
 
 #[cfg(feature = "synthetic-fixtures")]
+mod fixtures;
+#[cfg(feature = "synthetic-fixtures")]
 mod schema;
 #[cfg(feature = "synthetic-fixtures")]
 mod storage;
+#[cfg(feature = "synthetic-fixtures")]
+pub use fixtures::{SyntheticSource, blocked_payload};
 
 #[cfg(feature = "synthetic-fixtures")]
 pub use storage::{
