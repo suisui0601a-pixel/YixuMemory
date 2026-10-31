@@ -1,4 +1,5 @@
 use super::*;
+mod reopen_tests;
 use std::{
     sync::{
         Arc, Barrier,

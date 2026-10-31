@@ -11,7 +11,14 @@ pending Outbox, committed together. No side's Memory/current/Revision/Evidence i
 
 Resolution MUST reference a same-Space committed Revision containing the UNION of both endpoint
 Evidence sets. It records a decision, not objective truth or an automatic winner. Reopening requires
-a later new Revision carrying at least one new Evidence plus a generated explanation action Event.
+a later new Revision carrying at least one Evidence absent from the resolution Revision referenced
+by the immediately preceding resolved decision, plus a generated explanation action Event. Evidence
+already used by that resolution is not new, even if absent from the original Conflict endpoints.
+Compare actual same-Space RevisionEvidence sets inside the authorized state-change transaction;
+ordering, duplicates, Revision.number, Memory.version and knowledge_seq alone do not establish novelty.
+The candidate Revision must still be committed after that decision. This ADR does not additionally
+require its Evidence's source Event to be committed after resolution; such a source-age rule would
+be a separate semantic decision using knowledge_seq, never wall-clock ordering.
 No model, rank, insertion order or knowledge_seq decides whether facts conflict or which is true.
 Explicit conflict can preserve purported contradictions; temporal overlap is inspectable, not proof
 of contradiction. Automatic semantic discovery remains unimplemented.

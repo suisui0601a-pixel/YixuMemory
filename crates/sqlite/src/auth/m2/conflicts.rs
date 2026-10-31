@@ -309,8 +309,10 @@ pub(super) fn write<C: Clock>(
                     if last.status != ConflictStatus::Resolved {
                         return Err(Error::StateConflict);
                     }
+                    let resolved_revision = last.resolution_revision.ok_or(Error::Integrity)?;
+                    let (_, resolved_evidence) = revision(&tx, c.scope, resolved_revision)?;
                     if natural(revision_seq)? <= last.knowledge_seq
-                        || evidence.iter().all(|e| both.contains(e))
+                        || evidence.iter().all(|e| resolved_evidence.contains(e))
                     {
                         return Err(Error::InvalidInput);
                     }
