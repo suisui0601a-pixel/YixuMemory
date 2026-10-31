@@ -96,3 +96,13 @@ and old files are never automatically upgraded. memory.append and memory.revise 
 Grants. The public Memory facade uses an atomic Port; its supplied NoContentRuntime always refuses
 commands. There is no production Memory or source ingestion adapter, valid content or hydration.
 The accepted Auth-R2 parent is 17d6a62e6b7589f0f8b7b840361d36440d3d23eb; this delta awaits Luna review.
+
+## P1 Memory M2 local extension
+
+M1 c67e2d92701509bc2c1c1b189a0a6986df340b00 is accepted by independent review as supplied by the
+owner. The M2 delta remains local and awaits review. See docs/MEMORY_M2.md, docs/M2_RESEARCH.md,
+private ADR-005/006/007 and contracts/m2. Fresh Profile 5 adds explicit validity, verified metadata
+reads/pages/snapshots and append-only Conflict decisions. Production NoContentRuntime remains
+unavailable; the concrete adapter is cfg(test). No active fact, decrypted content or public endpoint
+is supplied. Run python -m pytest -q tests for the new SHAPE-only contracts in addition to the
+unchanged P0 611-test suite in its C: baseline copy. No public push or old profile upgrade.

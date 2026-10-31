@@ -178,6 +178,25 @@ def main() -> None:
             f"use yixu_ports::memory::AuthorizedMemory; fn attempt<S:AuthorizedMemory>(a:&mut yixu_application::memory::MemoryApplication<S>){{a.{method}();}} fn main(){{}}",
             [], f"no method named `{method}`",
         ))
+    for field in ("body", "terms", "locator", "admin", "key_ref"):
+        cases.append((
+            f"m2_query_has_no_{field}_override",
+            {"yixu-ports": (ports, 'default-features = false')},
+            f"fn attempt(q:&mut yixu_ports::memory_m2::MetadataQuery){{q.{field}=todo!();}}fn main(){{}}",
+            [], f"no field `{field}`",
+        ))
+    cases.append((
+        "m2_signing_authority_is_private_even_with_support_unification",
+        {"yixu-sqlite-foundation": (sqlite, 'default-features = false'), "yixu-sqlite-test-support": (support, 'features = ["synthetic-fixtures"]')},
+        "use yixu_sqlite_foundation::auth::m2::tokens::TokenAuthority;fn main(){}",
+        ["--all-features"], "could not find `auth`",
+    ))
+    cases.append((
+        "m2_facade_cannot_expose_repository",
+        {"yixu-ports": (ports, 'default-features = false'), "yixu-application": (application, 'default-features = false')},
+        "use yixu_ports::memory_m2::MemoryM2;fn attempt<S:MemoryM2>(a:&mut yixu_application::memory_m2::MemoryM2Application<S>){a.store=todo!();}fn main(){}",
+        [], "field `store`",
+    ))
     results = [check_manifest(*case) for case in cases]
 
     metadata = json.loads(

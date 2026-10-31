@@ -109,5 +109,6 @@ mod ingress_tests {
 }
 
 pub mod memory;
+pub mod memory_m2;
 /// Direct authorization logic and the unified metadata facade.
 pub mod metadata;

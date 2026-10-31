@@ -1,8 +1,14 @@
 //! Metadata foundation only. No content, database, model or operating-system dependencies.
 use std::{fmt, str::FromStr};
+pub mod temporal;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Error {
+    Integrity,
+    InvalidToken,
+    InvalidCursor,
+    UnsupportedQuery,
+    StateConflict,
     InvalidInput,
     NotFound,
     Constraint,

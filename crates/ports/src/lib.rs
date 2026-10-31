@@ -1,6 +1,7 @@
 //! Interfaces, not evidence that a cryptographic or security operation ran.
 use yixu_domain::{Id, Result, Scope};
 pub mod memory;
+pub mod memory_m2;
 
 /// Trusted server context. No issuer/constructor exists in this foundation.
 /// Request claims are not an AuthContext; external construction must fail.

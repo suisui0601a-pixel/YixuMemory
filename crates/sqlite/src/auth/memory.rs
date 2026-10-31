@@ -99,8 +99,21 @@ impl<C: Clock> AuthorizedMemory for AuthDatabase<C> {
         context: Option<&AuthContext>,
         command: MemoryWrite,
     ) -> Result<MemoryReceipt> {
-        if self.profile != 4 {
+        self.apply_envelope(context, command, None)
+    }
+}
+impl<C: Clock> AuthDatabase<C> {
+    pub(super) fn apply_envelope(
+        &mut self,
+        context: Option<&AuthContext>,
+        command: MemoryWrite,
+        validity: Option<yixu_domain::temporal::Validity>,
+    ) -> Result<MemoryReceipt> {
+        if !matches!((self.profile, validity), (4, None) | (5, Some(_))) {
             return Err(Error::CapabilityUnavailable);
+        }
+        if let Some(v) = validity {
+            v.validate()?;
         }
         let ctx = context.ok_or(Error::AuthorizationDenied)?;
         let tx = self
@@ -110,7 +123,14 @@ impl<C: Clock> AuthorizedMemory for AuthDatabase<C> {
         let start = time(&self.clock)?;
         let capability = command.target.capability();
         authorize_scope(&tx, ctx, command.scope, capability, start)?;
-        let request_digest = digest(&command)?;
+        if self.profile == 5 {
+            super::m2::check_for_write(&tx, ctx.scope)?;
+        }
+        let request_digest = if let Some(v) = validity {
+            Sha256::digest([digest(&command)?, format!("m2/{v:?}").into_bytes()].concat()).to_vec()
+        } else {
+            digest(&command)?
+        };
         type Replay = (Vec<u8>, String, String, i64, i64, i64);
         let replay: Option<Replay> = tx.query_row("SELECT request_digest,memory_id,revision_id,version,number,knowledge_seq FROM memory_retry WHERE tenant_id=?1 AND principal_id=?2 AND key_id=?3",params![ctx.scope.tenant.to_string(),ctx.principal.to_string(),command.idempotency.to_string()],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?,r.get(5)?))).optional().map_err(sql_error)?;
         let receipt = if let Some((old, memory, revision, version, number, seq)) = replay {
@@ -222,6 +242,9 @@ impl<C: Clock> AuthorizedMemory for AuthDatabase<C> {
                 .map_err(sql_error)?;
             }
             tx.execute("INSERT INTO revision VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,'user_assertion',?10,NULL,?10,?11)",params![ctx.scope.tenant.to_string(),ctx.scope.space.to_string(),revision.to_string(),memory.to_string(),number,parent,parent_number,command.primary_evidence.to_string(),command.content_payload.to_string(),start,seq]).map_err(sql_error)?;
+            if let Some(v) = validity {
+                super::m2::insert_time(&tx, ctx.scope, revision, version, v)?;
+            }
             for evidence in &command.evidence {
                 tx.execute(
                     "INSERT INTO revision_evidence VALUES(?1,?2,?3,?4,'supports')",

@@ -31,15 +31,28 @@ impl SyntheticSource {
         principal: Id,
         knowledge_seq: i64,
     ) -> Result<()> {
+        self.seed_at(c, scope, principal, knowledge_seq, (0, 0))
+    }
+    /// Explicit source occurrence and acceptance clocks, synthetic metadata only.
+    pub fn seed_at(
+        &self,
+        c: &Connection,
+        scope: Scope,
+        principal: Id,
+        knowledge_seq: i64,
+        times: (i64, i64),
+    ) -> Result<()> {
         blocked_payload(c, scope, self.body, false)?;
         blocked_payload(c, scope, self.locator, true)?;
         c.execute(
-            "INSERT INTO event VALUES(?1,?2,?3,'system_action',NULL,?4,0,0,?5,'1.0')",
+            "INSERT INTO event VALUES(?1,?2,?3,'system_action',NULL,?4,?5,?6,?7,'1.0')",
             params![
                 scope.tenant.to_string(),
                 scope.space.to_string(),
                 self.event.to_string(),
                 principal.to_string(),
+                times.0,
+                times.1,
                 knowledge_seq
             ],
         )

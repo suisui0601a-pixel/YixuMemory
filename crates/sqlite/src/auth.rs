@@ -18,6 +18,7 @@ const R1_DDL: &str = include_str!("../migrations/0003_auth_r1.sql");
 const VERSION: i64 = 3;
 const MEMORY_DDL: &str = include_str!("../migrations/0004_memory_lab.sql");
 mod ids;
+mod m2;
 mod memory;
 use ids::{OsResourceIds, ResourceIds};
 #[derive(Clone)]
@@ -40,6 +41,7 @@ struct TrustedIdentity {
 struct AuthDatabase<C: Clock> {
     connection: Connection,
     profile: i64,
+    query_tokens: Option<std::sync::Arc<m2::tokens::TokenAuthority>>,
     clock: C,
     ids: Box<dyn ResourceIds>,
     before_commit: Option<Box<dyn FnOnce() + Send>>,
@@ -61,15 +63,31 @@ fn natural(n: i64) -> Result<u64> {
 fn checksum() -> Vec<u8> {
     Sha256::digest(format!("{MIGRATION}\n{AUTH_DDL}\n{R1_DDL}").as_bytes()).to_vec()
 }
-fn profile_checksum(profile: i64) -> String {
-    let bytes = if profile == VERSION {
-        checksum()
-    } else {
-        Sha256::digest(format!("{MIGRATION}\n{AUTH_DDL}\n{R1_DDL}\n{MEMORY_DDL}").as_bytes())
-            .to_vec()
-    };
-    bytes.iter().map(|b| format!("{b:02x}")).collect()
+fn foundation(profile: i64) -> String {
+    if profile != 5 {
+        return MIGRATION.to_owned();
+    }
+    MIGRATION.replace("valid_from_ms","accepted_placeholder_from_ms").replace("valid_to_ms","accepted_placeholder_to_ms")
+    .replace(" UNIQUE(tenant_id,space_id,memory_id,id,number),", " UNIQUE(tenant_id,space_id,memory_id,id,number),\n FOREIGN KEY(tenant_id,space_id,id) REFERENCES revision_time(tenant_id,space_id,revision_id) DEFERRABLE INITIALLY DEFERRED,")
 }
+fn extension(profile: i64) -> String {
+    let m2 = if profile == 5 { m2::DDL } else { "" };
+    if profile >= 4 {
+        format!("{AUTH_DDL}\n{R1_DDL}\n{MEMORY_DDL}{m2}")
+    } else {
+        format!("{AUTH_DDL}\n{R1_DDL}")
+    }
+}
+fn profile_checksum(profile: i64) -> String {
+    if profile == VERSION {
+        return checksum().iter().map(|b| format!("{b:02x}")).collect();
+    }
+    Sha256::digest(format!("{}\n{}", foundation(profile), extension(profile)).as_bytes())
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
+}
+
 fn time<C: Clock>(clock: &C) -> Result<i64> {
     let value = clock.utc_millis().map_err(|_| Error::AuthorizationDenied)?;
     if value < 0 {
@@ -94,7 +112,7 @@ impl<C: Clock> AuthDatabase<C> {
         Self::open_profile(path, clock, VERSION)
     }
     fn open_profile(path: &Path, clock: C, profile: i64) -> Result<Self> {
-        if ![VERSION, 4].contains(&profile) {
+        if ![VERSION, 4, 5].contains(&profile) {
             return Err(Error::IncompatibleSchema);
         }
         let mut c = Connection::open(path).map_err(sql_error)?;
@@ -132,12 +150,8 @@ impl<C: Clock> AuthDatabase<C> {
             .map_err(sql_error)?;
         if version == 0 {
             tx.execute_batch(MIGRATION_RECORD).map_err(sql_error)?;
-            tx.execute_batch(MIGRATION).map_err(sql_error)?;
-            tx.execute_batch(AUTH_DDL).map_err(sql_error)?;
-            tx.execute_batch(R1_DDL).map_err(sql_error)?;
-            if profile == 4 {
-                tx.execute_batch(MEMORY_DDL).map_err(sql_error)?;
-            }
+            tx.execute_batch(&foundation(profile)).map_err(sql_error)?;
+            tx.execute_batch(&extension(profile)).map_err(sql_error)?;
             tx.execute(
                 "INSERT INTO migration_record VALUES(?1,?2,'applied')",
                 params![profile, profile_checksum(profile)],
@@ -163,12 +177,7 @@ impl<C: Clock> AuthDatabase<C> {
         if history[0].1 != profile_checksum(profile) {
             return Err(Error::MigrationChecksum);
         }
-        let extension = if profile == 4 {
-            format!("{AUTH_DDL}\n{R1_DDL}\n{MEMORY_DDL}")
-        } else {
-            format!("{AUTH_DDL}\n{R1_DDL}")
-        };
-        validate_schema_definitions(&tx, MIGRATION, &extension)?;
+        validate_schema_definitions(&tx, &foundation(profile), &extension(profile))?;
         let integrity: String = tx
             .query_row("PRAGMA integrity_check", [], |r| r.get(0))
             .map_err(sql_error)?;
@@ -184,6 +193,7 @@ impl<C: Clock> AuthDatabase<C> {
         Ok(Self {
             connection: c,
             profile,
+            query_tokens: None,
             clock,
             ids: Box::new(OsResourceIds),
             before_commit: None,
@@ -347,7 +357,17 @@ impl<C: Clock> AuthDatabase<C> {
                 enabled,
                 expires_at_ms,
             } => {
-                if self.profile != 4 || !["memory.append", "memory.revise"].contains(&capability) {
+                if !(self.profile == 4 && ["memory.append", "memory.revise"].contains(&capability)
+                    || self.profile == 5
+                        && [
+                            "memory.append",
+                            "memory.revise",
+                            "memory.read",
+                            "memory.history",
+                            "memory.search",
+                        ]
+                        .contains(&capability))
+                {
                     return Err(Error::AuthorizationDenied);
                 }
                 tx.execute("INSERT INTO memory_grant VALUES(?1,?2,?3,?4,?5,?6) ON CONFLICT(tenant_id,space_id,principal_id,capability) DO UPDATE SET enabled=excluded.enabled,expires_at_ms=excluded.expires_at_ms",params![scope.tenant.to_string(),scope.space.to_string(),principal.to_string(),capability,enabled,expires_at_ms]).map_err(sql_error)?;
@@ -479,7 +499,9 @@ fn authorize_scope(
 ) -> Result<()> {
     let grant_table = match capability {
         "metadata.append" => "direct_grant",
-        "memory.append" | "memory.revise" => "memory_grant",
+        "memory.append" | "memory.revise" | "memory.read" | "memory.history" | "memory.search" => {
+            "memory_grant"
+        }
         _ => return Err(Error::AuthorizationDenied),
     };
     if ctx.scope != scope || realm(tx)? != ctx.realm {

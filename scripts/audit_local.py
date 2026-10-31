@@ -51,6 +51,7 @@ def main() -> int:
             "__pycache__",
             ".ruff_cache",
             ".mypy_cache",
+            ".pytest_cache",
         }:
             continue
         assert path.suffix.lower() not in {".sqlite", ".db", ".pem", ".key", ".log"}
