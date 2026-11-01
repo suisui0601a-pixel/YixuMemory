@@ -1,5 +1,6 @@
 //! Metadata foundation only. No content, database, model or operating-system dependencies.
 use std::{fmt, str::FromStr};
+pub mod security_m3;
 pub mod temporal;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

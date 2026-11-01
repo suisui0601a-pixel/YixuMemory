@@ -26,6 +26,18 @@ pub struct NoContentRuntime {
     _private: (),
 }
 impl NoContentRuntime {
+    /// Product profile selection is not evidence of installed, accepted security backends.
+    pub fn security_capabilities(
+        &self,
+        profile: yixu_domain::security_m3::Profile,
+    ) -> SecurityCapabilities {
+        SecurityCapabilities {
+            profile,
+            content: false,
+            strong_erasure: false,
+            restore: false,
+        }
+    }
     /// Formal metadata ingress is unavailable until a trusted issuer, live Grant/
     /// revocation Policy and transaction-bound authorization are implemented.
     /// No policy or laboratory adapter can be injected into this assembly.
@@ -54,9 +66,43 @@ impl NoContentRuntime {
     }
 }
 
+pub struct SecurityCapabilities {
+    profile: yixu_domain::security_m3::Profile,
+    content: bool,
+    strong_erasure: bool,
+    restore: bool,
+}
+impl SecurityCapabilities {
+    pub fn profile(&self) -> yixu_domain::security_m3::Profile {
+        self.profile
+    }
+    pub fn content(&self) -> bool {
+        self.content
+    }
+    pub fn strong_erasure(&self) -> bool {
+        self.strong_erasure
+    }
+    pub fn restore(&self) -> bool {
+        self.restore
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn profile_name_cannot_upgrade_actual_assembly_capabilities() {
+        for profile in [
+            yixu_domain::security_m3::Profile::Local,
+            yixu_domain::security_m3::Profile::Protected,
+        ] {
+            let caps = NoContentRuntime::default().security_capabilities(profile);
+            assert_eq!(caps.profile(), profile);
+            assert!(!caps.content());
+            assert!(!caps.strong_erasure());
+            assert!(!caps.restore());
+        }
+    }
     fn scope() -> Scope {
         Scope {
             tenant: Id::from_bytes([1; 16]),

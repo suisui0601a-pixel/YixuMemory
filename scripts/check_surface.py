@@ -31,7 +31,7 @@ def check_manifest(
         )
         (path / "Cargo.toml").write_text(
             '[package]\nname="external-probe"\nversion="0.0.0"\nedition="2024"\n'
-            f"[dependencies]\n{dependency_lines}\n"
+            f"[dependencies]\n{dependency_lines}\n[workspace]\n"
         )
         result = subprocess.run(
             ["cargo", "check", "--offline", *args, "--manifest-path", str(path / "Cargo.toml")],
@@ -69,6 +69,24 @@ def main() -> None:
     ports = PORTS.as_posix()
     application = APPLICATION.as_posix()
     cases = [
+        (
+            "m3_fake_backend_unavailable_with_all_features",
+            {"yixu-m3-lab": ((ROOT / "crates/m3-lab").as_posix(), 'default-features = false')},
+            "use yixu_m3_lab::experiment::FakeKeyVault; fn main(){}",
+            ["--all-features"], "could not find `experiment`",
+        ),
+        (
+            "m3_release_permit_cannot_be_forged",
+            {"yixu-ports": (ports, 'default-features = false')},
+            "fn main(){let _=yixu_ports::security_m3::ReleasePermit{_private:()};}",
+            ["--all-features"], "field `_private`",
+        ),
+        (
+            "m3_protection_context_cannot_be_forged",
+            {"yixu-ports": (ports, 'default-features = false')},
+            "fn main(){let _=yixu_ports::security_m3::ProtectionContext{binding:todo!()};}",
+            [], "field `binding`",
+        ),
         (
             "sqlite_default_has_no_lab_api",
             {"yixu-sqlite-foundation": (sqlite, 'default-features = false')},
@@ -208,6 +226,7 @@ def main() -> None:
     for root in ("yixu-application", "yixu-sqlite-foundation"):
         reached = normal_reachable(metadata, root)
         assert "yixu-sqlite-test-support" not in reached, (root, reached)
+        assert not {"yixu-m3-lab", "chacha20poly1305", "zeroize"} & reached, (root, reached)
     results.extend(
         [
             {"case": "application_normal_graph_excludes_test_support", "result": "passed"},
