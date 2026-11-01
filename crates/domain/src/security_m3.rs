@@ -155,6 +155,9 @@ impl GuardModel {
     pub fn incarnation(&self) -> u64 {
         self.incarnation
     }
+    pub fn realm(&self) -> Identity {
+        self.realm
+    }
     pub fn set_available(&mut self, available: bool) {
         self.available = available;
     }

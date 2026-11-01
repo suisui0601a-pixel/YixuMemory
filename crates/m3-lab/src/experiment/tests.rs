@@ -1,5 +1,109 @@
 use super::*;
 #[test]
+fn remote_advanced_fence_or_phase_is_rejected_before_key_revocation() {
+    for advance_fence in [true, false] {
+        let mut lab = Lab::new(Profile::Protected);
+        let identity = lab.identity();
+        let b = lab.stage_canary(&identity, Fault::None).unwrap();
+        let i = lab.begin_delete(&identity, b, Fault::None).unwrap();
+        lab.witness.model.tdel(i.id).unwrap();
+        let f = lab.witness.model.claim(i.id).unwrap();
+        if advance_fence {
+            lab.witness.model.claim(i.id).unwrap();
+        } else {
+            for c in &i.copies {
+                lab.witness
+                    .model
+                    .observe(observation(&i, b, *c, f))
+                    .unwrap();
+            }
+            lab.witness.model.finalize(i.id).unwrap();
+        }
+        let local = lab.model.clone();
+        let remote = lab.witness.model.clone();
+        assert!(lab.finish_delete(&i, Fault::None).is_err());
+        assert_eq!(lab.model, local);
+        assert_eq!(lab.witness.model, remote);
+        assert!(lab.vault.keys.contains_key(&b.key));
+        assert!(lab.store.entries.contains_key(&b.payload));
+    }
+}
+#[test]
+fn remote_only_intent_must_not_be_erased_by_local_finalization() {
+    let mut lab = Lab::new(Profile::Protected);
+    let identity = lab.identity();
+    let b = lab.stage_canary(&identity, Fault::None).unwrap();
+    let i = lab.begin_delete(&identity, b, Fault::None).unwrap();
+    let mut remote_only = i.clone();
+    remote_only.id = [91; 16];
+    remote_only.request_digest = [92; 32];
+    remote_only.deletion_generation += 1;
+    lab.witness.prepare(remote_only, Fault::None).unwrap();
+    let remote_before = lab.witness.model.clone();
+    let local_before = lab.model.clone();
+    assert!(lab.finish_delete(&i, Fault::None).is_err());
+    assert_eq!(lab.witness.model, remote_before);
+    assert_eq!(lab.model, local_before);
+}
+#[test]
+fn completion_updates_only_its_intent_and_preserves_peer_phase() {
+    let mut lab = Lab::new(Profile::Protected);
+    let identity = lab.identity();
+    let a = lab.stage_canary(&identity, Fault::None).unwrap();
+    let b = lab.stage_canary(&identity, Fault::None).unwrap();
+    let i = lab.begin_delete(&identity, a, Fault::None).unwrap();
+    let j = lab.begin_delete(&identity, b, Fault::None).unwrap();
+    let before = lab.witness.model.records()[&j.id].clone();
+    lab.finish_delete(&i, Fault::None).unwrap();
+    assert_eq!(lab.witness.model.records()[&j.id], before);
+    lab.finish_delete(&j, Fault::None).unwrap();
+    assert_eq!(
+        lab.witness.model.records()[&i.id].state,
+        IntentState::Finalized
+    );
+}
+#[test]
+fn finalize_lost_ack_can_be_retried_without_overwriting_witness() {
+    let mut lab = Lab::new(Profile::Protected);
+    let identity = lab.identity();
+    let b = lab.stage_canary(&identity, Fault::None).unwrap();
+    let i = lab.begin_delete(&identity, b, Fault::None).unwrap();
+    assert_eq!(
+        lab.finish_delete(&i, Fault::FinalizeAck),
+        Err(Error::Unknown)
+    );
+    let witness = lab.witness.model.clone();
+    lab.finish_delete(&i, Fault::None).unwrap();
+    assert_eq!(lab.witness.model, witness);
+}
+#[test]
+fn mismatched_witness_identity_blocks_before_cleanup_or_claim() {
+    for mismatch in 0..4 {
+        let mut lab = Lab::new(Profile::Protected);
+        let identity = lab.identity();
+        let b = lab.stage_canary(&identity, Fault::None).unwrap();
+        let i = lab.begin_delete(&identity, b, Fault::None).unwrap();
+        match mismatch {
+            0 => lab.witness.model = GuardModel::new(Profile::Protected, [9; 16], 1).unwrap(),
+            1 => lab.witness.model = GuardModel::new(Profile::Protected, [1; 16], 2).unwrap(),
+            2 => lab.witness.model = GuardModel::new(Profile::Local, [1; 16], 1).unwrap(),
+            _ => {
+                let mut changed = i.clone();
+                changed.request_digest = [88; 32];
+                lab.witness.model = GuardModel::new(Profile::Protected, [1; 16], 1).unwrap();
+                lab.witness.prepare(changed, Fault::None).unwrap();
+            }
+        }
+        let local = lab.model.clone();
+        let remote = lab.witness.model.clone();
+        assert!(lab.finish_delete(&i, Fault::None).is_err());
+        assert_eq!(lab.model, local);
+        assert_eq!(lab.witness.model, remote);
+        assert!(lab.vault.keys.contains_key(&b.key));
+        assert!(lab.store.entries.contains_key(&b.payload));
+    }
+}
+#[test]
 fn xchacha_matches_published_draft_appendix_a1_vector() {
     // Numeric test data, not implementation code, from IETF draft-irtf-cfrg-xchacha-03 A.1.
     // Attribution/terms and draft status are recorded in docs/M3_THIRD_PARTY.md.

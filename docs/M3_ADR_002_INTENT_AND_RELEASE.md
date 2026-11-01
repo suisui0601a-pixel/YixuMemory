@@ -43,6 +43,17 @@ senders and settle in-flight requests before this pure reducer can consume a sna
 does not prove that a delayed PREPARE cannot arrive. The prototype deliberately has no UNKNOWN->NONE
 release transition. Full request barriers/commitments/signature freshness remain production gates.
 
+The concentrated Luna review found a fake-only ledger overwrite in the initial prototype. A new
+negative test reproduced it before repair. Fake completion now checks matching realm/profile,
+incarnation/sequence and exact immutable intent inventory BEFORE cleanup/claim. It starts from the
+remote ledger and projects only the selected intent's simulated receipts/finalize, preserving peer
+phases and remote-only facts. Divergent inventory is rejected for reconciliation, never overwritten.
+Lost finalize acknowledgement can retry without changing an already finalized remote record.
+The selected remote phase/fence and same-fence receipt subset are also preflighted before revoking
+any key or removing any blob. A remote-ahead state requires reconciliation, not a cleanup followed
+by a late error. A separately reproduced negative test verifies both ledgers and resources remain
+unchanged on that rejection.
+
 Private LabPermit is single-use and binds payload, authorization epoch, incarnation and security_seq.
 The test release function rechecks those values and live membership under the same Mutex as deletion
 and revocation. Its sink is a SHA256 digest of a fixed synthetic body; no network body queue exists.

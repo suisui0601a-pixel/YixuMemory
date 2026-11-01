@@ -260,6 +260,94 @@ struct FakeWitness {
     available: bool,
 }
 impl FakeWitness {
+    fn require_matching_ledger(&self, local: &GuardModel) -> Result<()> {
+        if !self.available {
+            return Err(Error::Unavailable);
+        }
+        if self.model.profile != local.profile
+            || self.model.realm() != local.realm()
+            || self.model.incarnation() != local.incarnation()
+            || self.model.security_seq() != local.security_seq()
+            || self.model.records().len() != local.records().len()
+            || local.records().iter().any(|(id, r)| {
+                self.model
+                    .records()
+                    .get(id)
+                    .is_none_or(|w| w.intent != r.intent)
+            })
+        {
+            return Err(Error::Integrity);
+        }
+        Ok(())
+    }
+    fn project_completion(&mut self, local: &GuardModel, id: Identity) -> Result<()> {
+        self.require_matching_ledger(local)?;
+        let completed = local.records().get(&id).ok_or(Error::Integrity)?;
+        if completed.state != IntentState::Receipted {
+            return Err(Error::Conflict);
+        }
+        // Start from remote, not local: other intents' phases, fences and receipts are preserved.
+        let mut next = self.model.clone();
+        let remote = next.records().get(&id).ok_or(Error::Integrity)?;
+        if remote.worker_fence > completed.worker_fence {
+            return Err(Error::Integrity);
+        }
+        if remote.state == IntentState::Finalized || remote.state == IntentState::Receipted {
+            if remote.worker_fence != completed.worker_fence
+                || remote.receipts != completed.receipts
+            {
+                return Err(Error::Integrity);
+            }
+            next.finalize(id)?;
+        } else {
+            if remote.state == IntentState::Guarded {
+                next.tdel(id)?;
+            }
+            while next.records()[&id].worker_fence < completed.worker_fence {
+                next.claim(id)?;
+            }
+            for receipt in &completed.receipts {
+                if next.records()[&id].receipts.contains(receipt) {
+                    continue;
+                }
+                next.observe(observation(
+                    &completed.intent,
+                    receipt.binding,
+                    receipt.copy,
+                    completed.worker_fence,
+                ))?;
+            }
+            next.finalize(id)?;
+        }
+        self.model = next;
+        Ok(())
+    }
+    fn preflight_completion(&self, local: &GuardModel, id: Identity) -> Result<()> {
+        self.require_matching_ledger(local)?;
+        let l = local.records().get(&id).ok_or(Error::Integrity)?;
+        let r = self.model.records().get(&id).ok_or(Error::Integrity)?;
+        let compatible = match l.state {
+            IntentState::DbFenced => {
+                matches!(r.state, IntentState::Guarded | IntentState::DbFenced)
+            }
+            IntentState::Receipted => matches!(
+                r.state,
+                IntentState::Guarded
+                    | IntentState::DbFenced
+                    | IntentState::Receipted
+                    | IntentState::Finalized
+            ),
+            IntentState::Finalized => r == l,
+            _ => false,
+        };
+        if !compatible
+            || r.worker_fence > l.worker_fence
+            || (r.worker_fence == l.worker_fence && !r.receipts.is_subset(&l.receipts))
+        {
+            return Err(Error::Integrity);
+        }
+        Ok(())
+    }
     fn prepare(&mut self, intent: SecurityIntent, fault: Fault) -> Result<()> {
         if !self.available {
             return Err(Error::Unavailable);
@@ -437,6 +525,9 @@ impl Lab {
         Ok(intent)
     }
     fn finish_delete(&mut self, intent: &SecurityIntent, fault: Fault) -> Result<()> {
+        if self.model.profile == Profile::Protected {
+            self.witness.preflight_completion(&self.model, intent.id)?;
+        }
         let record = self
             .model
             .records()
@@ -457,22 +548,24 @@ impl Lab {
         if self.model.profile == Profile::Protected && !self.witness.available {
             return Err(Error::Unavailable);
         }
-        let fence = self.model.claim(intent.id)?;
-        for b in &intent.targets {
-            self.vault.revoke(b, fence)?;
-            self.model
-                .observe(observation(intent, *b, KEY_COPY, fence))?;
-            if fault == Fault::Erase {
-                return Err(Error::Unavailable);
+        if record.state == IntentState::DbFenced {
+            let fence = self.model.claim(intent.id)?;
+            for b in &intent.targets {
+                self.vault.revoke(b, fence)?;
+                self.model
+                    .observe(observation(intent, *b, KEY_COPY, fence))?;
+                if fault == Fault::Erase {
+                    return Err(Error::Unavailable);
+                }
+                self.store.erase(b, fence)?;
+                self.model
+                    .observe(observation(intent, *b, BLOB_COPY, fence))?;
             }
-            self.store.erase(b, fence)?;
-            self.model
-                .observe(observation(intent, *b, BLOB_COPY, fence))?;
+        } else if record.state != IntentState::Receipted {
+            return Err(Error::Conflict);
         }
         if self.model.profile == Profile::Protected {
-            // Fake observation copy is deliberate. No claim of independent durable receipts.
-            self.witness.model = self.model.clone();
-            self.witness.model.finalize(intent.id)?;
+            self.witness.project_completion(&self.model, intent.id)?;
             if fault == Fault::FinalizeAck {
                 return Err(Error::Unknown);
             }
