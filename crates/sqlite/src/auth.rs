@@ -20,6 +20,8 @@ const MEMORY_DDL: &str = include_str!("../migrations/0004_memory_lab.sql");
 mod ids;
 mod m2;
 mod memory;
+#[cfg(target_os = "windows")]
+mod persistence;
 use ids::{OsResourceIds, ResourceIds};
 #[derive(Clone)]
 struct AuthContext {
@@ -64,16 +66,21 @@ fn checksum() -> Vec<u8> {
     Sha256::digest(format!("{MIGRATION}\n{AUTH_DDL}\n{R1_DDL}").as_bytes()).to_vec()
 }
 fn foundation(profile: i64) -> String {
-    if profile != 5 {
+    if profile < 5 {
         return MIGRATION.to_owned();
     }
-    MIGRATION.replace("valid_from_ms","accepted_placeholder_from_ms").replace("valid_to_ms","accepted_placeholder_to_ms")
+    MIGRATION.replace("metadata-fixture-not-encrypted", if profile == 6 { "synthetic-xchacha-v1" } else { "metadata-fixture-not-encrypted" }).replace("valid_from_ms","accepted_placeholder_from_ms").replace("valid_to_ms","accepted_placeholder_to_ms")
     .replace(" UNIQUE(tenant_id,space_id,memory_id,id,number),", " UNIQUE(tenant_id,space_id,memory_id,id,number),\n FOREIGN KEY(tenant_id,space_id,id) REFERENCES revision_time(tenant_id,space_id,revision_id) DEFERRABLE INITIALLY DEFERRED,")
 }
 fn extension(profile: i64) -> String {
-    let m2 = if profile == 5 { m2::DDL } else { "" };
+    let m2 = if profile >= 5 { m2::DDL } else { "" };
+    let persistent = if profile == 6 {
+        include_str!("../migrations/0006_persistence_lab.sql")
+    } else {
+        ""
+    };
     if profile >= 4 {
-        format!("{AUTH_DDL}\n{R1_DDL}\n{MEMORY_DDL}{m2}")
+        format!("{AUTH_DDL}\n{R1_DDL}\n{MEMORY_DDL}{m2}{persistent}")
     } else {
         format!("{AUTH_DDL}\n{R1_DDL}")
     }
@@ -112,7 +119,7 @@ impl<C: Clock> AuthDatabase<C> {
         Self::open_profile(path, clock, VERSION)
     }
     fn open_profile(path: &Path, clock: C, profile: i64) -> Result<Self> {
-        if ![VERSION, 4, 5].contains(&profile) {
+        if ![VERSION, 4, 5, 6].contains(&profile) {
             return Err(Error::IncompatibleSchema);
         }
         let mut c = Connection::open(path).map_err(sql_error)?;
@@ -358,7 +365,7 @@ impl<C: Clock> AuthDatabase<C> {
                 expires_at_ms,
             } => {
                 if !(self.profile == 4 && ["memory.append", "memory.revise"].contains(&capability)
-                    || self.profile == 5
+                    || self.profile >= 5
                         && [
                             "memory.append",
                             "memory.revise",

@@ -70,6 +70,18 @@ def main() -> None:
     application = APPLICATION.as_posix()
     cases = [
         (
+            "m3b_persistence_unavailable_with_all_features",
+            {"yixu-sqlite-foundation": (sqlite, 'default-features = false')},
+            "use yixu_sqlite_foundation::auth::persistence::Store; fn main(){}",
+            ["--all-features"], "could not find `auth`",
+        ),
+        (
+            "m3b_linux_store_unavailable_to_dependency",
+            {"yixu-m3-lab": ((ROOT / "crates/m3-lab").as_posix(), 'default-features = false')},
+            "use yixu_m3_lab::linux_store::Store; fn main(){}",
+            ["--all-features"], "could not find `linux_store`",
+        ),
+        (
             "m3_fake_backend_unavailable_with_all_features",
             {"yixu-m3-lab": ((ROOT / "crates/m3-lab").as_posix(), 'default-features = false')},
             "use yixu_m3_lab::experiment::FakeKeyVault; fn main(){}",

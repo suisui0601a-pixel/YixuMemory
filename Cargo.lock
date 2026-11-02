@@ -517,6 +517,7 @@ version = "0.1.0-foundation.1"
 dependencies = [
  "chacha20poly1305",
  "getrandom",
+ "rustix",
  "sha2",
  "tempfile",
  "yixu-application",
@@ -536,6 +537,7 @@ dependencies = [
 name = "yixu-sqlite-foundation"
 version = "0.1.0-foundation.1"
 dependencies = [
+ "chacha20poly1305",
  "getrandom",
  "hmac",
  "rusqlite",
@@ -545,6 +547,7 @@ dependencies = [
  "yixu-domain",
  "yixu-ports",
  "yixu-sqlite-test-support",
+ "zeroize",
 ]
 
 [[package]]

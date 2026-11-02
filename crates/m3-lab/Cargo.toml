@@ -15,6 +15,9 @@ getrandom = "=0.4.3"
 sha2.workspace = true
 tempfile.workspace = true
 
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+rustix = { version = "=1.1.6", features = ["fs", "process"] }
+
 [lints.rust]
 unsafe_code = "deny"
 [lints.clippy]
