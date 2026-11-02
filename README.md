@@ -6,6 +6,14 @@ Version: `0.0.0-p0` · Architecture: `P0-Baseline-001`
 
 独立开源长期记忆内核的首轮架构基线。当前交付为设计、数据契约与验收框架，**没有可运行的记忆服务**。不承诺消除 AI 遗忘，也不宣称未经测试的吞吐、安全或后端等价性。
 
+## 当前平台验证范围
+
+当前可验证的原型测试范围为 **Windows + NTFS**。本地 M3-B 合成持久化原型已在限定范围内通过独立审查；这不是生产级安全认证，也不表示本仓库已提供该实现或可安装产品。不将结果推广到其他 Windows 文件系统，Windows + exFAT 未测试、不作兼容性或安全性保证。
+
+Linux 和 macOS 尚未经过本地 P1 原型的编译、运行及安全验收，不作兼容性承诺。M3-C1 Linux 实机测试未执行，现按项目决定标记 **NOT TESTED / SKIPPED**。未测试不等于永久不支持，未来可以重新安排跨平台验证。公开 P0 的 Ubuntu CI 契约检查不构成 P1 Linux 原型验收。
+
+详见[平台验证矩阵](docs/PLATFORM_SUPPORT.md)与[测试状态总记录](docs/TEST_STATUS.md)。
+
 ## 阅读顺序
 
 1. [架构](docs/ARCHITECTURE.md) 与 [领域模型](docs/DOMAIN_MODEL.md)
