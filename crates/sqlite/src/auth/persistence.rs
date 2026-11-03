@@ -26,8 +26,11 @@ enum IoFault {
     ShortWrite,
     Sync,
 }
+mod dpapi;
+mod local_keys;
 #[path = "persistence/winfs.rs"]
 mod winfs;
+use dpapi::LocalVault;
 struct Store {
     root: PathBuf,
     anchor: winfs::Anchor,
@@ -176,10 +179,13 @@ fn seal(b: &PayloadBinding) -> Result<Vec<u8>> {
     seal_variant(b, 0)
 }
 fn seal_variant(b: &PayloadBinding, variant: u8) -> Result<Vec<u8>> {
+    let key = lab_key(Id::from_bytes(b.key))?;
+    seal_using_key(b, variant, &key)
+}
+fn seal_using_key(b: &PayloadBinding, variant: u8, key: &LockedBuffer) -> Result<Vec<u8>> {
     let mut plain =
         LockedBuffer::new(CANARY.len(), false).map_err(|_| Error::CapabilityUnavailable)?;
     plain.bytes_mut().copy_from_slice(synthetic(variant)?);
-    let key = lab_key(Id::from_bytes(b.key))?;
     let cipher = XChaCha20Poly1305::new_from_slice(key.bytes()).map_err(|_| Error::Constraint)?;
     let mut nonce = [0; 24];
     getrandom::fill(&mut nonce).map_err(|_| Error::ResourceUnavailable)?;
@@ -196,6 +202,10 @@ fn seal_variant(b: &PayloadBinding, variant: u8) -> Result<Vec<u8>> {
     Ok(out)
 }
 fn open(b: &PayloadBinding, bytes: &[u8]) -> Result<Vec<u8>> {
+    let k = lab_key(Id::from_bytes(b.key))?;
+    open_using_key(b, bytes, &k)
+}
+fn open_using_key(b: &PayloadBinding, bytes: &[u8], k: &LockedBuffer) -> Result<Vec<u8>> {
     let n = CANARY.len();
     let aad = b.aad(n as u32);
     let off = 12 + aad.len();
@@ -206,7 +216,6 @@ fn open(b: &PayloadBinding, bytes: &[u8]) -> Result<Vec<u8>> {
     {
         return Err(Error::Constraint);
     }
-    let k = lab_key(Id::from_bytes(b.key))?;
     let mut plain = LockedBuffer::new(n, false).map_err(|_| Error::CapabilityUnavailable)?;
     plain.bytes_mut().copy_from_slice(&bytes[off + 40..]);
     XChaCha20Poly1305::new_from_slice(k.bytes())
@@ -262,7 +271,7 @@ impl<C: Clock> AuthDatabase<C> {
     }
     fn stage(&mut self, ctx: &AuthContext, c: &Command) -> Result<String> {
         synthetic(c.variant)?;
-        if self.profile != 6 {
+        if ![6, 7].contains(&self.profile) {
             return Err(Error::CapabilityUnavailable);
         }
         let tx = self
@@ -335,6 +344,19 @@ impl<C: Clock> AuthDatabase<C> {
         Ok("staged".into())
     }
     fn persist(&mut self, ctx: &AuthContext, c: &Command, store: &Store, stop: Stop) -> Result<Id> {
+        self.persist_backend(ctx, c, store, stop, None)
+    }
+    fn persist_backend(
+        &mut self,
+        ctx: &AuthContext,
+        c: &Command,
+        store: &Store,
+        stop: Stop,
+        vault: Option<&LocalVault>,
+    ) -> Result<Id> {
+        if !matches!((self.profile, vault.is_some()), (6, false) | (7, true)) {
+            return Err(Error::CapabilityUnavailable);
+        }
         let state = self.stage(ctx, c)?;
         let plan = self.plan(ctx, c.key)?;
         if plan.copies.len() != 4 {
@@ -358,7 +380,17 @@ impl<C: Clock> AuthDatabase<C> {
                         if !attempted {
                             return Err(Error::CapabilityUnavailable);
                         }
-                        open(&b, &existing)?;
+                        self.open_backend(
+                            ctx,
+                            &b,
+                            &existing,
+                            vault,
+                            if c.target.is_some() {
+                                "memory.revise"
+                            } else {
+                                "memory.append"
+                            },
+                        )?;
                         existing
                     }
                     Err(Error::ResourceUnavailable) => {
@@ -382,7 +414,22 @@ impl<C: Clock> AuthDatabase<C> {
                             return Err(Error::CapabilityUnavailable);
                         }
                         tx.commit().map_err(sql_error)?;
-                        let bytes = seal_variant(&b, c.variant)?;
+                        let bytes = if let Some(v) = vault {
+                            let key = self.local_key(
+                                ctx,
+                                &b,
+                                v,
+                                if c.target.is_some() {
+                                    "memory.revise"
+                                } else {
+                                    "memory.append"
+                                },
+                                true,
+                            )?;
+                            seal_using_key(&b, c.variant, &key)?
+                        } else {
+                            seal_variant(&b, c.variant)?
+                        };
                         store.publish(p, &bytes)?;
                         bytes
                     }
@@ -424,6 +471,9 @@ impl<C: Clock> AuthDatabase<C> {
                 }
             }
             tx.execute("UPDATE content_intent SET state='sealed' WHERE tenant_id=?1 AND principal_id=?2 AND id=?3 AND state='staged'",params![ctx.scope.tenant.to_string(),ctx.principal.to_string(),c.key.to_string()]).map_err(sql_error)?;
+            if vault.is_some() {
+                Self::check_local_keys(&tx, ctx, c.key)?;
+            }
             tx.commit().map_err(sql_error)?;
         } else if state != "sealed" {
             return Err(Error::CapabilityUnavailable);
@@ -433,7 +483,17 @@ impl<C: Clock> AuthDatabase<C> {
             return Err(Error::Database);
         }
         // Validate current immutable files before T1, not while holding the writer lock.
-        self.validate_files(ctx, c.key, store)?;
+        self.validate_files_backend(
+            ctx,
+            c.key,
+            store,
+            vault,
+            if c.target.is_some() {
+                "memory.revise"
+            } else {
+                "memory.append"
+            },
+        )?;
         let tx = self
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)
@@ -615,6 +675,9 @@ impl<C: Clock> AuthDatabase<C> {
                 "memory.append"
             },
         )?;
+        if vault.is_some() {
+            Self::check_local_keys(&tx, ctx, c.key)?;
+        }
         tx.commit().map_err(sql_error)?;
         if stop == Stop::Reply {
             pause_if(stop);
@@ -622,7 +685,14 @@ impl<C: Clock> AuthDatabase<C> {
         }
         Ok(plan.memory)
     }
-    fn validate_files(&self, ctx: &AuthContext, key: Id, store: &Store) -> Result<Vec<u8>> {
+    fn validate_files_backend(
+        &mut self,
+        ctx: &AuthContext,
+        key: Id,
+        store: &Store,
+        vault: Option<&LocalVault>,
+        cap: &str,
+    ) -> Result<Vec<u8>> {
         let mut digest = None;
         let p = self.plan(ctx, key)?;
         for (id, k, o, kind, _) in p.copies {
@@ -638,7 +708,8 @@ impl<C: Clock> AuthDatabase<C> {
             if hash(&bytes) != h {
                 return Err(Error::Constraint);
             }
-            digest = Some(open(&binding(ctx, id, k, o, kind), &bytes)?);
+            digest =
+                Some(self.open_backend(ctx, &binding(ctx, id, k, o, kind), &bytes, vault, cap)?);
         }
         digest.ok_or(Error::Constraint)
     }
@@ -665,6 +736,9 @@ impl<C: Clock> AuthDatabase<C> {
         Ok(out)
     }
     fn cleanup_uncommitted(&mut self, ctx: &AuthContext, key: Id, store: &Store) -> Result<()> {
+        if self.profile != 6 {
+            return Err(Error::CapabilityUnavailable);
+        }
         // Fence the entire staging intent before touching any file. Never clear a fence.
         let plan = self.plan(ctx, key)?;
         let tx = self
@@ -693,6 +767,18 @@ impl<C: Clock> AuthDatabase<C> {
         Ok(())
     }
     fn release_digest(&mut self, ctx: &AuthContext, key: Id, store: &Store) -> Result<Vec<u8>> {
+        self.release_backend(ctx, key, store, None)
+    }
+    fn release_backend(
+        &mut self,
+        ctx: &AuthContext,
+        key: Id,
+        store: &Store,
+        vault: Option<&LocalVault>,
+    ) -> Result<Vec<u8>> {
+        if !matches!((self.profile, vault.is_some()), (6, false) | (7, true)) {
+            return Err(Error::CapabilityUnavailable);
+        }
         let tx = self
             .connection
             .transaction_with_behavior(TransactionBehavior::Immediate)
@@ -703,7 +789,7 @@ impl<C: Clock> AuthDatabase<C> {
             return Err(Error::CapabilityUnavailable);
         }
         tx.commit().map_err(sql_error)?;
-        let released_digest = self.validate_files(ctx, key, store)?;
+        let released_digest = self.validate_files_backend(ctx, key, store, vault, "memory.read")?;
         // No external output yet. Final writer lock serializes with revocation/fencing.
         let tx = self
             .connection
@@ -713,6 +799,9 @@ impl<C: Clock> AuthDatabase<C> {
         let valid:bool=tx.query_row("SELECT EXISTS(SELECT 1 FROM content_intent i JOIN memory m ON m.tenant_id=i.tenant_id AND m.space_id=i.space_id AND m.id=i.memory_id WHERE i.tenant_id=?1 AND i.space_id=?2 AND i.principal_id=?3 AND i.id=?4 AND i.state='committed' AND m.state='active' AND m.current_revision_id=i.revision_id)",params![ctx.scope.tenant.to_string(),ctx.scope.space.to_string(),ctx.principal.to_string(),key.to_string()],|r|r.get(0)).map_err(sql_error)?;
         if !valid {
             return Err(Error::CapabilityUnavailable);
+        }
+        if vault.is_some() {
+            Self::check_local_keys(&tx, ctx, key)?;
         }
         tx.commit().map_err(sql_error)?;
         Ok(released_digest)

@@ -70,6 +70,12 @@ def main() -> None:
     application = APPLICATION.as_posix()
     cases = [
         (
+            "w2_real_local_vault_unavailable_to_public_dependency",
+            {"yixu-sqlite-foundation": (sqlite, 'default-features = false')},
+            "use yixu_sqlite_foundation::auth::persistence::dpapi::LocalVault; fn main(){}",
+            ["--all-features"], "could not find `auth`",
+        ),
+        (
             "m3b_persistence_unavailable_with_all_features",
             {"yixu-sqlite-foundation": (sqlite, 'default-features = false')},
             "use yixu_sqlite_foundation::auth::persistence::Store; fn main(){}",

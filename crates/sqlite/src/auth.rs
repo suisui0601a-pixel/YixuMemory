@@ -69,18 +69,25 @@ fn foundation(profile: i64) -> String {
     if profile < 5 {
         return MIGRATION.to_owned();
     }
-    MIGRATION.replace("metadata-fixture-not-encrypted", if profile == 6 { "synthetic-xchacha-v1" } else { "metadata-fixture-not-encrypted" }).replace("valid_from_ms","accepted_placeholder_from_ms").replace("valid_to_ms","accepted_placeholder_to_ms")
+    MIGRATION.replace("metadata-fixture-not-encrypted", if profile >= 6 { "synthetic-xchacha-v1" } else { "metadata-fixture-not-encrypted" }).replace("valid_from_ms","accepted_placeholder_from_ms").replace("valid_to_ms","accepted_placeholder_to_ms")
     .replace(" UNIQUE(tenant_id,space_id,memory_id,id,number),", " UNIQUE(tenant_id,space_id,memory_id,id,number),\n FOREIGN KEY(tenant_id,space_id,id) REFERENCES revision_time(tenant_id,space_id,revision_id) DEFERRABLE INITIALLY DEFERRED,")
 }
 fn extension(profile: i64) -> String {
     let m2 = if profile >= 5 { m2::DDL } else { "" };
-    let persistent = if profile == 6 {
+    let persistent = if profile >= 6 {
         include_str!("../migrations/0006_persistence_lab.sql")
     } else {
         ""
     };
     if profile >= 4 {
-        format!("{AUTH_DDL}\n{R1_DDL}\n{MEMORY_DDL}{m2}{persistent}")
+        format!(
+            "{AUTH_DDL}\n{R1_DDL}\n{MEMORY_DDL}{m2}{persistent}{}",
+            if profile == 7 {
+                include_str!("../migrations/0007_local_keyvault.sql")
+            } else {
+                ""
+            }
+        )
     } else {
         format!("{AUTH_DDL}\n{R1_DDL}")
     }
@@ -119,7 +126,7 @@ impl<C: Clock> AuthDatabase<C> {
         Self::open_profile(path, clock, VERSION)
     }
     fn open_profile(path: &Path, clock: C, profile: i64) -> Result<Self> {
-        if ![VERSION, 4, 5, 6].contains(&profile) {
+        if ![VERSION, 4, 5, 6, 7].contains(&profile) {
             return Err(Error::IncompatibleSchema);
         }
         let mut c = Connection::open(path).map_err(sql_error)?;

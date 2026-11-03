@@ -1,8 +1,8 @@
 use super::*;
 #[derive(Clone)]
-struct TestClock;
+pub(super) struct TestClock;
 impl TestClock {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         Self
     }
 }
@@ -24,19 +24,22 @@ fn scope() -> Scope {
     }
 }
 use tempfile::{TempDir, tempdir};
-struct Fixture {
-    path: PathBuf,
-    db: AuthDatabase<TestClock>,
-    store: Store,
-    authority: BootstrapAuthority,
-    _dir: TempDir,
+pub(super) struct Fixture {
+    pub(super) path: PathBuf,
+    pub(super) db: AuthDatabase<TestClock>,
+    pub(super) store: Store,
+    pub(super) authority: BootstrapAuthority,
+    pub(super) _dir: TempDir,
 }
 impl Fixture {
     fn new() -> Self {
+        Self::profile(6)
+    }
+    pub(super) fn profile(profile: i64) -> Self {
         let dir = tempdir().unwrap();
         assert!(dir.path().to_string_lossy().starts_with("C:"));
         let path = dir.path().join("content.sqlite");
-        let mut db = AuthDatabase::open_profile(&path, TestClock::new(), 6).unwrap();
+        let mut db = AuthDatabase::open_profile(&path, TestClock::new(), profile).unwrap();
         let authority = db.bootstrap(id(90)).unwrap();
         db.administer(
             &authority,
@@ -71,12 +74,12 @@ impl Fixture {
             authority,
         }
     }
-    fn ctx(&self) -> AuthContext {
+    pub(super) fn ctx(&self) -> AuthContext {
         self.db
             .identify(TrustedIdentity { subject: id(4) }, id(3))
             .unwrap()
     }
-    fn cmd(&self, k: u8) -> Command {
+    pub(super) fn cmd(&self, k: u8) -> Command {
         Command {
             key: id(k),
             target: None,
@@ -86,7 +89,7 @@ impl Fixture {
     fn reopen(&mut self) {
         self.db = AuthDatabase::open_profile(&self.path, TestClock::new(), 6).unwrap();
     }
-    fn count(&self, t: &str) -> i64 {
+    pub(super) fn count(&self, t: &str) -> i64 {
         self.db
             .connection
             .query_row(&format!("SELECT count(*) FROM {t}"), [], |r| r.get(0))
