@@ -4,11 +4,7 @@ use chacha20poly1305::{
     Tag, XChaCha20Poly1305, XNonce,
     aead::{AeadInPlace, KeyInit},
 };
-use std::{
-    fs::{File, OpenOptions},
-    io::{Read, Write},
-    path::PathBuf,
-};
+use std::path::PathBuf;
 use yixu_domain::security_m3::{OwnerKind, PayloadBinding, SecurityScope};
 #[path = "persistence/locked.rs"]
 mod secure;
@@ -30,12 +26,27 @@ enum IoFault {
     ShortWrite,
     Sync,
 }
+#[path = "persistence/winfs.rs"]
+mod winfs;
 struct Store {
     root: PathBuf,
+    anchor: winfs::Anchor,
+}
+fn envelope(b: &[u8]) -> Result<()> {
+    if b.len() < 215 || &b[..8] != b"YIXUB001" {
+        return Err(Error::Constraint);
+    }
+    let n = u32::from_be_bytes(b[8..12].try_into().unwrap()) as usize;
+    if n == 0 || n > 4096 || b.len() != 215 + n {
+        return Err(Error::Constraint);
+    }
+    Ok(())
 }
 impl Store {
-    // Windows experiment ONLY: a fresh TempDir controlled by the test process. Does not
-    // claim hostile-directory or directory-fsync safety. Linux reference is separate.
+    fn new(root: PathBuf) -> Result<Self> {
+        let anchor = winfs::Anchor::open(&root).map_err(|_| Error::CapabilityUnavailable)?;
+        Ok(Self { root, anchor })
+    }
     fn path(&self, p: Id) -> PathBuf {
         self.root.join(p.to_string())
     }
@@ -43,44 +54,40 @@ impl Store {
         self.publish_fault(p, b, IoFault::None)
     }
     fn publish_fault(&self, p: Id, b: &[u8], fault: IoFault) -> Result<()> {
+        envelope(b)?;
         if matches!(fault, IoFault::Enospc) {
             return Err(Error::Database);
         }
-        let target = self.path(p);
-        let mut f = OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&target)
-            .map_err(|_| Error::ResourceUnavailable)?;
-        if matches!(fault, IoFault::ShortWrite) {
-            f.write_all(&b[..b.len() / 2])
-                .map_err(|_| Error::Database)?;
-            return Err(Error::Database);
-        }
-        if matches!(fault, IoFault::Sync) {
-            f.write_all(b).map_err(|_| Error::Database)?;
-            return Err(Error::Database);
-        }
-        f.write_all(b)
-            .and_then(|_| f.sync_all())
-            .map_err(|_| Error::Database)
+        self.anchor
+            .publish(
+                &format!("pending-{}", fresh()?),
+                &p.to_string(),
+                b,
+                match fault {
+                    IoFault::ShortWrite => 1,
+                    IoFault::Sync => 2,
+                    _ => 0,
+                },
+                |point| {
+                    if std::env::var("YIXU_W1_POINT").ok() == Some(point.to_string()) {
+                        let ready = std::env::var_os("YIXU_W1_READY").unwrap();
+                        std::fs::write(ready, b"ready").unwrap();
+                        loop {
+                            std::thread::park_timeout(Duration::from_secs(1));
+                        }
+                    }
+                },
+            )
+            .map_err(|_| Error::ResourceUnavailable)
     }
     fn read(&self, p: Id) -> Result<Vec<u8>> {
-        let path = self.path(p);
-        let m = std::fs::symlink_metadata(&path).map_err(|_| Error::ResourceUnavailable)?;
-        if !m.is_file() || m.len() > 8192 {
-            return Err(Error::Constraint);
-        }
-        let mut b = Vec::new();
-        File::open(path)
-            .map_err(|_| Error::Database)?
-            .take(8193)
-            .read_to_end(&mut b)
-            .map_err(|_| Error::Database)?;
-        if b.len() > 8192 {
-            return Err(Error::Constraint);
-        }
-        Ok(b)
+        self.anchor.read(&p.to_string()).map_err(|e| {
+            if e.raw_os_error() == Some(2) {
+                Error::ResourceUnavailable
+            } else {
+                Error::Constraint
+            }
+        })
     }
 }
 #[derive(Clone)]
@@ -674,7 +681,10 @@ impl<C: Clock> AuthDatabase<C> {
             match store.read(p) {
                 Ok(bytes) => {
                     open(&binding(ctx, p, k, o, kind), &bytes)?;
-                    std::fs::remove_file(store.path(p)).map_err(|_| Error::Database)?;
+                    store
+                        .anchor
+                        .erase(&p.to_string(), &bytes)
+                        .map_err(|_| Error::Database)?;
                 }
                 Err(Error::ResourceUnavailable) => {}
                 Err(e) => return Err(e),

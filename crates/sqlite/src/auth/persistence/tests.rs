@@ -25,11 +25,11 @@ fn scope() -> Scope {
 }
 use tempfile::{TempDir, tempdir};
 struct Fixture {
-    _dir: TempDir,
     path: PathBuf,
     db: AuthDatabase<TestClock>,
     store: Store,
     authority: BootstrapAuthority,
+    _dir: TempDir,
 }
 impl Fixture {
     fn new() -> Self {
@@ -67,7 +67,7 @@ impl Fixture {
             _dir: dir,
             path,
             db,
-            store: Store { root },
+            store: Store::new(root).unwrap(),
             authority,
         }
     }
@@ -250,9 +250,10 @@ fn no_plaintext_in_db_wal_or_files() {
 fn no_replace_and_partial_file_fail_closed() {
     let f = Fixture::new();
     let p = id(66);
-    f.store.publish(p, b"old").unwrap();
+    let bytes = seal(&binding(&f.ctx(), p, id(67), id(68), 2)).unwrap();
+    f.store.publish(p, &bytes).unwrap();
     assert!(f.store.publish(p, b"replacement").is_err());
-    assert_eq!(f.store.read(p).unwrap(), b"old");
+    assert_eq!(f.store.read(p).unwrap(), bytes);
 }
 
 #[test]
@@ -264,9 +265,7 @@ fn process_child() {
     let ctx = db
         .identify(TrustedIdentity { subject: id(4) }, id(3))
         .unwrap();
-    let store = Store {
-        root: PathBuf::from(std::env::var_os("YIXU_M3B_STORE").unwrap()),
-    };
+    let store = Store::new(PathBuf::from(std::env::var_os("YIXU_M3B_STORE").unwrap())).unwrap();
     let point = std::env::var("YIXU_M3B_KILL").unwrap();
     let stop = match point.as_str() {
         "Stage" => Stop::Stage,
@@ -373,7 +372,7 @@ fn two_connections_cas_and_idempotent_replay() {
                 target: Some((m, 1)),
                 variant: 0,
             },
-            &Store { root },
+            &Store::new(root).unwrap(),
             Stop::None,
         )
     });
@@ -454,9 +453,7 @@ fn process_writer() {
     let ctx = db
         .identify(TrustedIdentity { subject: id(4) }, id(3))
         .unwrap();
-    let store = Store {
-        root: PathBuf::from(std::env::var_os("YIXU_M3B_STORE").unwrap()),
-    };
+    let store = Store::new(PathBuf::from(std::env::var_os("YIXU_M3B_STORE").unwrap())).unwrap();
     let result = db.persist(
         &ctx,
         &Command {
@@ -588,4 +585,61 @@ fn distinct_synthetic_bodies_have_distinct_released_digests() {
     let bd = f.db.release_digest(&ctx, b.key, &f.store).unwrap();
     assert_ne!(ad, bd);
     assert_eq!(bd, hash(synthetic(1).unwrap()));
+}
+
+#[test]
+fn w1_kill_during_write_before_rename_and_after_rename() {
+    for point in [1, 2, 3] {
+        let mut f = Fixture::new();
+        let ready = f._dir.path().join("w1-ready");
+        let mut child = std::process::Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "auth::persistence::tests::process_writer"])
+            .env("YIXU_M3B_WRITER", &f.path)
+            .env("YIXU_M3B_STORE", &f.store.root)
+            .env("YIXU_W1_POINT", point.to_string())
+            .env("YIXU_W1_READY", &ready)
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .unwrap();
+        let deadline = std::time::Instant::now() + Duration::from_secs(30);
+        while !ready.exists()
+            && std::time::Instant::now() < deadline
+            && child.try_wait().unwrap().is_none()
+        {
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        let reached = ready.exists();
+        let _ = child.kill();
+        child.wait().unwrap();
+        assert!(reached, "point {point}");
+        f.reopen();
+        let ctx = f.ctx();
+        let c = f.cmd(60);
+        assert_eq!(f.count("memory"), 0);
+        assert_eq!(f.count("outbox_job"), 0);
+        let plan = f.db.plan(&ctx, c.key).unwrap();
+        let present = plan
+            .copies
+            .iter()
+            .filter(|v| f.store.path(v.0).exists())
+            .count();
+        if point < 3 {
+            assert_eq!(present, 0);
+            assert!(f.db.persist(&ctx, &c, &f.store, Stop::None).is_err());
+            assert!(std::fs::read_dir(&f.store.root).unwrap().any(|e| {
+                e.unwrap()
+                    .file_name()
+                    .to_string_lossy()
+                    .starts_with("pending-")
+            }));
+        } else {
+            assert_eq!(present, 1);
+            f.db.persist(&ctx, &c, &f.store, Stop::None).unwrap();
+            assert_eq!(
+                f.db.release_digest(&ctx, c.key, &f.store).unwrap(),
+                hash(CANARY)
+            );
+        }
+    }
 }
