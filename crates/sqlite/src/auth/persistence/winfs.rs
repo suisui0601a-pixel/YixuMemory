@@ -83,6 +83,11 @@ unsafe extern "system" {
         fsn: u32,
     ) -> i32;
     fn SetFileInformationByHandle(file: H, class: u32, info: H, size: u32) -> i32;
+    fn GetFileType(file: H) -> u32;
+}
+pub(super) fn inherited_stdout_is_pipe() -> bool {
+    // SAFETY: borrowed standard handle, inspected only, never closed or retained here.
+    unsafe { GetFileType(std::io::stdout().as_raw_handle()) == 3 }
 }
 fn denied() -> io::Error {
     io::Error::other("unsupported NTFS object or identity")
@@ -168,6 +173,18 @@ pub(super) struct Anchor {
     id: (u32, u32, u32),
 }
 impl Anchor {
+    /// Exclusive OS handle, not a timeout lease. Retain Anchor and File until process exit.
+    pub(super) fn broker_lock(&self) -> io::Result<File> {
+        let f = match relative(self.root()?, "broker-lock", false, true, true) {
+            Ok(f) => f,
+            Err(e) if matches!(e.raw_os_error(), Some(80 | 183)) => {
+                relative(self.root()?, "broker-lock", false, false, true)?
+            }
+            Err(e) => return Err(e),
+        };
+        self.check(&f)?;
+        Ok(f)
+    }
     pub(super) fn open(path: &Path) -> io::Result<Self> {
         if std::mem::size_of::<usize>() != 8 {
             return Err(denied());

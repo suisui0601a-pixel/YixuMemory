@@ -40,7 +40,7 @@ impl<C: Clock> AuthDatabase<C> {
         cap: &str,
         create: bool,
     ) -> Result<LockedBuffer> {
-        if self.profile != 7 {
+        if ![7, 8].contains(&self.profile) {
             return Err(Error::CapabilityUnavailable);
         }
         let tx = self
@@ -127,7 +127,7 @@ impl<C: Clock> AuthDatabase<C> {
         b: &PayloadBinding,
         v: &LocalVault,
     ) -> Result<()> {
-        if self.profile != 7 || raw(a.realm) != b.scope.realm {
+        if ![7, 8].contains(&self.profile) || raw(a.realm) != b.scope.realm {
             return Err(Error::AuthorizationDenied);
         }
         let tx = self

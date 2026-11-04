@@ -82,12 +82,16 @@ fn extension(profile: i64) -> String {
     if profile >= 4 {
         format!(
             "{AUTH_DDL}\n{R1_DDL}\n{MEMORY_DDL}{m2}{persistent}{}",
-            if profile == 7 {
+            if profile >= 7 {
                 include_str!("../migrations/0007_local_keyvault.sql")
             } else {
                 ""
             }
-        )
+        ) + if profile == 8 {
+            include_str!("../migrations/0008_release.sql")
+        } else {
+            ""
+        }
     } else {
         format!("{AUTH_DDL}\n{R1_DDL}")
     }
@@ -126,7 +130,7 @@ impl<C: Clock> AuthDatabase<C> {
         Self::open_profile(path, clock, VERSION)
     }
     fn open_profile(path: &Path, clock: C, profile: i64) -> Result<Self> {
-        if ![VERSION, 4, 5, 6, 7].contains(&profile) {
+        if ![VERSION, 4, 5, 6, 7, 8].contains(&profile) {
             return Err(Error::IncompatibleSchema);
         }
         let mut c = Connection::open(path).map_err(sql_error)?;

@@ -26,6 +26,7 @@ enum IoFault {
     ShortWrite,
     Sync,
 }
+mod broker;
 mod dpapi;
 mod local_keys;
 #[path = "persistence/winfs.rs"]
@@ -206,6 +207,9 @@ fn open(b: &PayloadBinding, bytes: &[u8]) -> Result<Vec<u8>> {
     open_using_key(b, bytes, &k)
 }
 fn open_using_key(b: &PayloadBinding, bytes: &[u8], k: &LockedBuffer) -> Result<Vec<u8>> {
+    Ok(hash(decrypt_locked(b, bytes, k)?.bytes()))
+}
+fn decrypt_locked(b: &PayloadBinding, bytes: &[u8], k: &LockedBuffer) -> Result<LockedBuffer> {
     let n = CANARY.len();
     let aad = b.aad(n as u32);
     let off = 12 + aad.len();
@@ -228,7 +232,7 @@ fn open_using_key(b: &PayloadBinding, bytes: &[u8], k: &LockedBuffer) -> Result<
         )
         .map_err(|_| Error::Constraint)?;
     // Release only a digest to the synthetic sink; never return body from this adapter.
-    Ok(hash(plain.bytes()))
+    Ok(plain)
 }
 impl<C: Clock> AuthDatabase<C> {
     fn content_check(tx: &Transaction<'_>, ctx: &AuthContext, now: i64, cap: &str) -> Result<()> {
@@ -271,7 +275,7 @@ impl<C: Clock> AuthDatabase<C> {
     }
     fn stage(&mut self, ctx: &AuthContext, c: &Command) -> Result<String> {
         synthetic(c.variant)?;
-        if ![6, 7].contains(&self.profile) {
+        if ![6, 7, 8].contains(&self.profile) {
             return Err(Error::CapabilityUnavailable);
         }
         let tx = self
@@ -354,7 +358,7 @@ impl<C: Clock> AuthDatabase<C> {
         stop: Stop,
         vault: Option<&LocalVault>,
     ) -> Result<Id> {
-        if !matches!((self.profile, vault.is_some()), (6, false) | (7, true)) {
+        if !matches!((self.profile, vault.is_some()), (6, false) | (7 | 8, true)) {
             return Err(Error::CapabilityUnavailable);
         }
         let state = self.stage(ctx, c)?;
@@ -776,7 +780,7 @@ impl<C: Clock> AuthDatabase<C> {
         store: &Store,
         vault: Option<&LocalVault>,
     ) -> Result<Vec<u8>> {
-        if !matches!((self.profile, vault.is_some()), (6, false) | (7, true)) {
+        if !matches!((self.profile, vault.is_some()), (6, false) | (7 | 8, true)) {
             return Err(Error::CapabilityUnavailable);
         }
         let tx = self

@@ -233,6 +233,12 @@ def main() -> None:
         "use yixu_ports::memory_m2::MemoryM2;fn attempt<S:MemoryM2>(a:&mut yixu_application::memory_m2::MemoryM2Application<S>){a.store=todo!();}fn main(){}",
         [], "field `store`",
     ))
+    cases.append((
+        "w3_broker_and_plaintext_unavailable_even_with_all_features",
+        {"yixu-sqlite-foundation": (sqlite, 'default-features = false')},
+        "use yixu_sqlite_foundation::auth::persistence::broker::Broker;fn main(){}",
+        ["--all-features"], "could not find `auth`",
+    ))
     results = [check_manifest(*case) for case in cases]
 
     metadata = json.loads(
