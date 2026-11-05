@@ -29,6 +29,7 @@ enum IoFault {
 mod broker;
 mod dpapi;
 mod local_keys;
+mod output;
 #[path = "persistence/winfs.rs"]
 mod winfs;
 use dpapi::LocalVault;

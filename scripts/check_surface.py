@@ -239,6 +239,13 @@ def main() -> None:
         "use yixu_sqlite_foundation::auth::persistence::broker::Broker;fn main(){}",
         ["--all-features"], "could not find `auth`",
     ))
+    for private_type in ("TerminalEvidence", "Operation"):
+        cases.append((
+            f"w4a_{private_type}_has_no_request_constructor",
+            {"yixu-sqlite-foundation": (sqlite, 'default-features = false')},
+            f"use yixu_sqlite_foundation::auth::persistence::output::{private_type};fn main(){{}}",
+            ["--all-features"], "could not find `auth`",
+        ))
     results = [check_manifest(*case) for case in cases]
 
     metadata = json.loads(

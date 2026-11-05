@@ -87,8 +87,12 @@ fn extension(profile: i64) -> String {
             } else {
                 ""
             }
-        ) + if profile == 8 {
+        ) + if profile >= 8 {
             include_str!("../migrations/0008_release.sql")
+        } else {
+            ""
+        } + if profile == 9 {
+            include_str!("../migrations/0009_output.sql")
         } else {
             ""
         }
@@ -130,7 +134,7 @@ impl<C: Clock> AuthDatabase<C> {
         Self::open_profile(path, clock, VERSION)
     }
     fn open_profile(path: &Path, clock: C, profile: i64) -> Result<Self> {
-        if ![VERSION, 4, 5, 6, 7, 8].contains(&profile) {
+        if ![VERSION, 4, 5, 6, 7, 8, 9].contains(&profile) {
             return Err(Error::IncompatibleSchema);
         }
         let mut c = Connection::open(path).map_err(sql_error)?;
@@ -206,6 +210,12 @@ impl<C: Clock> AuthDatabase<C> {
             .map_err(sql_error)?;
         if integrity != "ok" || violations != 0 {
             return Err(Error::Constraint);
+        }
+        if profile == 9 {
+            // This isolated profile has no accepted recovery issuer. Every new opening
+            // fences the assembly; never infer safety from a file lock or a prior Ready row.
+            let incarnation = OsResourceIds.next()?;
+            tx.execute("UPDATE output_runtime SET incarnation=?1,state='RecoveryBlocked' WHERE singleton=1",[incarnation.to_string()]).map_err(sql_error)?;
         }
         tx.commit().map_err(sql_error)?;
         Ok(Self {
