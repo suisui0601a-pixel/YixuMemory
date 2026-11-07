@@ -159,12 +159,13 @@ impl Paused {
                 assert!(!thread.is_null());
                 let thread = Handle(thread);
                 // Snapshot TIDs can be reused; verify the stable handle before side effects.
-                assert_eq!(unsafe { GetProcessIdOfThread(thread.0) }, child.child.id());
+                let owner = unsafe { GetProcessIdOfThread(thread.0) };
+                assert_eq!(owner, child.child.id());
                 let previous = unsafe { SuspendThread(thread.0) };
                 assert_ne!(previous, u32::MAX);
                 paused.threads.push(thread);
                 println!(
-                    "SuspendThread owned child thread={} previous={previous}",
+                    "SuspendThread owned child pid={owner} thread={} previous={previous}",
                     entry.id
                 );
             }
@@ -216,7 +217,9 @@ fn handles(line: &str) -> (usize, usize, usize) {
 }
 fn startup_refused(root: &std::path::Path) {
     let mut probe = OwnedChild::spawn(root, "lock");
-    assert_eq!(probe.line(), "R1 STARTUP_REFUSED");
+    let response = probe.line();
+    assert_eq!(response, "R1 STARTUP_REFUSED 32");
+    println!("managed replacement {response}");
     assert!(probe.child.wait().unwrap().success());
 }
 #[test]
@@ -227,8 +230,10 @@ fn owned_child_probe() {
     let mode = std::env::var("YIXU_R1_MODE").unwrap();
     let anchor = winfs::Anchor::open(std::path::Path::new(&root)).unwrap();
     if mode == "lock" {
-        assert!(anchor.broker_lock().is_err());
-        eprintln!("R1 STARTUP_REFUSED");
+        let error = anchor
+            .broker_lock()
+            .expect_err("old instance must retain exclusive lock");
+        eprintln!("R1 STARTUP_REFUSED {}", error.raw_os_error().unwrap_or(0));
         return;
     }
     let _lock = anchor.broker_lock().unwrap();
