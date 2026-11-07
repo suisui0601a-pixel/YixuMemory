@@ -1,6 +1,6 @@
 use super::*;
 use std::sync::Mutex;
-static SERIAL: Mutex<()> = Mutex::new(());
+pub(super) static SERIAL: Mutex<()> = Mutex::new(());
 fn identity() -> Identity {
     Identity {
         operation: fresh().unwrap(),

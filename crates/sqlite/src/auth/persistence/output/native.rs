@@ -395,4 +395,6 @@ impl Drop for Session {
     }
 }
 #[cfg(test)]
+mod recovery_experiments;
+#[cfg(test)]
 mod tests;
