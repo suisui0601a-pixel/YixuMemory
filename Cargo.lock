@@ -512,6 +512,24 @@ name = "yixu-domain"
 version = "0.1.0-foundation.1"
 
 [[package]]
+name = "yixu-ipc"
+version = "0.1.0-foundation.1"
+dependencies = [
+ "rusqlite",
+ "sha2",
+ "tempfile",
+ "yixu-ipc-test-support",
+]
+
+[[package]]
+name = "yixu-ipc-test-support"
+version = "0.1.0-foundation.1"
+dependencies = [
+ "hmac",
+ "sha2",
+]
+
+[[package]]
 name = "yixu-m3-lab"
 version = "0.1.0-foundation.1"
 dependencies = [

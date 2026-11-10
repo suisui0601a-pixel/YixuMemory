@@ -6,6 +6,8 @@ members = [
     "crates/sqlite",
     "crates/test-support",
     "crates/m3-lab",
+    "crates/ipc",
+    "crates/test-support/ipc",
 ]
 resolver = "3"
 

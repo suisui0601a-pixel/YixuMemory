@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import tempfile
 from pathlib import Path
@@ -246,10 +247,24 @@ def main() -> None:
             f"use yixu_sqlite_foundation::auth::persistence::output::{private_type};fn main(){{}}",
             ["--all-features"], "could not find `auth`",
         ))
+    ipc_deps = {"yixu-ipc": ((ROOT / "crates/ipc").as_posix(), 'default-features = false')}
+    for name, source, diagnostic in (
+        ("private_session", "use yixu_ipc::AuthenticatedSession; fn main(){}", "struct `AuthenticatedSession` is private"),
+        ("private_assembly", "fn main(){yixu_ipc::Core::new([0;16],[0;16],todo!());}", "associated function `new` is private"),
+        ("no_fake_auth", "use yixu_ipc_test_support::prove; fn main(){}", "unresolved import `yixu_ipc_test_support`"),
+        ("no_native_settlement", "fn main(){yixu_ipc::Core::default().complete_native(todo!());}", "no method named `complete_native`"),
+    ):
+        cases.append((f"ipc_{name}", ipc_deps, source, ["--all-features"], diagnostic))
+    cases.append((
+        "ipc_scheduler_descriptor_cannot_mint_business_auth",
+        {**ipc_deps, "yixu-ports": (ports, 'default-features = false')},
+        "fn attempt(s:yixu_ipc::Scheduled)->yixu_ports::AuthContext{s.into()} fn main(){}",
+        ["--all-features"], "AuthContext: From<Scheduled>",
+    ))
     results = [check_manifest(*case) for case in cases]
 
     metadata = json.loads(
-        subprocess.check_output(["cargo", "metadata", "--locked", "--format-version", "1"], cwd=ROOT, text=True)
+        subprocess.check_output(["cargo", "metadata", "--locked", "--offline", "--all-features", "--format-version", "1"], cwd=ROOT, text=True)
     )
     packages = {package["name"]: package for package in metadata["packages"]}
     assert packages["yixu-sqlite-test-support"]["publish"] == [], "test support must remain unpublished"
@@ -258,17 +273,24 @@ def main() -> None:
         reached = normal_reachable(metadata, root)
         assert "yixu-sqlite-test-support" not in reached, (root, reached)
         assert not {"yixu-m3-lab", "chacha20poly1305", "zeroize"} & reached, (root, reached)
+        assert not {"yixu-ipc", "yixu-ipc-test-support"} & reached, (root, reached)
+    assert packages["yixu-ipc-test-support"]["publish"] == []
+    assert not {
+        "yixu-ipc-test-support", "hmac", "rusqlite", "windows-sys", "yixu-application",
+        "yixu-ports", "yixu-sqlite-foundation",
+    } & normal_reachable(metadata, "yixu-ipc")
     results.extend(
         [
             {"case": "application_normal_graph_excludes_test_support", "result": "passed"},
             {"case": "sqlite_normal_graph_excludes_test_support", "result": "passed"},
             {"case": "test_support_publish_false", "result": "passed"},
+            {"case": "ipc_normal_graph_isolated_from_fixture_and_runtime", "result": "passed"},
         ]
     )
-    out = ROOT / "verification"
+    out = Path(os.environ.get("YIXU_VERIFICATION_OUT", str(ROOT / "verification")))
     out.mkdir(exist_ok=True)
     (out / "external-api-probes.json").write_text(json.dumps(results, indent=2) + "\n")
-    print(f"{len(cases)} compile-negative probes and 3 package-graph checks passed")
+    print(f"{len(cases)} compile-negative probes and 4 package-graph checks passed")
 
 
 if __name__ == "__main__":

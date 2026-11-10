@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -12,7 +13,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "verification"
+OUT = Path(os.environ.get("YIXU_VERIFICATION_OUT", str(ROOT / "verification")))
 
 
 def main() -> int:
