@@ -57,7 +57,7 @@ stateDiagram-v2
   Established --> Quarantined: 绑定/重放/序列冲突
 ```
 
-握手有效期 30 秒，会话 300 秒，宿主提供进程单调秒计数。时钟倒退拒绝，溢出拒绝。会话不会延长授权。域与 epoch 在认证、入队、派发前检查。安全事件由宿主串行调用且优先于后续数据请求。删除栅栏按 scope 持续阻断，累计超过 16 个作用域时阻断整个 realm，v1 无清除入口。预认证阶段无需查询客户端业务权限，握手成功前不生成可调度工作。
+握手有效期 30 秒，会话 300 秒，宿主提供进程单调秒计数。时钟倒退拒绝，溢出拒绝。会话不会延长授权。域与 epoch 在认证、入队、派发前检查。安全事件由宿主串行调用且优先于后续数据请求。删除栅栏按 scope 持续阻断。当前 realm 的栅栏含非法 Tenant 或 Space 时返回编码错误并阻断整个 realm，避免确认一个永远不匹配的栅栏。累计超过 16 个作用域也阻断整个 realm，v1 无清除入口。预认证阶段无需查询客户端业务权限，握手成功前不生成可调度工作。
 
 每个 Core 固定一个 realm。最多 8 条占用连接，每连接最多 4 个未完成请求，全局排队最多 16 个，另有至多 1 个已派发槽。按连接 round-robin，每连接 FIFO。仅观察到传输关闭且无已派发保留时才能退账。错误、超时和 CancelRequested 都不能用于绕过连接或派发预算。调度器以独占可变引用串行运行。真正跨进程预算由未来唯一可信服务保证。
 
@@ -72,7 +72,7 @@ stateDiagram-v2
 | 帧 | 最大合法帧、已知大端字节、1/7/52/564 字节分块、同块两帧、EOF、所有截断前缀、尾随字节、非法 magic、未知 kind/flags、错误版本、513 和 u32::MAX。 |
 | 身份 | 双向合成证明、假 server proof、server proof 反射为 client proof、旧 proof 改 ID、ID 冲突保留 owner、错 realm/Tenant/Space/Principal/epoch、错 channel、过期、认证中断线。 |
 | 授权和顺序 | 认证后撤权、事件未到但实时 epoch 已变、跨 scope 请求、旧 incarnation、旧序号/乱序/超前、同 ID 去重、同 ID 不同摘要、ID 历史耗尽。 |
-| 队列与取消 | 八连接并发、单连接洪泛、全局队列满、背压重试、FIFO/round-robin、Closing 拒绝新请求、取消与删除/撤权的两个顺序、断线或超时保持未知槽。 |
+| 队列与取消 | 八连接并发、单连接洪泛、全局队列满、背压重试、FIFO/round-robin、Closing 拒绝新请求、取消与删除/撤权的两个顺序、畸形本域栅栏阻断排队任务、断线或超时保持未知槽。 |
 | 恢复 | 自有测试子进程在握手中、提交前、写入但未 commit、commit 后无回执时被终止。新 incarnation 拒绝旧连接/证明。哨兵 knowledge_seq/业务写/Outbox 保持 0/0/0 或原来已提交的 1/1/1。哨兵是隔离的 SQLite 测试接收端。 |
 | 隔离 | 默认 CapabilityUnavailable、外部编译拒绝私有会话和装配、拒绝把 Scheduled 转成业务 AuthContext、无原生终态入口、all-features 正常依赖图排除 test-support、业务层与 Windows adapter。 |
 

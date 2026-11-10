@@ -697,6 +697,32 @@ fn epoch_is_rechecked_on_admission_and_dispatch_without_event() {
 }
 
 #[test]
+fn malformed_local_fence_blocks_queued_work_and_new_connections() {
+    for malformed in [
+        Scope {
+            tenant: ZERO,
+            ..SCOPE
+        },
+        Scope {
+            space: ZERO,
+            ..SCOPE
+        },
+    ] {
+        let (mut core, _) = fixture(INC);
+        let (c, sid) = establish(&mut core, 11);
+        assert_eq!(
+            send(&mut core, c, &request(sid, 1, 2, SCOPE, None), 1),
+            Ok(Outcome::Queued)
+        );
+        assert_eq!(core.deletion_fence(malformed), Err(Error::BadEncoding));
+        assert_eq!(core.state(c), State::Closing);
+        assert_eq!(core.request_state(c, [1; 16]), Some(RequestState::Dropped));
+        assert_eq!(core.dispatch(1), Ok(None));
+        assert_eq!(core.connect([12; 32], 1), Err(Error::Denied));
+    }
+}
+
+#[test]
 fn close_and_expiry_do_not_settle_dispatched_work() {
     for expired in [false, true] {
         let (mut core, _) = fixture(INC);

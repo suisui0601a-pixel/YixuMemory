@@ -496,6 +496,11 @@ impl Core {
         if scope.realm != self.realm || self.realm == ZERO {
             return Err(Error::Binding);
         }
+        if !scope.valid() {
+            self.realm_blocked = true;
+            self.invalidate_authority();
+            return Err(Error::BadEncoding);
+        }
         if self.fences.len() == MAX_FENCES && !self.fences.contains(&scope) {
             self.realm_blocked = true;
         } else {

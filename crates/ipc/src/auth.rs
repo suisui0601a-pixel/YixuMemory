@@ -9,6 +9,10 @@ pub struct Scope {
 }
 
 impl Scope {
+    pub(crate) fn valid(self) -> bool {
+        ![self.realm, self.tenant, self.space].contains(&ZERO)
+    }
+
     pub(crate) fn decode(bytes: &[u8]) -> Self {
         Self {
             realm: field(bytes, 0),
@@ -52,7 +56,7 @@ impl Hello {
         let principal = field(bytes, 50);
         let epoch = u64::from_be_bytes(field(bytes, 66));
         let nonce = field(bytes, 74);
-        if [scope.realm, scope.tenant, scope.space, principal].contains(&ZERO) || nonce == [0; 32] {
+        if !scope.valid() || principal == ZERO || nonce == [0; 32] {
             return Err(Error::BadEncoding);
         }
         Ok(Self {
