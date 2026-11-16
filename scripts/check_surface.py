@@ -253,6 +253,9 @@ def main() -> None:
         ("private_assembly", "fn main(){yixu_ipc::Core::new([0;16],[0;16],todo!());}", "associated function `new` is private"),
         ("no_fake_auth", "use yixu_ipc_test_support::prove; fn main(){}", "unresolved import `yixu_ipc_test_support`"),
         ("no_native_settlement", "fn main(){yixu_ipc::Core::default().complete_native(todo!());}", "no method named `complete_native`"),
+        ("r4_no_synthetic_broker", "use yixu_ipc::tests::r4::Broker; fn main(){}", "could not find `tests`"),
+        ("r4_no_synthetic_completion", "use yixu_ipc::SyntheticCompletion; fn main(){}", "unresolved import `yixu_ipc::SyntheticCompletion`"),
+        ("r4_no_direct_release_intent_write", "fn main(){yixu_ipc::Core::default().arm(todo!());}", "no method named `arm`"),
     ):
         cases.append((f"ipc_{name}", ipc_deps, source, ["--all-features"], diagnostic))
     cases.append((
