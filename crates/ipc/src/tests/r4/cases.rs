@@ -326,6 +326,13 @@ fn child_checkpoint() {
         "before_arm_commit" | "armed" | "observed" | "settled"
     ));
     let mut broker = create(&path).unwrap();
+    broker
+        .db
+        .execute_batch(
+            "CREATE TABLE knowledge_seq(value INTEGER); INSERT INTO knowledge_seq VALUES(7);
+             CREATE TABLE business_write(id INTEGER); CREATE TABLE outbox(id INTEGER);",
+        )
+        .unwrap();
     queue(&mut broker, 11, 1);
     if stage == "before_arm_commit" {
         broker.arm_before_commit(1, checkpoint).unwrap();
@@ -399,6 +406,23 @@ fn process_loss_and_read_only_reconciliation() {
         let reopened = RecoveryBlocked::inspect(&path).unwrap();
         assert_eq!(counts(&reopened.db), expected);
         assert_eq!(reopened.unresolved, expected.0 - expected.2);
+        let (knowledge, business, outbox, integrity): (i64, i64, i64, String) = reopened
+            .db
+            .query_row(
+                "SELECT (SELECT value FROM knowledge_seq), (SELECT count(*) FROM business_write),
+                 (SELECT count(*) FROM outbox), (SELECT integrity_check FROM pragma_integrity_check)",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+            )
+            .unwrap();
+        assert_eq!(
+            (knowledge, business, outbox, integrity.as_str()),
+            (7, 0, 0, "ok")
+        );
+        println!(
+            "stage={stage} intent/observation/receipt/audit={expected:?} knowledge/business/outbox=({knowledge},{business},{outbox}) sqlite={}",
+            rusqlite::version()
+        );
         assert!(matches!(create(&path), Err(Failure::Conflict)));
         if stage == "settled" {
             let binding: [u8; 32] = reopened

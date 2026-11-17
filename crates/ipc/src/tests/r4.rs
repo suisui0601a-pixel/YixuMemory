@@ -515,8 +515,8 @@ impl Broker {
                 "UPDATE security_event SET state='Applied' WHERE id=?1",
                 [id],
             )?;
-            let epoch: u64 = tx.query_row("SELECT epoch FROM authority", [], |r| r.get(0))?;
-            Ok(epoch)
+            let epoch: i64 = tx.query_row("SELECT epoch FROM authority", [], |r| r.get(0))?;
+            u64::try_from(epoch).map_err(|_| Failure::Blocked)
         })?;
         self.epoch.set(Some(epoch));
         Ok(())
