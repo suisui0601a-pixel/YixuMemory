@@ -10,7 +10,7 @@ fn fixture_db() -> (tempfile::TempDir, Broker) {
     (dir, broker)
 }
 
-fn establish_broker(broker: &mut Broker, channel: u8, epoch: u64) -> (Connection, Id) {
+pub(super) fn establish_broker(broker: &mut Broker, channel: u8, epoch: u64) -> (Connection, Id) {
     let channel = [channel; 32];
     let connection = broker.connect(channel, 1).unwrap();
     let h = hello(SCOPE, PRINCIPAL, VERSION, epoch);
@@ -25,7 +25,7 @@ fn establish_broker(broker: &mut Broker, channel: u8, epoch: u64) -> (Connection
     (connection, challenge.session)
 }
 
-fn queue(broker: &mut Broker, channel: u8, id: u8) -> (Connection, Id) {
+pub(super) fn queue(broker: &mut Broker, channel: u8, id: u8) -> (Connection, Id) {
     let (connection, sid) = establish_broker(broker, channel, 7);
     let request = request(sid, id, 2, SCOPE, Some(TARGET));
     assert_eq!(
@@ -45,7 +45,7 @@ fn counts(db: &Sqlite) -> (i64, i64, i64, i64) {
     .unwrap()
 }
 
-fn state(db: &Sqlite, operation: i64) -> String {
+pub(super) fn state(db: &Sqlite, operation: i64) -> String {
     db.query_row(
         "SELECT state FROM release_intent WHERE operation=?1",
         [operation],
@@ -349,7 +349,7 @@ fn child_checkpoint() {
     checkpoint();
 }
 
-struct OwnedChild(Child);
+pub(super) struct OwnedChild(pub(super) Child);
 impl Drop for OwnedChild {
     fn drop(&mut self) {
         let _ = self.0.kill();

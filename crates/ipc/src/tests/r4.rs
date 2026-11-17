@@ -141,9 +141,17 @@ struct Broker {
     epoch: Rc<Cell<Option<u64>>>,
     active: Option<(i64, Connection, Id)>,
     blocked: bool,
+    requires_binding: bool,
 }
 
 fn create(path: &Path) -> Result<Broker> {
+    create_with(path, |_| Ok(()))
+}
+
+fn create_with(
+    path: &Path,
+    initialize: impl FnOnce(&Transaction<'_>) -> Result<()>,
+) -> Result<Broker> {
     std::fs::File::create_new(path).map_err(|_| Failure::Conflict)?;
     let mut db = Sqlite::open(path)?;
     db.execute_batch(
@@ -160,6 +168,8 @@ fn create(path: &Path) -> Result<Broker> {
         "INSERT INTO authority(scope,principal,target,epoch,expiry) VALUES(?1,?2,?3,7,100)",
         params![SCOPE.encode(), PRINCIPAL, TARGET],
     )?;
+    initialize(&tx)?;
+    let application_id: i64 = tx.query_row("PRAGMA application_id", [], |row| row.get(0))?;
     tx.commit()?;
     let (core, epoch) = fixture(incarnation);
     Ok(Broker {
@@ -168,6 +178,7 @@ fn create(path: &Path) -> Result<Broker> {
         epoch,
         active: None,
         blocked: false,
+        requires_binding: application_id != 0,
     })
 }
 
@@ -283,6 +294,15 @@ impl Broker {
         now: u64,
         before_commit: impl FnOnce(),
     ) -> Result<Option<Armed>> {
+        self.arm_bound(now, |_| Ok(None), before_commit)
+    }
+
+    fn arm_bound(
+        &mut self,
+        now: u64,
+        authority_binding: impl FnOnce(&Transaction<'_>) -> Result<Option<[u8; 32]>>,
+        before_commit: impl FnOnce(),
+    ) -> Result<Option<Armed>> {
         let accepting = self.accepting()?;
         self.core.authorization_changed(now)?;
         self.sync_active()?;
@@ -297,6 +317,7 @@ impl Broker {
         let session = slot.id;
         let deadline = slot.deadline;
         let channel = slot.channel;
+        let require_binding = self.requires_binding;
         let result = self.transact(|tx| {
             let Request::Inspect(target) = scheduled.request else { return Err(Failure::Denied); };
             let scope = scheduled.scope.encode();
@@ -313,6 +334,10 @@ impl Broker {
                     row.get(4)?, row.get(5)?, row.get(6)?,
                 ]),
             ).optional()?.ok_or(Failure::Denied)?;
+            let extension = authority_binding(tx)?;
+            if require_binding && extension.is_none() {
+                return Err(Failure::Blocked);
+            }
             let exists: bool = tx.query_row(
                 "SELECT EXISTS(SELECT 1 FROM release_intent WHERE scope=?1 AND principal=?2 AND request=?3)",
                 params![scope, scheduled.principal, scheduled.request_id], |row| row.get(0),
@@ -336,6 +361,9 @@ impl Broker {
             hash.update(operation.to_be_bytes());
             hash.update([1]); // Attempt.
             for field in snapshot { hash.update(field.to_be_bytes()); }
+            if let Some(binding) = extension {
+                hash.update(binding);
+            }
             let binding: [u8; 32] = hash.finalize().into();
             tx.execute(
                 "INSERT INTO release_intent(operation,scope,principal,target,request,binding)
@@ -441,6 +469,14 @@ impl Broker {
     }
 
     fn close_for(&mut self, scope: Scope, change: Change) -> Result<i64> {
+        self.close_with(scope, |tx| Ok((insert_change(tx, scope, change)?, true)))
+    }
+
+    fn close_with(
+        &mut self,
+        scope: Scope,
+        enqueue: impl FnOnce(&Transaction<'_>) -> Result<(i64, bool)>,
+    ) -> Result<i64> {
         if scope != SCOPE {
             self.block();
             return Err(Failure::Protocol(Error::Binding));
@@ -449,14 +485,19 @@ impl Broker {
             return Err(Failure::Blocked);
         }
         let slot = self.active;
-        let id = self.transact(|tx| {
-            tx.execute("INSERT INTO security_event(kind,scope) VALUES(?1,?2)", params![change.record().0, scope.encode()])?;
-            let id = tx.last_insert_rowid();
-            if let Some((operation, _, _)) = slot {
-                tx.execute("UPDATE release_intent SET state='CancelRequested' WHERE operation=?1 AND state='Armed'", [operation])?;
+        let (id, inserted) = self.transact(|tx| {
+            let (id, inserted) = enqueue(tx)?;
+            if let Some((operation, _, _)) = slot.filter(|_| inserted) {
+                tx.execute(
+                    "UPDATE release_intent SET state='CancelRequested' WHERE operation=?1 AND state='Armed'",
+                    [operation],
+                )?;
             }
-            Ok(id)
+            Ok((id, inserted))
         })?;
+        if !inserted {
+            return Ok(id);
+        }
         for session in self
             .core
             .sessions
@@ -487,6 +528,26 @@ impl Broker {
     }
 
     fn apply(&mut self, id: i64) -> Result<()> {
+        self.apply_with(id, |tx, change| {
+            let changed = tx.execute(
+                &format!(
+                    "UPDATE authority SET epoch=epoch+1,{} WHERE scope=?1",
+                    change.record().1
+                ),
+                [SCOPE.encode()],
+            )?;
+            if changed != 1 {
+                return Err(Failure::Blocked);
+            }
+            Ok(())
+        })
+    }
+
+    fn apply_with(
+        &mut self,
+        id: i64,
+        apply: impl FnOnce(&Transaction<'_>, Change) -> Result<()>,
+    ) -> Result<()> {
         if self.blocked || self.active.is_some() {
             return Err(Failure::Blocked);
         }
@@ -501,16 +562,7 @@ impl Broker {
                 .optional()?
                 .ok_or(Failure::Conflict)?;
             let change = Change::from_record(&kind).ok_or(Failure::Blocked)?;
-            let changed = tx.execute(
-                &format!(
-                    "UPDATE authority SET epoch=epoch+1,{} WHERE scope=?1",
-                    change.record().1
-                ),
-                [SCOPE.encode()],
-            )?;
-            if changed != 1 {
-                return Err(Failure::Blocked);
-            }
+            apply(tx, change)?;
             tx.execute(
                 "UPDATE security_event SET state='Applied' WHERE id=?1",
                 [id],
@@ -521,6 +573,14 @@ impl Broker {
         self.epoch.set(Some(epoch));
         Ok(())
     }
+}
+
+fn insert_change(tx: &Transaction<'_>, scope: Scope, change: Change) -> Result<i64> {
+    tx.execute(
+        "INSERT INTO security_event(kind,scope) VALUES(?1,?2)",
+        params![change.record().0, scope.encode()],
+    )?;
+    Ok(tx.last_insert_rowid())
 }
 
 fn receipt_like(
@@ -545,10 +605,16 @@ struct RecoveryBlocked {
 
 impl RecoveryBlocked {
     fn inspect(path: &Path) -> Result<Self> {
+        Self::inspect_profile(path, 0)
+    }
+
+    fn inspect_profile(path: &Path, application_id: i64) -> Result<Self> {
         let db = Sqlite::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+        db.execute_batch("BEGIN")?;
+        let actual: i64 = db.query_row("PRAGMA application_id", [], |r| r.get(0))?;
         let profile: String =
             db.query_row("SELECT profile FROM runtime WHERE id=1", [], |r| r.get(0))?;
-        if profile != PROFILE {
+        if profile != PROFILE || actual != application_id {
             return Err(Failure::Blocked);
         }
         let (inconsistent, unresolved): (bool, i64) = db.query_row(
@@ -577,3 +643,4 @@ impl RecoveryBlocked {
 }
 
 mod cases;
+mod r5;
