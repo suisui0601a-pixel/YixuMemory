@@ -105,7 +105,6 @@ impl Engine {
         if unfinished {
             return Err(Error::CapabilityUnavailable);
         }
-        // B1 is create-only. The expected pointer and existing-memory tests are still real CAS.
         let existing: Option<Id> = sql(tx
             .query_row(
                 "SELECT current_revision FROM memory WHERE scope=?1 AND id=?2",
@@ -113,7 +112,7 @@ impl Engine {
                 |r| r.get(0),
             )
             .optional())?;
-        if existing.is_some() || request.expected_current.is_some() {
+        if existing != request.expected_current {
             return Err(Error::CasConflict);
         }
         let operation = fresh()?;
@@ -269,6 +268,14 @@ impl Engine {
     }
 
     pub(super) fn verify_files(&self, plan: &Plan) -> Result<(LockedBuffer, Publication)> {
+        self.verify_files_with(plan, |_| Ok(()))
+    }
+
+    pub(super) fn verify_files_with(
+        &self,
+        plan: &Plan,
+        mut checkpoint: impl FnMut(super::read::ReadPoint) -> Result<()>,
+    ) -> Result<(LockedBuffer, Publication)> {
         let binding = plan.binding(self.installation);
         let cipher_name = filename(plan.payload);
         let key_name = filename(plan.key);
@@ -284,8 +291,12 @@ impl Engine {
             .files
             .read(&cipher_name)
             .map_err(|_| Error::ResourceUnavailable)?;
+        checkpoint(super::read::ReadPoint::CipherRead)?;
+        checkpoint(super::read::ReadPoint::BeforeUnwrap)?;
         let (key, wrapped_hash) = self.vault.load(&binding)?;
         let plain = content_crypto::open(&binding, &envelope, &key)?;
+        drop(key);
+        checkpoint(super::read::ReadPoint::Decrypted)?;
         if std::str::from_utf8(plain.bytes()).is_err()
             || identity(&self.files, &cipher_name)? != cipher_id
             || identity(&self.vault.anchor, &key_name)? != key_id
@@ -367,12 +378,14 @@ impl Engine {
         }
         let scope = plan.identity.scope_bytes();
         let req = plan.request;
-        let exists: bool = sql(tx.query_row(
-            "SELECT EXISTS(SELECT 1 FROM memory WHERE scope=?1 AND id=?2)",
-            params![scope, req.memory],
-            |r| r.get(0),
-        ))?;
-        if exists || req.expected_current.is_some() {
+        let existing: Option<Id> = sql(tx
+            .query_row(
+                "SELECT current_revision FROM memory WHERE scope=?1 AND id=?2",
+                params![scope, req.memory],
+                |r| r.get(0),
+            )
+            .optional())?;
+        if existing != req.expected_current {
             return Err(Error::CasConflict);
         }
         sql(tx.execute(
@@ -383,14 +396,31 @@ impl Engine {
         if sql(gates::make_effective(&tx, event))? != 1 {
             return Err(Error::CapabilityUnavailable);
         }
+        let number: i64 = match existing {
+            Some(parent) => sql(tx.query_row(
+                "SELECT number+1 FROM revision WHERE scope=?1 AND memory=?2 AND id=?3",
+                params![scope, req.memory, parent],
+                |r| r.get(0),
+            ))?,
+            None => {
+                sql(tx.execute(
+                    "INSERT INTO memory VALUES(?1,?2,?3,'active')",
+                    params![scope, req.memory, req.revision],
+                ))?;
+                1
+            }
+        };
         sql(tx.execute(
-            "INSERT INTO memory VALUES(?1,?2,?3,'active')",
-            params![scope, req.memory, req.revision],
+            "INSERT INTO revision VALUES(?1,?2,?3,?4,?5)",
+            params![scope, req.memory, req.revision, number, plan.payload],
         ))?;
-        sql(tx.execute(
-            "INSERT INTO revision VALUES(?1,?2,?3,1,?4)",
-            params![scope, req.memory, req.revision, plan.payload],
-        ))?;
+        if let Some(parent) = existing
+            && sql(tx.execute(
+                "UPDATE memory SET current_revision=?1 WHERE scope=?2 AND id=?3 AND current_revision=?4",
+                params![req.revision,scope,req.memory,parent],
+            ))? != 1 {
+                return Err(Error::CasConflict);
+            }
         sql(tx.execute(
             "INSERT INTO local_key VALUES(?1,?2,?3,?4,1,0)",
             params![scope, plan.payload, plan.key, req.generation],

@@ -71,6 +71,18 @@ def main() -> None:
     application = APPLICATION.as_posix()
     cases = [
         (
+            "b2_read_api_is_not_public",
+            {"yixu-sqlite-foundation": (sqlite, 'default-features = false')},
+            "use yixu_sqlite_foundation::auth::persistence::profile10::read::ReadQuery; fn main(){}",
+            ["--all-features"], "could not find `auth`",
+        ),
+        (
+            "b2_borrow_trait_is_not_public",
+            {"yixu-application": (application, 'default-features = false')},
+            "use yixu_application::internal_content::ContentRead; fn main(){}",
+            ["--all-features"], "could not find `internal_content`",
+        ),
+        (
             "p10_real_content_engine_is_private_with_all_features",
             {"yixu-sqlite-foundation": (sqlite, 'default-features = false')},
             "use yixu_sqlite_foundation::auth::persistence::profile10::Engine; fn main(){}",

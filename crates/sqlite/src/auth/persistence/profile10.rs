@@ -9,6 +9,7 @@ use std::{fs::File, path::Path};
 mod application;
 #[path = "../../../../ipc/src/tests/transaction_gates.rs"]
 mod gates;
+mod read;
 mod recovery;
 mod tests;
 mod write;
@@ -475,6 +476,9 @@ struct Application {
 }
 impl Application {
     fn create_memory(&mut self, request: WriteRequest, body: &str) -> Result<WriteReceipt> {
+        if request.expected_current.is_some() {
+            return Err(Error::InvalidInput);
+        }
         application::InternalContentApplication::new(self).create_memory(request, body)
     }
 }

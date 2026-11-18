@@ -4,13 +4,13 @@ use super::*;
 use std::io::Write;
 use std::time::{Duration, Instant};
 
-fn installation() -> Installation {
+pub(super) fn installation() -> Installation {
     Installation {
         id: [91; 16],
         realm: [92; 16],
     }
 }
-fn actor() -> Identity {
+pub(super) fn actor() -> Identity {
     Identity {
         scope: SecurityScope {
             realm: installation().realm,
@@ -20,7 +20,7 @@ fn actor() -> Identity {
         principal: [95; 16],
     }
 }
-fn provisions() -> Vec<Provision> {
+pub(super) fn provisions() -> Vec<Provision> {
     [101, 102]
         .into_iter()
         .map(|id| Provision {
@@ -32,7 +32,7 @@ fn provisions() -> Vec<Provision> {
         })
         .collect()
 }
-fn request(memory: u8) -> WriteRequest {
+pub(super) fn request(memory: u8) -> WriteRequest {
     WriteRequest {
         request: fresh().unwrap(),
         memory: [memory; 16],
@@ -43,13 +43,13 @@ fn request(memory: u8) -> WriteRequest {
         expected_current: None,
     }
 }
-struct OwnedRoot(std::path::PathBuf);
+pub(super) struct OwnedRoot(std::path::PathBuf);
 impl OwnedRoot {
-    fn path(&self) -> &Path {
+    pub(super) fn path(&self) -> &Path {
         &self.0
     }
 }
-fn owned_root() -> OwnedRoot {
+pub(super) fn owned_root() -> OwnedRoot {
     let base = std::env::var_os("YIXU_R6_TMP")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(std::env::temp_dir);
@@ -63,7 +63,7 @@ fn owned_root() -> OwnedRoot {
     // Retain crash evidence and ciphertext for the B1 audit. No unknown orphan cleanup.
     OwnedRoot(root.keep())
 }
-fn application(root: &Path) -> Application {
+pub(super) fn application(root: &Path) -> Application {
     Application {
         engine: Engine::create(root, installation(), &provisions()).unwrap(),
         identity: actor(),
@@ -79,7 +79,7 @@ fn row_plan(app: &Application, req: WriteRequest) -> Plan {
         .unwrap()
         .0
 }
-fn sentinel() -> zeroize::Zeroizing<String> {
+pub(super) fn sentinel() -> zeroize::Zeroizing<String> {
     zeroize::Zeroizing::new(format!(
         "唯一正文哨兵·{}·日本語とmémoire",
         filename(fresh().unwrap())
@@ -437,7 +437,7 @@ fn schema_profile_installation_realm_and_immutable_graph_reject() {
     assert!(Engine::open_existing(root.path(), installation()).is_err());
 }
 
-fn scan(root: &Path, needle: &[u8], live_lock: Option<&File>) -> (usize, u64) {
+pub(super) fn scan(root: &Path, needle: &[u8], live_lock: Option<&File>) -> (usize, u64) {
     let locked = live_lock.map(|lock| {
         assert_eq!(lock.metadata().unwrap().len(), 0);
         root.join("broker-lock")
@@ -515,6 +515,10 @@ fn owned_process_entry() {
         .unwrap()
         .parse::<yixu_domain::Id>()
         .unwrap());
+    if mode.starts_with("B2") {
+        super::read::tests::owner_round(&root, &mode, &seed, nonce);
+        return;
+    }
     let mut app = Application {
         engine: Engine::create_supervised(&root, installation(), &provisions(), nonce).unwrap(),
         identity: actor(),

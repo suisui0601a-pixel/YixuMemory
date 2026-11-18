@@ -31,30 +31,56 @@ impl OwnerProcess {
         point: &str,
         seed: &str,
     ) -> Result<Self> {
+        Self::launch_next(root, installation, point, seed, None)
+    }
+
+    pub(super) fn launch_next(
+        root: &Path,
+        installation: Installation,
+        point: &str,
+        seed: &str,
+        previous: Option<ExitProof>,
+    ) -> Result<Self> {
         use std::io::{BufRead, Write};
         let nonce = fresh()?;
-        let mut log = File::create(root.join("control").join("child-stdout.log"))
-            .map_err(|_| Error::ResourceUnavailable)?;
-        let stderr = File::create(root.join("control").join("child-stderr.log"))
-            .map_err(|_| Error::ResourceUnavailable)?;
-        let mut child = std::process::Command::new(
-            std::env::current_exe().map_err(|_| Error::ResourceUnavailable)?,
+        let mut log = File::create(
+            root.join("control")
+                .join(format!("child-stdout-{}.log", filename(nonce))),
         )
-        .args([
-            "--exact",
-            "auth::persistence::profile10::tests::owned_process_entry",
-            "--nocapture",
-        ])
-        .env("YIXU_P10_CHILD", root)
-        .env("YIXU_P10_POINT", point)
-        .env("YIXU_P10_SEED", seed)
-        .env("YIXU_P10_NONCE", filename(nonce))
-        .env("TMP", root.join("temp"))
-        .env("TEMP", root.join("temp"))
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::from(stderr))
-        .spawn()
         .map_err(|_| Error::ResourceUnavailable)?;
+        let stderr = File::create(
+            root.join("control")
+                .join(format!("child-stderr-{}.log", filename(nonce))),
+        )
+        .map_err(|_| Error::ResourceUnavailable)?;
+        let mut command = std::process::Command::new(
+            std::env::current_exe().map_err(|_| Error::ResourceUnavailable)?,
+        );
+        if let Some(proof) = previous {
+            command.env("YIXU_P10_PREV", filename(proof.incarnation));
+            command.env("YIXU_P10_PREV_NONCE", filename(proof.nonce));
+            if proof.installation.id != installation.id
+                || proof.installation.realm != installation.realm
+            {
+                return Err(Error::Integrity);
+            }
+        }
+        let mut child = command
+            .args([
+                "--exact",
+                "auth::persistence::profile10::tests::owned_process_entry",
+                "--nocapture",
+            ])
+            .env("YIXU_P10_CHILD", root)
+            .env("YIXU_P10_POINT", point)
+            .env("YIXU_P10_SEED", seed)
+            .env("YIXU_P10_NONCE", filename(nonce))
+            .env("TMP", root.join("temp"))
+            .env("TEMP", root.join("temp"))
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::from(stderr))
+            .spawn()
+            .map_err(|_| Error::ResourceUnavailable)?;
         let stdout = child.stdout.take().ok_or(Error::ResourceUnavailable)?;
         let (sender, receiver) = std::sync::mpsc::sync_channel(1);
         let drainer = std::thread::spawn(move || {
@@ -418,7 +444,7 @@ impl Engine {
         proof: ExitProof,
         now: i64,
     ) -> Result<Self> {
-        let mut engine = Self::open_existing(root, installation)?;
+        let engine = Self::open_existing(root, installation)?;
         if proof.installation.id != installation.id
             || proof.installation.realm != installation.realm
             || proof.incarnation != engine.incarnation
@@ -426,6 +452,39 @@ impl Engine {
         {
             return Err(Error::CapabilityUnavailable);
         }
+        Self::resume_checked(engine, installation, proof, fresh()?)
+    }
+
+    pub(super) fn resume_supervised(
+        root: &Path,
+        installation: Installation,
+        nonce: Id,
+    ) -> Result<Self> {
+        let parse = |name| -> Result<Id> {
+            std::env::var(name)
+                .map_err(|_| Error::CapabilityUnavailable)?
+                .parse::<yixu_domain::Id>()
+                .map(raw)
+                .map_err(|_| Error::Integrity)
+        };
+        let proof = ExitProof {
+            incarnation: parse("YIXU_P10_PREV")?,
+            nonce: parse("YIXU_P10_PREV_NONCE")?,
+            installation,
+        };
+        let engine = Self::open_existing(root, installation)?;
+        if proof.incarnation != engine.incarnation || engine.reconcile(0)?.blocked {
+            return Err(Error::CapabilityUnavailable);
+        }
+        Self::resume_checked(engine, installation, proof, nonce)
+    }
+
+    fn resume_checked(
+        mut engine: Self,
+        _installation: Installation,
+        proof: ExitProof,
+        nonce: Id,
+    ) -> Result<Self> {
         let next = fresh()?;
         let tx = sql(engine
             .db
@@ -450,7 +509,7 @@ impl Engine {
         ))?;
         sql(tx.execute(
             "UPDATE runtime SET incarnation=?1,owner_nonce=?2,clean=0",
-            params![next, fresh()?],
+            params![next, nonce],
         ))?;
         sql(tx.commit())?;
         engine.incarnation = next;
