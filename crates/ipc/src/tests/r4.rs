@@ -2,6 +2,8 @@
 use super::*;
 use rusqlite::{Connection as Sqlite, OptionalExtension, Transaction, TransactionBehavior, params};
 use std::path::Path;
+#[path = "transaction_gates.rs"]
+mod transaction_gates;
 
 const SCHEMA: &str = include_str!("r4/synthetic.sql");
 const TARGET: Id = [42; 16];
@@ -183,11 +185,7 @@ fn create_with(
 }
 
 fn closing(db: &Sqlite) -> rusqlite::Result<bool> {
-    db.query_row(
-        "SELECT EXISTS(SELECT 1 FROM security_event WHERE state<>'Applied')",
-        [],
-        |r| r.get(0),
-    )
+    transaction_gates::closing(db)
 }
 
 impl Broker {
@@ -323,17 +321,9 @@ impl Broker {
             let scope = scheduled.scope.encode();
             let now = i64::try_from(now).map_err(|_| Failure::Denied)?;
             let epoch = i64::try_from(scheduled.epoch).map_err(|_| Failure::Denied)?;
-            let snapshot = tx.query_row(
-                "SELECT epoch, expiry, revision, source, key_gen, copy_gen, deletion_gen
-                 FROM authority WHERE scope=?1 AND principal=?2 AND target=?3 AND epoch=?4
-                 AND expiry>?5 AND grant_ok=1 AND principal_ok=1 AND space_ok=1 AND source_ok=1
-                 AND key_ok=1 AND copy_ok=1 AND deletion_gen=0",
-                params![scope, scheduled.principal, target, epoch, now],
-                |row| Ok([
-                    row.get::<_, i64>(0)?, row.get(1)?, row.get(2)?, row.get(3)?,
-                    row.get(4)?, row.get(5)?, row.get(6)?,
-                ]),
-            ).optional()?.ok_or(Failure::Denied)?;
+            let snapshot = transaction_gates::authorized_snapshot(
+                tx, &scope, &scheduled.principal, &target, epoch, now,
+            )?.ok_or(Failure::Denied)?;
             let extension = authority_binding(tx)?;
             if require_binding && extension.is_none() {
                 return Err(Failure::Blocked);
@@ -514,12 +504,7 @@ impl Broker {
             return Err(Failure::Blocked);
         }
         self.transact(|tx| {
-            let changed = tx.execute(
-                "UPDATE security_event SET state='EffectiveFence'
-                WHERE id=?1 AND state='Closing'
-                AND NOT EXISTS(SELECT 1 FROM security_event WHERE id<?1 AND state<>'Applied')",
-                [id],
-            )?;
+            let changed = transaction_gates::make_effective(tx, id)?;
             if changed != 1 {
                 return Err(Failure::Conflict);
             }

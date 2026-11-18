@@ -180,9 +180,7 @@ impl Graph {
         if self.kind(revision) != Some(Kind::Revision) {
             return Err(Failure::Blocked);
         }
-        let mut hash = Sha256::new();
-        hash.update(b"YXIP/r5-read-graph/v1\0");
-        hash.update(revision);
+        let mut nodes = Vec::new();
         for id in self.required_for_revision(revision) {
             let node = self.nodes[&id];
             let retired: bool = db.query_row(
@@ -190,13 +188,9 @@ impl Graph {
                 params![id, node.generation],
                 |row| row.get(0),
             )?;
-            if retired {
-                return Ok(None);
-            }
-            hash.update(id);
-            hash.update(node.generation.to_be_bytes());
+            nodes.push((id, node.generation, retired));
         }
-        Ok(Some(hash.finalize().into()))
+        Ok(transaction_gates::live_graph_binding(revision, nodes))
     }
 }
 

@@ -71,6 +71,24 @@ def main() -> None:
     application = APPLICATION.as_posix()
     cases = [
         (
+            "p10_real_content_engine_is_private_with_all_features",
+            {"yixu-sqlite-foundation": (sqlite, 'default-features = false')},
+            "use yixu_sqlite_foundation::auth::persistence::profile10::Engine; fn main(){}",
+            ["--all-features"], "could not find `auth`",
+        ),
+        (
+            "p10_internal_application_has_no_production_module",
+            {"yixu-application": (application, 'default-features = false')},
+            "use yixu_application::internal_content::InternalContentApplication; fn main(){}",
+            ["--all-features"], "could not find `internal_content`",
+        ),
+        (
+            "body_crypto_helper_unavailable_to_public_dependency",
+            {"yixu-sqlite-foundation": (sqlite, 'default-features = false')},
+            "use yixu_sqlite_foundation::auth::persistence::content_crypto; fn main(){}",
+            ["--all-features"], "could not find `auth`",
+        ),
+        (
             "w2_real_local_vault_unavailable_to_public_dependency",
             {"yixu-sqlite-foundation": (sqlite, 'default-features = false')},
             "use yixu_sqlite_foundation::auth::persistence::dpapi::LocalVault; fn main(){}",

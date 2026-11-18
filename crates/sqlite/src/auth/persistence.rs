@@ -1,9 +1,5 @@
 //! PRIVATE Windows synthetic persistent-content experiment. Not a Runtime adapter.
 use super::*;
-use chacha20poly1305::{
-    Tag, XChaCha20Poly1305, XNonce,
-    aead::{AeadInPlace, KeyInit},
-};
 use std::path::PathBuf;
 use yixu_domain::security_m3::{OwnerKind, PayloadBinding, SecurityScope};
 #[path = "persistence/locked.rs"]
@@ -27,9 +23,11 @@ enum IoFault {
     Sync,
 }
 mod broker;
+mod content_crypto;
 mod dpapi;
 mod local_keys;
 mod output;
+mod profile10;
 #[path = "persistence/winfs.rs"]
 mod winfs;
 use dpapi::LocalVault;
@@ -185,23 +183,7 @@ fn seal_variant(b: &PayloadBinding, variant: u8) -> Result<Vec<u8>> {
     seal_using_key(b, variant, &key)
 }
 fn seal_using_key(b: &PayloadBinding, variant: u8, key: &LockedBuffer) -> Result<Vec<u8>> {
-    let mut plain =
-        LockedBuffer::new(CANARY.len(), false).map_err(|_| Error::CapabilityUnavailable)?;
-    plain.bytes_mut().copy_from_slice(synthetic(variant)?);
-    let cipher = XChaCha20Poly1305::new_from_slice(key.bytes()).map_err(|_| Error::Constraint)?;
-    let mut nonce = [0; 24];
-    getrandom::fill(&mut nonce).map_err(|_| Error::ResourceUnavailable)?;
-    let aad = b.aad(CANARY.len() as u32);
-    let tag = cipher
-        .encrypt_in_place_detached(XNonce::from_slice(&nonce), &aad, plain.bytes_mut())
-        .map_err(|_| Error::Constraint)?;
-    let mut out = b"YIXUB001".to_vec();
-    out.extend((CANARY.len() as u32).to_be_bytes());
-    out.extend(aad);
-    out.extend(nonce);
-    out.extend(tag);
-    out.extend(plain.bytes());
-    Ok(out)
+    content_crypto::seal(b, synthetic(variant)?, key)
 }
 fn open(b: &PayloadBinding, bytes: &[u8]) -> Result<Vec<u8>> {
     let k = lab_key(Id::from_bytes(b.key))?;
@@ -211,29 +193,10 @@ fn open_using_key(b: &PayloadBinding, bytes: &[u8], k: &LockedBuffer) -> Result<
     Ok(hash(decrypt_locked(b, bytes, k)?.bytes()))
 }
 fn decrypt_locked(b: &PayloadBinding, bytes: &[u8], k: &LockedBuffer) -> Result<LockedBuffer> {
-    let n = CANARY.len();
-    let aad = b.aad(n as u32);
-    let off = 12 + aad.len();
-    if bytes.len() != off + 40 + n
-        || &bytes[..8] != b"YIXUB001"
-        || bytes[8..12] != (n as u32).to_be_bytes()
-        || bytes[12..off] != aad
-    {
+    if content_crypto::encoded_length(bytes)? != CANARY.len() {
         return Err(Error::Constraint);
     }
-    let mut plain = LockedBuffer::new(n, false).map_err(|_| Error::CapabilityUnavailable)?;
-    plain.bytes_mut().copy_from_slice(&bytes[off + 40..]);
-    XChaCha20Poly1305::new_from_slice(k.bytes())
-        .map_err(|_| Error::Constraint)?
-        .decrypt_in_place_detached(
-            XNonce::from_slice(&bytes[off..off + 24]),
-            &aad,
-            plain.bytes_mut(),
-            Tag::from_slice(&bytes[off + 24..off + 40]),
-        )
-        .map_err(|_| Error::Constraint)?;
-    // Release only a digest to the synthetic sink; never return body from this adapter.
-    Ok(plain)
+    content_crypto::open(b, bytes, k)
 }
 impl<C: Clock> AuthDatabase<C> {
     fn content_check(tx: &Transaction<'_>, ctx: &AuthContext, now: i64, cap: &str) -> Result<()> {

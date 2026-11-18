@@ -58,6 +58,19 @@ unsafe extern "system" {
         ea_length: u32,
     ) -> i32;
     fn NtSetInformationFile(file: H, status: *mut Status, info: H, size: u32, class: u32) -> i32;
+    fn NtQueryDirectoryFile(
+        file: H,
+        event: H,
+        apc: H,
+        context: H,
+        status: *mut Status,
+        buffer: H,
+        size: u32,
+        class: u32,
+        single: u8,
+        name: H,
+        restart: u8,
+    ) -> i32;
     fn RtlNtStatusToDosError(status: i32) -> u32;
 }
 #[link(name = "kernel32")]
@@ -168,11 +181,97 @@ fn relative(
     // SAFETY: NtCreateFile transferred a unique valid handle on success.
     Ok(unsafe { File::from_raw_handle(h) })
 }
+fn directory_names(bytes: &[u8]) -> io::Result<Vec<String>> {
+    let mut names = Vec::new();
+    let mut offset = 0;
+    loop {
+        let header = bytes.get(offset..offset + 12).ok_or_else(denied)?;
+        let next = u32::from_le_bytes(header[..4].try_into().unwrap()) as usize;
+        let len = u32::from_le_bytes(header[8..12].try_into().unwrap()) as usize;
+        if len == 0 || !len.is_multiple_of(2) {
+            return Err(denied());
+        }
+        let raw = bytes
+            .get(offset + 12..offset + 12 + len)
+            .ok_or_else(denied)?;
+        let wide: Vec<u16> = raw
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|p| u16::from_le_bytes([p[0], p[1]]))
+            .collect();
+        let name = String::from_utf16(&wide).map_err(|_| denied())?;
+        if name != "." && name != ".." {
+            component(&name)?;
+            names.push(name);
+        }
+        if next == 0 {
+            break;
+        }
+        if next < 12 + len || !next.is_multiple_of(4) || next > bytes.len() - offset {
+            return Err(denied());
+        }
+        offset += next;
+    }
+    if names.len() > 4096 {
+        return Err(denied());
+    }
+    Ok(names)
+}
 pub(super) struct Anchor {
     pins: Vec<File>,
     id: (u32, u32, u32),
 }
 impl Anchor {
+    pub(super) fn directory_identity(&self) -> io::Result<[u32; 3]> {
+        let (volume, high, low) = ident(&info(self.root()?)?);
+        Ok([volume, high, low])
+    }
+    /// Enumerate names through the pinned directory HANDLE. Never follows child entries.
+    pub(super) fn names(&self) -> io::Result<Vec<String>> {
+        let mut names = Vec::new();
+        let mut restart = 1;
+        loop {
+            let mut storage = vec![0u64; 8192];
+            let mut status = Status {
+                status: 0,
+                information: 0,
+            };
+            // SAFETY: live pinned synchronous directory HANDLE and aligned owned 64KiB output.
+            let code = unsafe {
+                NtQueryDirectoryFile(
+                    self.root()?.as_raw_handle(),
+                    std::ptr::null_mut(),
+                    std::ptr::null_mut(),
+                    std::ptr::null_mut(),
+                    &mut status,
+                    storage.as_mut_ptr().cast(),
+                    65536,
+                    12,
+                    0,
+                    std::ptr::null_mut(),
+                    restart,
+                )
+            };
+            if code as u32 == 0x80000006 {
+                break;
+            } // STATUS_NO_MORE_FILES
+            if code < 0 || status.information == 0 || status.information > 65536 {
+                return Err(denied());
+            }
+            restart = 0;
+            // SAFETY: checked OS-written byte count bounded by the owned output allocation.
+            let bytes = unsafe {
+                std::slice::from_raw_parts(storage.as_ptr().cast::<u8>(), status.information)
+            };
+            names.extend(directory_names(bytes)?);
+            if names.len() > 4096 {
+                return Err(denied());
+            }
+        }
+        names.sort();
+        Ok(names)
+    }
     /// Exclusive OS handle, not a timeout lease. Retain Anchor and File until process exit.
     pub(super) fn broker_lock(&self) -> io::Result<File> {
         let f = match relative(self.root()?, "broker-lock", false, true, true) {
@@ -287,6 +386,12 @@ impl Anchor {
         }
         Ok(b)
     }
+    /// Identity captured through the same anchored, validated object open used by reads.
+    pub(super) fn object_identity(&self, name: &str) -> io::Result<[u32; 3]> {
+        let f = relative(self.root()?, name, false, false, false)?;
+        let (volume, high, low) = ident(&self.check(&f)?);
+        Ok([volume, high, low])
+    }
     pub(super) fn publish(
         &self,
         temp: &str,
@@ -373,6 +478,28 @@ impl Anchor {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn directory_records_are_bounded_and_malformed_names_fail_closed() {
+        let mut valid = vec![0u8; 14];
+        valid[8..12].copy_from_slice(&2u32.to_le_bytes());
+        valid[12..14].copy_from_slice(&(b'x' as u16).to_le_bytes());
+        assert_eq!(super::directory_names(&valid).unwrap(), vec!["x"]);
+        for end in [0, 1, 11, 12, 13] {
+            assert!(super::directory_names(&valid[..end]).is_err());
+        }
+        let mut malformed = valid.clone();
+        malformed[8..12].copy_from_slice(&1u32.to_le_bytes());
+        assert!(super::directory_names(&malformed).is_err());
+        malformed = valid.clone();
+        malformed[..4].copy_from_slice(&4u32.to_le_bytes());
+        assert!(super::directory_names(&malformed).is_err());
+        malformed = valid.clone();
+        malformed[..4].copy_from_slice(&u32::MAX.to_le_bytes());
+        assert!(super::directory_names(&malformed).is_err());
+        malformed = valid.clone();
+        malformed[12..14].copy_from_slice(&0xd800u16.to_le_bytes());
+        assert!(super::directory_names(&malformed).is_err());
+    }
     use super::*;
     use std::{
         sync::{Arc, Barrier},
