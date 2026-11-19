@@ -2,8 +2,8 @@ use super::*;
 
 #[derive(Clone, Copy)]
 pub(super) struct ReadQuery {
-    memory: Id,
-    revision: Option<Id>,
+    pub(super) memory: Id,
+    pub(super) revision: Option<Id>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -102,13 +102,14 @@ impl Engine {
         Ok((plan, epoch, current))
     }
 
-    fn read_borrow<T>(
+    pub(super) fn read_borrow<T>(
         &mut self,
         identity: Identity,
         query: ReadQuery,
         mut checkpoint: impl FnMut(ReadPoint) -> Result<()>,
         inspect: impl FnOnce(&str) -> T,
     ) -> Result<T> {
+        self.b3_guard_read()?;
         // A consistent initial view is released before all file and DPAPI I/O.
         let initial = sql(rusqlite::Transaction::new_unchecked(
             &self.db,
@@ -127,6 +128,7 @@ impl Engine {
                         error
                     }
                 })?;
+        self.b3_guard_read()?;
         // This reservation orders the synchronous in-process borrow before later security commits.
         // No file/DPAPI/output I/O occurs during this section.
         let final_guard = sql(rusqlite::Transaction::new_unchecked(
@@ -172,10 +174,18 @@ impl application::ContentRead for Application {
 }
 
 impl Application {
-    fn read_revision<T>(&mut self, query: ReadQuery, inspect: impl FnOnce(&str) -> T) -> Result<T> {
+    pub(super) fn read_revision<T>(
+        &mut self,
+        query: ReadQuery,
+        inspect: impl FnOnce(&str) -> T,
+    ) -> Result<T> {
         application::InternalContentApplication::new(self).read_revision(query, inspect)
     }
-    fn revise_memory(&mut self, request: WriteRequest, body: &str) -> Result<WriteReceipt> {
+    pub(super) fn revise_memory(
+        &mut self,
+        request: WriteRequest,
+        body: &str,
+    ) -> Result<WriteReceipt> {
         if request.expected_current.is_none() {
             return Err(Error::InvalidInput);
         }

@@ -458,8 +458,32 @@ impl Anchor {
         Ok(())
     }
     pub(super) fn erase(&self, name: &str, expected: &[u8]) -> io::Result<()> {
+        self.erase_object(name, expected, None)
+    }
+    pub(super) fn erase_verified(
+        &self,
+        name: &str,
+        expected: &[u8],
+        expected_identity: &[u8],
+    ) -> io::Result<()> {
+        self.erase_object(name, expected, Some(expected_identity))
+    }
+    fn erase_object(
+        &self,
+        name: &str,
+        expected: &[u8],
+        expected_identity: Option<&[u8]>,
+    ) -> io::Result<()> {
         let mut f = relative(self.root()?, name, false, false, true)?;
-        self.check(&f)?;
+        let metadata = self.check(&f)?;
+        let (volume, high, low) = ident(&metadata);
+        let actual: Vec<u8> = [volume, high, low]
+            .iter()
+            .flat_map(|v| v.to_be_bytes())
+            .collect();
+        if expected_identity.is_some_and(|expected| expected != actual) {
+            return Err(denied());
+        }
         let mut b = Vec::new();
         Read::by_ref(&mut f).take(8193).read_to_end(&mut b)?;
         if b != expected {

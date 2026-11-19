@@ -71,6 +71,18 @@ def main() -> None:
     application = APPLICATION.as_posix()
     cases = [
         (
+            "b3_recovery_api_is_not_public",
+            {"yixu-sqlite-foundation": (sqlite, 'default-features = false')},
+            "use yixu_sqlite_foundation::auth::persistence::profile10::b3::DeleteCommand; fn main(){}",
+            ["--all-features"], "could not find `auth`",
+        ),
+        (
+            "b3_engine_is_not_a_production_backend",
+            {"yixu-application": (application, 'default-features = false')},
+            "fn main(){yixu_application::NoContentRuntime::default().delete_content(todo!());}",
+            ["--all-features"], "no method named `delete_content`",
+        ),
+        (
             "b2_read_api_is_not_public",
             {"yixu-sqlite-foundation": (sqlite, 'default-features = false')},
             "use yixu_sqlite_foundation::auth::persistence::profile10::read::ReadQuery; fn main(){}",

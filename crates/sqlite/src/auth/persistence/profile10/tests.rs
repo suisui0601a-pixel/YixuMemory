@@ -515,6 +515,10 @@ fn owned_process_entry() {
         .unwrap()
         .parse::<yixu_domain::Id>()
         .unwrap());
+    if mode.starts_with("B3") {
+        super::b3::tests::owner_round(&root, &mode, nonce);
+        return;
+    }
     if mode.starts_with("B2") {
         super::read::tests::owner_round(&root, &mode, &seed, nonce);
         return;

@@ -7,6 +7,7 @@ use std::{fs::File, path::Path};
 
 #[path = "../../../../application/src/internal_content.rs"]
 mod application;
+mod b3;
 #[path = "../../../../ipc/src/tests/transaction_gates.rs"]
 mod gates;
 mod read;
@@ -252,23 +253,28 @@ fn attest(db: &Connection) -> Result<()> {
         .collect())
     }
     let expected = sql(Connection::open_in_memory())?;
-    install_schema(&expected)?;
+    let version = b3::version(db)?;
+    install_schema_version(&expected, version)?;
     if definitions(db)? != definitions(&expected)?
         || sql(db.query_row("PRAGMA application_id", [], |r| r.get::<_, i64>(0)))? != APP_ID
-        || sql(db.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0)))? != 10
         || sql(db.query_row("PRAGMA integrity_check", [], |r| r.get::<_, String>(0)))? != "ok"
-        || sql(db.query_row(
-            "SELECT EXISTS(SELECT 1 FROM pragma_foreign_key_check)",
-            [],
-            |r| r.get::<_, bool>(0),
-        ))?
+        || !b3::foreign_keys_safe(db, version)?
     {
         return Err(Error::IncompatibleSchema);
     }
     Ok(())
 }
 fn install_schema(db: &Connection) -> Result<()> {
-    sql(db.execute_batch(DDL))
+    install_schema_version(db, 10)
+}
+fn install_schema_version(db: &Connection, version: i64) -> Result<()> {
+    sql(db.execute_batch(DDL))?;
+    if version == 11 {
+        b3::install(db)?;
+    } else if version != 10 {
+        return Err(Error::IncompatibleSchema);
+    }
+    Ok(())
 }
 
 impl Engine {
@@ -280,6 +286,15 @@ impl Engine {
         installation: Installation,
         grants: &[Provision],
         owner_nonce: Id,
+    ) -> Result<Self> {
+        Self::create_version(root, installation, grants, owner_nonce, 10)
+    }
+    fn create_version(
+        root: &Path,
+        installation: Installation,
+        grants: &[Provision],
+        owner_nonce: Id,
+        version: i64,
     ) -> Result<Self> {
         if installation.id == [0; 16] || installation.realm == [0; 16] || grants.is_empty() {
             return Err(Error::InvalidInput);
@@ -311,7 +326,11 @@ impl Engine {
         sql(db.execute_batch("PRAGMA journal_mode=WAL"))?;
         let incarnation = fresh()?;
         let tx = sql(db.transaction_with_behavior(TransactionBehavior::Immediate))?;
-        install_schema(&tx)?;
+        if version == 10 {
+            install_schema(&tx)?;
+        } else {
+            install_schema_version(&tx, version)?;
+        }
         sql(tx.execute(
             "INSERT INTO runtime VALUES(1,?1,?2,?3,?4,?5,?6,7,0,0,0)",
             params![
@@ -320,7 +339,7 @@ impl Engine {
                 incarnation,
                 owner_nonce,
                 store_identity,
-                digest(DDL.as_bytes())
+                b3::schema_hash(version)
             ],
         ))?;
         for grant in grants {
@@ -420,6 +439,7 @@ impl Engine {
         if !valid {
             return Err(Error::AuthorizationDenied);
         }
+        b3::check_quarantine(db, identity, request)?;
         Ok(epoch)
     }
 

@@ -147,6 +147,7 @@ impl Engine {
         now: i64,
         mut hook: impl FnMut(Point, &mut Self) -> Result<()>,
     ) -> Result<WriteReceipt> {
+        self.b3_guard_storage()?;
         if body.is_empty() || body.len() > 4096 {
             return Err(Error::InvalidInput);
         }
@@ -262,6 +263,7 @@ impl Engine {
         // Read-back with DPAPI and tag validation is outside the final SQLite writer transaction.
         let (_, publication) = self.verify_files(plan)?;
         hook(Point::BeforeCommit, self)?;
+        self.b3_guard_storage()?;
         self.commit(plan, &publication, now)?;
         hook(Point::Committed, self)?;
         self.receipt(plan.operation)

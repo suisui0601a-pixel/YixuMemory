@@ -226,6 +226,9 @@ fn ledger_hash(db: &Connection) -> Result<[u8; 32]> {
             }
         }
     }
+    if b3::version(db)? == 11 {
+        b3::hash_ledger(db, &mut hash)?;
+    }
     Ok(hash.finalize().into())
 }
 
@@ -251,7 +254,7 @@ impl Engine {
             ))?;
         if id != installation.id
             || realm != installation.realm
-            || hash != digest(DDL.as_bytes())
+            || hash != b3::schema_hash(b3::version(&db)?)
             || store != storage_identity(&anchor, &files, &vault)?
         {
             return Err(Error::Integrity);
@@ -271,6 +274,9 @@ impl Engine {
     pub(super) fn reconcile(&self, _fixture_time: i64) -> Result<Reconciliation> {
         let now = trusted_now()?;
         attest(&self.db)?;
+        if b3::version(&self.db)? == 11 {
+            return self.reconcile_b3();
+        }
         let mut result = Reconciliation {
             blocked: sql(self
                 .db
@@ -422,12 +428,14 @@ impl Engine {
             return Err(Error::CapabilityUnavailable);
         }
         // Single actor and held W1 lock: no content operation can begin after this flag.
+        let isolated = self.b3_isolations()?;
         let tx = sql(self
             .db
             .transaction_with_behavior(TransactionBehavior::Immediate))?;
         if sql(gates::closing(&tx))? {
             return Err(Error::CapabilityUnavailable);
         }
+        b3::persist_isolations(&tx, self.incarnation, &isolated)?;
         let hash = ledger_hash(&tx)?;
         sql(tx.execute(
             "INSERT INTO stop_receipt
@@ -486,6 +494,7 @@ impl Engine {
         nonce: Id,
     ) -> Result<Self> {
         let next = fresh()?;
+        let isolated = engine.b3_isolations()?;
         let tx = sql(engine
             .db
             .transaction_with_behavior(TransactionBehavior::Immediate))?;
@@ -503,6 +512,7 @@ impl Engine {
         if !clean || sql(gates::closing(&tx))? {
             return Err(Error::CapabilityUnavailable);
         }
+        b3::persist_isolations(&tx, next, &isolated)?;
         sql(tx.execute(
             "INSERT INTO resume_receipt SELECT incarnation,?1,epoch,?2 FROM runtime",
             params![next, hash],
