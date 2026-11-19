@@ -21,7 +21,7 @@
 ## 已运行
 
 - B1/B2/B3 定点：47 harness 条目，保留原 24 条，新增 23 个业务断言测试；原集合含 owned_process_entry 辅助入口，不冒充 47 个独立生产安全能力。
-- Workspace 默认及 all-features：各 400 普通 harness 条目 + 10 compile-fail doctest 通过；含辅助/子进程入口，两个配置不能相加成独立能力数量。
+- Workspace 默认：400 普通 harness 条目 + 10 compile-fail doctest；all-features：402 + 10，均通过。含辅助/子进程入口，两个配置不能相加成独立能力数量。
 - 排除 16 个 Native 输出实验条目；命令在 meta 日志完整列出。本阶段没有 unfiltered Native 输出全量重验。
 - fmt、Clippy all-targets/all-features -D warnings、默认/全特性构建通过。
 - 54 个外部编译拒绝探针与 4 个依赖图检查通过。
