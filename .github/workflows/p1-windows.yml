@@ -45,6 +45,7 @@ jobs:
           "TEMP=$temp" >> $env:GITHUB_ENV
           "TMP=$temp" >> $env:GITHUB_ENV
           "YIXU_VERIFICATION_OUT=$temp/evidence" >> $env:GITHUB_ENV
+          "CARGO_TARGET_DIR=$env:GITHUB_WORKSPACE/experimental/p1/target" >> $env:GITHUB_ENV
           rustup toolchain install 1.99.1-x86_64-pc-windows-gnu --profile minimal --component rustfmt --component clippy
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           rustup override set 1.99.1-x86_64-pc-windows-gnu
