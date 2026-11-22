@@ -76,6 +76,9 @@ fn configure(connection: &Connection) -> Result<()> {
     if !connection.is_autocommit() {
         return Err(Error::IncompatibleSchema);
     }
+    // Changing temp_store may discard TEMP objects. Reject an unexpected
+    // namespace before any connection configuration, not after that side effect.
+    namespace_clear(connection)?;
     db(connection.execute_batch(
         "PRAGMA foreign_keys=ON; PRAGMA recursive_triggers=ON; PRAGMA temp_store=MEMORY;",
     ))?;
@@ -88,6 +91,10 @@ fn configured(connection: &Connection) -> Result<()> {
             return Err(Error::IncompatibleSchema);
         }
     }
+    namespace_clear(connection)
+}
+
+fn namespace_clear(connection: &Connection) -> Result<()> {
     if db(connection.query_row(
         "SELECT count(*) FROM pragma_database_list WHERE name NOT IN ('main','temp')",
         [],

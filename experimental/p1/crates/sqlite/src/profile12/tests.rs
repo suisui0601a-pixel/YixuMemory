@@ -306,6 +306,20 @@ fn fresh_only_refuses_reinstall_or_nonempty_zero_version_database() {
             .unwrap(),
         0
     );
+    let mut temp_connection = Connection::open_in_memory().unwrap();
+    temp_connection
+        .execute_batch("CREATE TEMP TABLE keep_me(value INTEGER); INSERT INTO keep_me VALUES(42)")
+        .unwrap();
+    assert_eq!(
+        install_fresh(&mut temp_connection),
+        Err(Error::IncompatibleSchema)
+    );
+    assert_eq!(
+        temp_connection
+            .query_row("SELECT value FROM temp.keep_me", [], |r| r.get::<_, i64>(0))
+            .unwrap(),
+        42
+    );
 }
 
 #[test]
