@@ -1,0 +1,53 @@
+[
+  {
+    "package": "hmac",
+    "version": "0.13.0",
+    "declared_license": "MIT OR Apache-2.0",
+    "repository": "https://github.com/RustCrypto/MACs",
+    "license_files": [
+      {
+        "file": "LICENSE-APACHE",
+        "sha256": "a9040321c3712d8fd0b09cf52b17445de04a23a10165049ae187cd39e5c86be5"
+      },
+      {
+        "file": "LICENSE-MIT",
+        "sha256": "9e0dfd2dd4173a530e238cb6adb37aa78c34c6bc7444e0e10c1ab5d8881f63ba"
+      }
+    ],
+    "use": "Unmodified Cargo registry dependency; HMAC is dev-only in cfg(test) token adapter; no surveyed project source reuse."
+  },
+  {
+    "package": "ctutils",
+    "version": "0.4.7",
+    "declared_license": "Apache-2.0 OR MIT",
+    "repository": "https://github.com/RustCrypto/utils",
+    "license_files": [
+      {
+        "file": "LICENSE-APACHE",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+      },
+      {
+        "file": "LICENSE-MIT",
+        "sha256": "91585c36e4fb9ab4ca0d3dfac5d66d3c0c62cc51f640a0e1196542daf2267eae"
+      }
+    ],
+    "use": "Unmodified Cargo registry dependency; HMAC is dev-only in cfg(test) token adapter; no surveyed project source reuse."
+  },
+  {
+    "package": "cmov",
+    "version": "0.5.4",
+    "declared_license": "Apache-2.0 OR MIT",
+    "repository": "https://github.com/RustCrypto/utils",
+    "license_files": [
+      {
+        "file": "LICENSE-APACHE",
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+      },
+      {
+        "file": "LICENSE-MIT",
+        "sha256": "70c9d40f1f9545c3f133b8a67206e89da850f6468eed072281bb3701514114a9"
+      }
+    ],
+    "use": "Unmodified Cargo registry dependency; HMAC is dev-only in cfg(test) token adapter; no surveyed project source reuse."
+  }
+]

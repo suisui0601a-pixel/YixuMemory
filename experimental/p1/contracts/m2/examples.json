@@ -1,0 +1,89 @@
+{
+  "query": {
+    "profile": 5,
+    "projection": "metadata",
+    "tenant_id": "00000000-0000-4000-8000-000000000001",
+    "space_id": "00000000-0000-4000-8000-000000000003",
+    "mode": "current",
+    "memory_id": null,
+    "as_of": null,
+    "valid_at_ms": null,
+    "include_uncertain": false,
+    "evidence_id": null,
+    "assertion_kind": null,
+    "state": "source_blocked",
+    "retrieval": "metadata",
+    "limit": 10,
+    "cursor": null
+  },
+  "write": {
+    "profile": 5,
+    "tenant_id": "00000000-0000-4000-8000-000000000001",
+    "space_id": "00000000-0000-4000-8000-000000000003",
+    "operation": "append",
+    "memory_id": null,
+    "expected_version": 0,
+    "evidence_ids": [
+      "00000000-0000-4000-8000-000000000021"
+    ],
+    "primary_evidence_id": "00000000-0000-4000-8000-000000000021",
+    "content_payload_id": "00000000-0000-4000-8000-000000000012",
+    "idempotency_key": "00000000-0000-4000-8000-000000000040",
+    "validity": {
+      "kind": "unknown"
+    }
+  },
+  "conflict": {
+    "profile": 5,
+    "tenant_id": "00000000-0000-4000-8000-000000000001",
+    "space_id": "00000000-0000-4000-8000-000000000003",
+    "idempotency_key": "00000000-0000-4000-8000-000000000040",
+    "operation": "create",
+    "left_revision_id": "00000000-0000-4000-8000-000000000031",
+    "right_revision_id": "00000000-0000-4000-8000-000000000032"
+  },
+  "unknown_time": {
+    "kind": "unknown"
+  },
+  "future_time": {
+    "kind": "known",
+    "from": {
+      "earliest_ms": 200,
+      "latest_ms": 200,
+      "precision": "millisecond"
+    },
+    "to": null
+  },
+  "page": {
+    "rows": [
+      {
+        "memory": "00000000-0000-4000-8000-000000000030",
+        "revision": "00000000-0000-4000-8000-000000000031",
+        "number": 1,
+        "memory_version_at_revision": 1,
+        "knowledge_seq": 2,
+        "recorded_at_ms": 100,
+        "validity": {
+          "kind": "unknown"
+        },
+        "temporal_match": null,
+        "assertion_kind": "user_assertion",
+        "primary_evidence": "00000000-0000-4000-8000-000000000021",
+        "evidence": [
+          {
+            "id": "00000000-0000-4000-8000-000000000021",
+            "event": "00000000-0000-4000-8000-000000000020",
+            "occurred_at_ms": 10,
+            "recorded_at_ms": 100,
+            "knowledge_seq": 1
+          }
+        ],
+        "state": "source_blocked",
+        "content_available": false,
+        "conflicts": []
+      }
+    ],
+    "snapshot": "c2hhcGUtb25seS1ub3QtYS12YWxpZC10b2tlbg==",
+    "next_cursor": null
+  }
+}

@@ -1,0 +1,172 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "memory": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "revision": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9223372036854775807
+          },
+          "memory_version_at_revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9223372036854775807
+          },
+          "knowledge_seq": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9223372036854775807
+          },
+          "recorded_at_ms": {
+            "type": "integer",
+            "minimum": -9223372036854775808,
+            "maximum": 9223372036854775807
+          },
+          "validity": {
+            "$ref": "time.schema.json"
+          },
+          "temporal_match": {
+            "anyOf": [
+              {
+                "enum": [
+                  "certain",
+                  "possible",
+                  "unknown",
+                  "outside"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "assertion_kind": {
+            "enum": [
+              "extracted_fact",
+              "model_inference",
+              "fictional_setting",
+              "user_assertion"
+            ]
+          },
+          "primary_evidence": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "event": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "occurred_at_ms": {
+                  "type": "integer",
+                  "minimum": -9223372036854775808,
+                  "maximum": 9223372036854775807
+                },
+                "recorded_at_ms": {
+                  "type": "integer",
+                  "minimum": -9223372036854775808,
+                  "maximum": 9223372036854775807
+                },
+                "knowledge_seq": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9223372036854775807
+                }
+              },
+              "required": [
+                "id",
+                "event",
+                "occurred_at_ms",
+                "recorded_at_ms",
+                "knowledge_seq"
+              ]
+            },
+            "minItems": 1
+          },
+          "state": {
+            "const": "source_blocked"
+          },
+          "content_available": {
+            "const": false
+          },
+          "conflicts": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "memory",
+          "revision",
+          "number",
+          "memory_version_at_revision",
+          "knowledge_seq",
+          "recorded_at_ms",
+          "validity",
+          "temporal_match",
+          "assertion_kind",
+          "primary_evidence",
+          "evidence",
+          "state",
+          "content_available",
+          "conflicts"
+        ]
+      },
+      "maxItems": 100
+    },
+    "snapshot": {
+      "type": "string",
+      "contentEncoding": "base64",
+      "minLength": 1,
+      "maxLength": 2732,
+      "description": "Opaque server-MAC bytes; shape validation is not signature verification or authorization."
+    },
+    "next_cursor": {
+      "anyOf": [
+        {
+          "type": "string",
+          "contentEncoding": "base64",
+          "minLength": 1,
+          "maxLength": 2732,
+          "description": "Opaque server-MAC bytes; shape validation is not signature verification or authorization."
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "rows",
+    "snapshot",
+    "next_cursor"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yixumemory.invalid/private/m2/page.schema.json"
+}

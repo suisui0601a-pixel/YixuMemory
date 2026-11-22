@@ -1,0 +1,141 @@
+{
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profile": {
+          "const": 5
+        },
+        "tenant_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "space_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "idempotency_key": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "operation": {
+          "const": "create"
+        },
+        "left_revision_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "right_revision_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "profile",
+        "tenant_id",
+        "space_id",
+        "idempotency_key",
+        "operation",
+        "left_revision_id",
+        "right_revision_id"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profile": {
+          "const": 5
+        },
+        "tenant_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "space_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "idempotency_key": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "operation": {
+          "const": "resolve"
+        },
+        "conflict_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "expected_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9223372036854775807
+        },
+        "resolution_revision_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "profile",
+        "tenant_id",
+        "space_id",
+        "idempotency_key",
+        "operation",
+        "conflict_id",
+        "expected_version",
+        "resolution_revision_id"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profile": {
+          "const": 5
+        },
+        "tenant_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "space_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "idempotency_key": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "operation": {
+          "const": "reopen"
+        },
+        "conflict_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "expected_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9223372036854775807
+        },
+        "new_revision_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "profile",
+        "tenant_id",
+        "space_id",
+        "idempotency_key",
+        "operation",
+        "conflict_id",
+        "expected_version",
+        "new_revision_id"
+      ]
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yixumemory.invalid/private/m2/conflict.schema.json"
+}

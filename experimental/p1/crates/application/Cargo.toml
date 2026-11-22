@@ -1,0 +1,11 @@
+[package]
+name = "yixu-application"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+[dependencies]
+yixu-domain.workspace = true
+yixu-ports.workspace = true
+[lints]
+workspace = true

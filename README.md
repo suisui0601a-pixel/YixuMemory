@@ -2,6 +2,10 @@
 
 Independent Long-Term Memory Infrastructure
 
+P1 实验源码现位于 [experimental/p1](experimental/p1)，发布不等于生产验收。
+参阅[实际能力与平台状态](docs/IMPLEMENTATION_STATUS.md)及[整合来源](docs/integration/20261122/README.md)。
+当前没有可部署的正式记忆服务；生产正文仍关闭，REST/MCP/SDK/PostgreSQL 等未实现能力明确列出。
+
 Version: `0.0.0-p0` · Architecture: `P0-Baseline-001`
 
 独立开源长期记忆内核的首轮架构基线。当前交付为设计、数据契约与验收框架，**没有可运行的记忆服务**。不承诺消除 AI 遗忘，也不宣称未经测试的吞吐、安全或后端等价性。

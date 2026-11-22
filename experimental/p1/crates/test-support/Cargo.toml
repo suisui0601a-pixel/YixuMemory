@@ -1,0 +1,37 @@
+[package]
+name = "yixu-sqlite-test-support"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[features]
+default = []
+synthetic-fixtures = []
+fault-injection = ["synthetic-fixtures"]
+
+[dependencies]
+yixu-domain.workspace = true
+yixu-ports.workspace = true
+rusqlite.workspace = true
+sha2.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+yixu-application = { path = "../application" }
+
+[[bin]]
+name = "foundation-fault"
+path = "src/bin/foundation-fault.rs"
+required-features = ["fault-injection"]
+
+[[test]]
+name = "real_sqlite"
+required-features = ["synthetic-fixtures"]
+
+[[test]]
+name = "remediation"
+required-features = ["synthetic-fixtures"]
+
+[lints]
+workspace = true

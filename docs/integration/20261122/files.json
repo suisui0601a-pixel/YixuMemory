@@ -1,0 +1,861 @@
+{
+  "source": "78eb835990cff0086204326d5c2fc91907c353c8",
+  "public_base": "85f033e646b5446d02a0fdc9a3bf92a0ee8dd0e0",
+  "files": [
+    {
+      "source": ".gitattributes",
+      "destination": "experimental/p1/.gitattributes",
+      "sha256": "a79691a93b46e49ce460c26ef22afcc03d6eca1e63bf2edbc20e96159510f6c9"
+    },
+    {
+      "source": ".gitignore",
+      "destination": "experimental/p1/.gitignore",
+      "sha256": "d9820402bb51041c9026616805fcd13bfceb769ae37ed86064c4f2dae4adbf61"
+    },
+    {
+      "source": "Cargo.lock",
+      "destination": "experimental/p1/Cargo.lock",
+      "sha256": "47df6bce27af870a55e37f895442390a8e223a4bbeb9db08f803e92a4cd113ee"
+    },
+    {
+      "source": "Cargo.toml",
+      "destination": "experimental/p1/Cargo.toml",
+      "sha256": "d58023803f4cd5b2371e31433d9c0b85639adeb4654a21f29e0d9b89d2fbb4cb"
+    },
+    {
+      "source": "HANDOFF.md",
+      "destination": "experimental/p1/HANDOFF.md",
+      "sha256": "1c4e9dd8bd979efd02605d08272968c66bed81f37cece15c6d063c6d0d8a1eff"
+    },
+    {
+      "source": "README.md",
+      "destination": "experimental/p1/README.md",
+      "sha256": "5c894535a13aeabe8e2aaa132e29082c407aa0338012753d2380c79d8889c402"
+    },
+    {
+      "source": "contracts/m2/README.md",
+      "destination": "experimental/p1/contracts/m2/README.md",
+      "sha256": "4fa6250e51ed0ea5fd25931bab7e9befa83bb140a7b8fe9662c0d835220a8989"
+    },
+    {
+      "source": "contracts/m2/conflict-history.schema.json",
+      "destination": "experimental/p1/contracts/m2/conflict-history.schema.json",
+      "sha256": "bbe356140abd1a194d10523f66726cd6c045cfea933c21bea049b5500eb9a7c6"
+    },
+    {
+      "source": "contracts/m2/conflict.schema.json",
+      "destination": "experimental/p1/contracts/m2/conflict.schema.json",
+      "sha256": "4796e17892663292dcd97a7fcce1c53858930303390677bf986108503cbdca3d"
+    },
+    {
+      "source": "contracts/m2/examples.json",
+      "destination": "experimental/p1/contracts/m2/examples.json",
+      "sha256": "4ba01ec21ec9dba8abe11d71ea401cc36de0c6d68950e65f30d23132eef946af"
+    },
+    {
+      "source": "contracts/m2/openapi.json",
+      "destination": "experimental/p1/contracts/m2/openapi.json",
+      "sha256": "76605baf33afdbf17218e8dbf9b1a918dc91c6a9f50d9d55673746124c0b4bc2"
+    },
+    {
+      "source": "contracts/m2/page.schema.json",
+      "destination": "experimental/p1/contracts/m2/page.schema.json",
+      "sha256": "b91071f6f52ad49abbe76278bf2fffcd0e15e8314e470df966865b525830ddf2"
+    },
+    {
+      "source": "contracts/m2/query.schema.json",
+      "destination": "experimental/p1/contracts/m2/query.schema.json",
+      "sha256": "cb1261323bb8f15da6d281c1ddfca5da0f101839a72767ff35495030872cb464"
+    },
+    {
+      "source": "contracts/m2/time.schema.json",
+      "destination": "experimental/p1/contracts/m2/time.schema.json",
+      "sha256": "54d5cec2e3b4015aacd4cd2eaa52838c4e1bec031c3339eff783343398af10c5"
+    },
+    {
+      "source": "contracts/m2/write.schema.json",
+      "destination": "experimental/p1/contracts/m2/write.schema.json",
+      "sha256": "7ebf0010d061a0d0ce19c2354c52f0e81a87ffc045170f33923467142c1f5321"
+    },
+    {
+      "source": "crates/application/Cargo.toml",
+      "destination": "experimental/p1/crates/application/Cargo.toml",
+      "sha256": "a16f0633f79f107c3849b8b292ee8aa0031ec09c997ac9d1d8300bb210c2bbdb"
+    },
+    {
+      "source": "crates/application/src/internal_content.rs",
+      "destination": "experimental/p1/crates/application/src/internal_content.rs",
+      "sha256": "62bc8cf144295aef7f2206ab28aa446772b569750d6c0b290c7763259f580573"
+    },
+    {
+      "source": "crates/application/src/lib.rs",
+      "destination": "experimental/p1/crates/application/src/lib.rs",
+      "sha256": "4577a3575babe0568d80bcac10a537eb12e770fb02bff0ff257af8e3a1ebedaf"
+    },
+    {
+      "source": "crates/application/src/memory.rs",
+      "destination": "experimental/p1/crates/application/src/memory.rs",
+      "sha256": "f0e90e085f320284eced3360232dc678864b067d8fe517dfbb6ded0be294f086"
+    },
+    {
+      "source": "crates/application/src/memory_m2.rs",
+      "destination": "experimental/p1/crates/application/src/memory_m2.rs",
+      "sha256": "9d2ef672797767ecee38ee6fd216b88c86d5073fc24d853fd1cefb91f20f177e"
+    },
+    {
+      "source": "crates/application/src/metadata.rs",
+      "destination": "experimental/p1/crates/application/src/metadata.rs",
+      "sha256": "b70ca3bb40e2b8a135e60bad36e2fe3b072d1e071beea9e791f6a556676a57cf"
+    },
+    {
+      "source": "crates/domain/Cargo.toml",
+      "destination": "experimental/p1/crates/domain/Cargo.toml",
+      "sha256": "c169ac583d2e1557bd884f6f167381a5efd9c6f66958d94b968cc5a6e54ec3be"
+    },
+    {
+      "source": "crates/domain/src/lib.rs",
+      "destination": "experimental/p1/crates/domain/src/lib.rs",
+      "sha256": "ceaaf8e21992440bc1b35ab7ade1c24f5f7befc8a2592274fe344cf029023f22"
+    },
+    {
+      "source": "crates/domain/src/security_m3.rs",
+      "destination": "experimental/p1/crates/domain/src/security_m3.rs",
+      "sha256": "3ea6f85d21645aaafcb8c2ccb92ee5d6aaa954ed8ebb0578c294b5394e6999f1"
+    },
+    {
+      "source": "crates/domain/src/security_m3/tests.rs",
+      "destination": "experimental/p1/crates/domain/src/security_m3/tests.rs",
+      "sha256": "1f8235d85c39ef74f1526df8bd028cd71e54e0270b70f83df631839e96421e92"
+    },
+    {
+      "source": "crates/domain/src/temporal.rs",
+      "destination": "experimental/p1/crates/domain/src/temporal.rs",
+      "sha256": "f1be33dc974d0d2dcea08d2d781dd738b47e079438abd5c5a8becbd46c24809e"
+    },
+    {
+      "source": "crates/ipc/Cargo.toml",
+      "destination": "experimental/p1/crates/ipc/Cargo.toml",
+      "sha256": "82d8ba746e5d2fd03cd2b9013b21e4b151cecb928933bc0430236882e6eb4c36"
+    },
+    {
+      "source": "crates/ipc/src/auth.rs",
+      "destination": "experimental/p1/crates/ipc/src/auth.rs",
+      "sha256": "e341bc32afd785cc0c86a74e223e8bdf6ace8ad6b7d3d8990f6500d29e3fd2f6"
+    },
+    {
+      "source": "crates/ipc/src/lib.rs",
+      "destination": "experimental/p1/crates/ipc/src/lib.rs",
+      "sha256": "2b43170c94efc25be14ffa55df1e2c982e48e69da8a8df754ea076c088020a94"
+    },
+    {
+      "source": "crates/ipc/src/tests.rs",
+      "destination": "experimental/p1/crates/ipc/src/tests.rs",
+      "sha256": "0319efc6ab5f58f620bf82a7317394e61b022a87a9591df3eb062eda29683ad4"
+    },
+    {
+      "source": "crates/ipc/src/tests/r4.rs",
+      "destination": "experimental/p1/crates/ipc/src/tests/r4.rs",
+      "sha256": "705addb29fc67a33edd1f3790dfe79714dc34d94ac63e996b34887d59fc6484a"
+    },
+    {
+      "source": "crates/ipc/src/tests/r4/cases.rs",
+      "destination": "experimental/p1/crates/ipc/src/tests/r4/cases.rs",
+      "sha256": "69b5f143ef37d0d566879c4b83d8bee35004cc0c36b1ea919dfa026b884cbd7f"
+    },
+    {
+      "source": "crates/ipc/src/tests/r4/r5.rs",
+      "destination": "experimental/p1/crates/ipc/src/tests/r4/r5.rs",
+      "sha256": "9824732de318a9a8ee7aa2e66ee907de6132dd735e908d078ecd275f8178fb37"
+    },
+    {
+      "source": "crates/ipc/src/tests/r4/r5/cases.rs",
+      "destination": "experimental/p1/crates/ipc/src/tests/r4/r5/cases.rs",
+      "sha256": "cb0701d14c98609dde1674428dd365e40e0d1e8640619e68d8d8a11a642b81ac"
+    },
+    {
+      "source": "crates/ipc/src/tests/r4/r5/closure.sql",
+      "destination": "experimental/p1/crates/ipc/src/tests/r4/r5/closure.sql",
+      "sha256": "b17c5e0ffc858047d3951d937bbab13b78e853663c3207e59288be7e808573d2"
+    },
+    {
+      "source": "crates/ipc/src/tests/r4/synthetic.sql",
+      "destination": "experimental/p1/crates/ipc/src/tests/r4/synthetic.sql",
+      "sha256": "81067e30aee5335c60a8c2d3f907de745eda8ab299440463289341e3f45b360f"
+    },
+    {
+      "source": "crates/ipc/src/tests/recovery.rs",
+      "destination": "experimental/p1/crates/ipc/src/tests/recovery.rs",
+      "sha256": "97b531769a72a5351e2b7974ea7635bcc8a6ae44af3938f48a2e1b371e4518f3"
+    },
+    {
+      "source": "crates/ipc/src/tests/transaction_gates.rs",
+      "destination": "experimental/p1/crates/ipc/src/tests/transaction_gates.rs",
+      "sha256": "584d669c410b764cd21ada930092f766c57d1e1e716c86093e10618993d55dad"
+    },
+    {
+      "source": "crates/ipc/src/wire.rs",
+      "destination": "experimental/p1/crates/ipc/src/wire.rs",
+      "sha256": "9ac308d097035d81b3844e2a8c825b5fb2af35e842eea17f1fd19b730faa27e8"
+    },
+    {
+      "source": "crates/m3-lab/Cargo.toml",
+      "destination": "experimental/p1/crates/m3-lab/Cargo.toml",
+      "sha256": "7d9c584375868405067b92240dad1e0ada1a2fd37c9ab13652e3bd2830429e3d"
+    },
+    {
+      "source": "crates/m3-lab/src/experiment/memory.rs",
+      "destination": "experimental/p1/crates/m3-lab/src/experiment/memory.rs",
+      "sha256": "e238c78483a3b332d2621c3453452eaa1a29dd9bc4e6168e47279cb5e4885beb"
+    },
+    {
+      "source": "crates/m3-lab/src/experiment/mod.rs",
+      "destination": "experimental/p1/crates/m3-lab/src/experiment/mod.rs",
+      "sha256": "1477ed92031723e1e1fe9bd7fd6446e46bf3ce96686240d6d60881a0418c99cb"
+    },
+    {
+      "source": "crates/m3-lab/src/experiment/tests.rs",
+      "destination": "experimental/p1/crates/m3-lab/src/experiment/tests.rs",
+      "sha256": "0919abc8194787f9a35a0cce569581a81fb1b95dec5e1e3bc07175ef48d58176"
+    },
+    {
+      "source": "crates/m3-lab/src/lib.rs",
+      "destination": "experimental/p1/crates/m3-lab/src/lib.rs",
+      "sha256": "07ededd23e08d434f9010ab2b5ec15a2f3ec2e8074cab22387107b8e2b2910c4"
+    },
+    {
+      "source": "crates/m3-lab/src/linux_store.rs",
+      "destination": "experimental/p1/crates/m3-lab/src/linux_store.rs",
+      "sha256": "941d49e34f1d2888a0d16e04ab83b5d5b52669607154844523e6485f28e8e6cc"
+    },
+    {
+      "source": "crates/ports/Cargo.toml",
+      "destination": "experimental/p1/crates/ports/Cargo.toml",
+      "sha256": "64ce1bbf9e45a4f4105ffaeb3255f2eac7f34e266dfe23ee4f1809909d772afb"
+    },
+    {
+      "source": "crates/ports/src/authorized_metadata.rs",
+      "destination": "experimental/p1/crates/ports/src/authorized_metadata.rs",
+      "sha256": "ccc272927b51943588bea92cf5599ef43cb9a76e3aea66fe2575daaf97c2ccf1"
+    },
+    {
+      "source": "crates/ports/src/lib.rs",
+      "destination": "experimental/p1/crates/ports/src/lib.rs",
+      "sha256": "8b1c2bca7d7de63262114a591c26046d596fe53b020d231d2b57ea82b90f91ed"
+    },
+    {
+      "source": "crates/ports/src/memory.rs",
+      "destination": "experimental/p1/crates/ports/src/memory.rs",
+      "sha256": "841d2323aaba19f8e38f83fb6f34fcdef865c8c223eb57e32ba90ac2b9abe379"
+    },
+    {
+      "source": "crates/ports/src/memory_m2.rs",
+      "destination": "experimental/p1/crates/ports/src/memory_m2.rs",
+      "sha256": "b30f1ea48ae6293313ceb9f64529f7433e0972bb05167f5961638d092c4fbe2b"
+    },
+    {
+      "source": "crates/ports/src/security_m3.rs",
+      "destination": "experimental/p1/crates/ports/src/security_m3.rs",
+      "sha256": "599dbadbfd03aa8ca6c20a7b1a01b9c08c299a1fd94b0a81d92b0df8802a8565"
+    },
+    {
+      "source": "crates/sqlite/Cargo.toml",
+      "destination": "experimental/p1/crates/sqlite/Cargo.toml",
+      "sha256": "924568c768d42411e75cef079765e476203606b514caeb8fd45b7d4a473cff33"
+    },
+    {
+      "source": "crates/sqlite/migrations/0001_foundation.sql",
+      "destination": "experimental/p1/crates/sqlite/migrations/0001_foundation.sql",
+      "sha256": "46ad10e396bbffbc5e3a42a931c140801efbb1a9aaefc01c5fe25295c8847d8d"
+    },
+    {
+      "source": "crates/sqlite/migrations/0002_auth_profile.sql",
+      "destination": "experimental/p1/crates/sqlite/migrations/0002_auth_profile.sql",
+      "sha256": "66c46a7129dc4308dc85a8f1911d4870266f98117d49309f55eb6a85dee3452c"
+    },
+    {
+      "source": "crates/sqlite/migrations/0003_auth_r1.sql",
+      "destination": "experimental/p1/crates/sqlite/migrations/0003_auth_r1.sql",
+      "sha256": "49351a54f4ac9822265c5ea67e097c33b48356d918025196ed114af9c73b9e31"
+    },
+    {
+      "source": "crates/sqlite/migrations/0004_memory_lab.sql",
+      "destination": "experimental/p1/crates/sqlite/migrations/0004_memory_lab.sql",
+      "sha256": "f9986844ebb285ad6bcc558086a927b2c94f781f3727a53699dc8528fc8c03b0"
+    },
+    {
+      "source": "crates/sqlite/migrations/0005_memory_m2.sql",
+      "destination": "experimental/p1/crates/sqlite/migrations/0005_memory_m2.sql",
+      "sha256": "4a00852756ea3cad82f148b80127d7197f9b897652579f6fb877d19aef14953d"
+    },
+    {
+      "source": "crates/sqlite/migrations/0006_persistence_lab.sql",
+      "destination": "experimental/p1/crates/sqlite/migrations/0006_persistence_lab.sql",
+      "sha256": "780ad2080e884108934d3b2f6844fc035d3cb43ba75839046500a7da4810426c"
+    },
+    {
+      "source": "crates/sqlite/migrations/0007_local_keyvault.sql",
+      "destination": "experimental/p1/crates/sqlite/migrations/0007_local_keyvault.sql",
+      "sha256": "81a8d58e8a00fef7e0bb82d77bc540ccf63124d24ba5556a85b0b49babbbf795"
+    },
+    {
+      "source": "crates/sqlite/migrations/0008_release.sql",
+      "destination": "experimental/p1/crates/sqlite/migrations/0008_release.sql",
+      "sha256": "2cccbe2c1421f5119f5e53d257a8ef6ed72af1a979b30d92af1caadd50abff48"
+    },
+    {
+      "source": "crates/sqlite/migrations/0009_output.sql",
+      "destination": "experimental/p1/crates/sqlite/migrations/0009_output.sql",
+      "sha256": "a90d8fe5acaff260fa36771e1c39541480ec2cc884134ea72da7c9cad078dba8"
+    },
+    {
+      "source": "crates/sqlite/migrations/0010_local_content.sql",
+      "destination": "experimental/p1/crates/sqlite/migrations/0010_local_content.sql",
+      "sha256": "88678456e70aec2ec369200e6bc64caebe7c7c6d9d536ffebcd361736788a135"
+    },
+    {
+      "source": "crates/sqlite/migrations/0011_object_recovery.sql",
+      "destination": "experimental/p1/crates/sqlite/migrations/0011_object_recovery.sql",
+      "sha256": "13aed47a9438d90ec116c90e8abe1eddc8ec9213a40aa6a2bc99629636e1df97"
+    },
+    {
+      "source": "crates/sqlite/src/auth.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth.rs",
+      "sha256": "a91c4edc4a1c8b093ede5c46bbd590d05c6d0f2ff7ed216e25bf45e5aa4f603f"
+    },
+    {
+      "source": "crates/sqlite/src/auth/ids.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/ids.rs",
+      "sha256": "e52e26f44c724a297ca9501c92c05c9eccf31327bf0336cb015ea888ea86453e"
+    },
+    {
+      "source": "crates/sqlite/src/auth/m2.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/m2.rs",
+      "sha256": "dbd78c58910adcdcff977510f7ee0ba64b47ac513c51e9f1506eda8bc5b1c23d"
+    },
+    {
+      "source": "crates/sqlite/src/auth/m2/conflicts.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/m2/conflicts.rs",
+      "sha256": "ab437d7f04a2ce7b4d5be45293eeb159760d6f3c569077d0157eea9c4de69509"
+    },
+    {
+      "source": "crates/sqlite/src/auth/m2/tests.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/m2/tests.rs",
+      "sha256": "3839a7e923b2a3711819a5b7a0e0cf0fa4205a8c1d2877b81ae7c7a7735b9005"
+    },
+    {
+      "source": "crates/sqlite/src/auth/m2/tests/reopen_tests.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/m2/tests/reopen_tests.rs",
+      "sha256": "9c925e13ff71cae5701413758b23662ba9a284b74b8c3a720b0f495cd088c71d"
+    },
+    {
+      "source": "crates/sqlite/src/auth/m2/tokens.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/m2/tokens.rs",
+      "sha256": "6adaf7dde9e6b31c766ba653af77b79b533293d5e3a1a8b30d6dfccbe4c4b384"
+    },
+    {
+      "source": "crates/sqlite/src/auth/memory.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/memory.rs",
+      "sha256": "40c436efca96c8fd1cd8336c99a6b51a6b47d1e1f1f8f88685e925a79ac87c53"
+    },
+    {
+      "source": "crates/sqlite/src/auth/memory/tests.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/memory/tests.rs",
+      "sha256": "6d17eba39e385df05b8d3954432b77444de2ebb7f07f87d85c346ae1cff6ead9"
+    },
+    {
+      "source": "crates/sqlite/src/auth/persistence.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/persistence.rs",
+      "sha256": "11227acfeae50b6e3ab8b43ead40f310fbea2c69e733a0f07608f1bf77d5e429"
+    },
+    {
+      "source": "crates/sqlite/src/auth/persistence/broker.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/persistence/broker.rs",
+      "sha256": "4900a68c518fef71efc7e3ac4823b2a50042b0c9037a9ce530c24ef72328211e"
+    },
+    {
+      "source": "crates/sqlite/src/auth/persistence/broker/tests.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/persistence/broker/tests.rs",
+      "sha256": "c8ea1a7d70502c5ea146d7a580885f4aece2487371d9d95916e2a4428d5297bd"
+    },
+    {
+      "source": "crates/sqlite/src/auth/persistence/content_crypto.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/persistence/content_crypto.rs",
+      "sha256": "6fab07b42483f7ef8a69a12af07bf2c96162b427143ab5202a33842efe8d6aed"
+    },
+    {
+      "source": "crates/sqlite/src/auth/persistence/dpapi.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/persistence/dpapi.rs",
+      "sha256": "787a083de0689e73b6c351ef26775c4afa97f63456b4f6001e6f3782a95a8089"
+    },
+    {
+      "source": "crates/sqlite/src/auth/persistence/dpapi/tests.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/persistence/dpapi/tests.rs",
+      "sha256": "a9c3606cf2dab5ae3cbc23db4dcdc30692b20ee5938cdd2071cc1872768b8709"
+    },
+    {
+      "source": "crates/sqlite/src/auth/persistence/local_keys.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/persistence/local_keys.rs",
+      "sha256": "1da1b83b7366bb407a01e375dee4164bf8f8018a55ddc7ad369c05ecf86c5017"
+    },
+    {
+      "source": "crates/sqlite/src/auth/persistence/locked.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/persistence/locked.rs",
+      "sha256": "f1e7a6a4981b829040429b9c77626663b7ea581f84b676ec887c50dab12f6fe8"
+    },
+    {
+      "source": "crates/sqlite/src/auth/persistence/output.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/persistence/output.rs",
+      "sha256": "5832148c4fdb9022698d663b87e6e1837cd9309f7dbc18f3cf0eda7ff7bf5eb6"
+    },
+    {
+      "source": "crates/sqlite/src/auth/persistence/output/native.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/persistence/output/native.rs",
+      "sha256": "f7576ce46d2a6a5b06a94ab60b4389691fe3a8af4a4e61ff1676edfe2eae9e99"
+    },
+    {
+      "source": "crates/sqlite/src/auth/persistence/output/native/recovery_experiments.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/persistence/output/native/recovery_experiments.rs",
+      "sha256": "a5f2cb36f18db03849e9bd6eac168f75e67b5732e685ce39556e8730e986dc44"
+    },
+    {
+      "source": "crates/sqlite/src/auth/persistence/output/native/tests.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/persistence/output/native/tests.rs",
+      "sha256": "ed1f3dd6092e0b0f165000b731723da52e3ce81422e872f4f269589678e6c77f"
+    },
+    {
+      "source": "crates/sqlite/src/auth/persistence/output/tests.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/persistence/output/tests.rs",
+      "sha256": "fe2df4f9be3e81ccd0e25eec325d52ce870b215e27ed5a8ab0dff868d6e3b60f"
+    },
+    {
+      "source": "crates/sqlite/src/auth/persistence/profile10.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/persistence/profile10.rs",
+      "sha256": "cb3e070714b0db566fdb1ddaed81bf9105fd3a19b97dbd1d34a44fe9af54e53f"
+    },
+    {
+      "source": "crates/sqlite/src/auth/persistence/profile10/b3.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/persistence/profile10/b3.rs",
+      "sha256": "823720f1c85442f5c0efe69157aa1bd790e2d66b583528baa653a096e8bc3dbd"
+    },
+    {
+      "source": "crates/sqlite/src/auth/persistence/profile10/b3/tests.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/persistence/profile10/b3/tests.rs",
+      "sha256": "446a917fb6a434da1ad524bb1ea3539043a86f39c96385ade09a68f6bb513d3c"
+    },
+    {
+      "source": "crates/sqlite/src/auth/persistence/profile10/read.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/persistence/profile10/read.rs",
+      "sha256": "e2c9100f40fa86ffafdeec8d5654d42de8c7ac473f0756a49c46fad4d25f3c99"
+    },
+    {
+      "source": "crates/sqlite/src/auth/persistence/profile10/read/tests.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/persistence/profile10/read/tests.rs",
+      "sha256": "c4d2671808a1a84f0af68ce716da5d7cd7b26d15c610d42c42d9aec48e5e6df2"
+    },
+    {
+      "source": "crates/sqlite/src/auth/persistence/profile10/recovery.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/persistence/profile10/recovery.rs",
+      "sha256": "1ceec07ad6e85d6691acea9be17efab990720b4de2fb2da5fb51ced8ff7b6e61"
+    },
+    {
+      "source": "crates/sqlite/src/auth/persistence/profile10/tests.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/persistence/profile10/tests.rs",
+      "sha256": "d79fd12c227519b3892eacffef2f382eb9225c3c23b55685eb7fd643fb71c0a3"
+    },
+    {
+      "source": "crates/sqlite/src/auth/persistence/profile10/write.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/persistence/profile10/write.rs",
+      "sha256": "602a33bf56da964ef74296f6845326bb70bc217a276b2ffb25a0b3a93345e921"
+    },
+    {
+      "source": "crates/sqlite/src/auth/persistence/tests.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/persistence/tests.rs",
+      "sha256": "a316835334c72ece5ed0984b6e1fffcc35f000ffea8ab155b8df26b52e4ddd47"
+    },
+    {
+      "source": "crates/sqlite/src/auth/persistence/winfs.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/persistence/winfs.rs",
+      "sha256": "90c7655682511a043a76a08eaa8f2758c4af762b957867dbe1545ac5b1b4cae4"
+    },
+    {
+      "source": "crates/sqlite/src/auth/tests.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/tests.rs",
+      "sha256": "1c90b82ba0eaa42e3002c0e1dcffae50fa97402a816b9cb0247d257e6fa98536"
+    },
+    {
+      "source": "crates/sqlite/src/auth/tests/r1.rs",
+      "destination": "experimental/p1/crates/sqlite/src/auth/tests/r1.rs",
+      "sha256": "cfaf0b8e714011436633050746d474d8ebeb37827d834883f2475fc2a818e861"
+    },
+    {
+      "source": "crates/sqlite/src/lib.rs",
+      "destination": "experimental/p1/crates/sqlite/src/lib.rs",
+      "sha256": "56aa5ee466fb6e137db6ba5d3faf9faa52b7639bd5a887d55e1e5df24b615d2b"
+    },
+    {
+      "source": "crates/test-support/Cargo.toml",
+      "destination": "experimental/p1/crates/test-support/Cargo.toml",
+      "sha256": "50133ae5bee85539f083c55b2b9017db911c38850d3202fde381b9fb27aba261"
+    },
+    {
+      "source": "crates/test-support/ipc/Cargo.toml",
+      "destination": "experimental/p1/crates/test-support/ipc/Cargo.toml",
+      "sha256": "75ee8760b57c395ace378b7e0c6e1aebcae318faa8779c200d43ee0013c91225"
+    },
+    {
+      "source": "crates/test-support/ipc/src/lib.rs",
+      "destination": "experimental/p1/crates/test-support/ipc/src/lib.rs",
+      "sha256": "7a7317d47db12d911bf663f31a5f52cba207e1862d77858f8ab2fc7ba0fb840f"
+    },
+    {
+      "source": "crates/test-support/src/bin/foundation-fault.rs",
+      "destination": "experimental/p1/crates/test-support/src/bin/foundation-fault.rs",
+      "sha256": "73f3f7ae167420b3880c809cb4eb5700310edf8258d9c256a6d6b6a656ed3383"
+    },
+    {
+      "source": "crates/test-support/src/fixtures.rs",
+      "destination": "experimental/p1/crates/test-support/src/fixtures.rs",
+      "sha256": "d453e47b7f05a6fd8cb9338fe254990eda356a943b7260fa7ff620cf08cc92de"
+    },
+    {
+      "source": "crates/test-support/src/lib.rs",
+      "destination": "experimental/p1/crates/test-support/src/lib.rs",
+      "sha256": "4cdbe262ab4566a2f9e9520bd1bc673169932432b99c6ab1e00058b1ebf38e9b"
+    },
+    {
+      "source": "crates/test-support/src/schema.rs",
+      "destination": "experimental/p1/crates/test-support/src/schema.rs",
+      "sha256": "21f71158822d300fd2c5b43276556b184013f41bb3bef1f23fd3858bab290b60"
+    },
+    {
+      "source": "crates/test-support/src/storage.rs",
+      "destination": "experimental/p1/crates/test-support/src/storage.rs",
+      "sha256": "7b532dad06552b65f679ad6d783b3dbcd24d93a793c22bb68506ece181e6a958"
+    },
+    {
+      "source": "crates/test-support/tests/real_sqlite.rs",
+      "destination": "experimental/p1/crates/test-support/tests/real_sqlite.rs",
+      "sha256": "dd74f22425efbfb4cabe5a58bc3c8cc7be627d02e9f84486eb860965a96dc72e"
+    },
+    {
+      "source": "crates/test-support/tests/remediation.rs",
+      "destination": "experimental/p1/crates/test-support/tests/remediation.rs",
+      "sha256": "be8be167f6509bb77c2679636910a067c0f91edc5d3a05a7f0163c18d6877e3e"
+    },
+    {
+      "source": "docs/AUTH_ADR_001.md",
+      "destination": "experimental/p1/docs/AUTH_ADR_001.md",
+      "sha256": "d11cf7999b1de162927acc261d7744a6ac2a34575ce5a9ad736a07fb661a3242"
+    },
+    {
+      "source": "docs/AUTH_ADR_002.md",
+      "destination": "experimental/p1/docs/AUTH_ADR_002.md",
+      "sha256": "fb5e2904d5aef1d6ac8cfe317687e83c5292e41dda33a959600b8042aac31e2b"
+    },
+    {
+      "source": "docs/AUTH_ADR_003.md",
+      "destination": "experimental/p1/docs/AUTH_ADR_003.md",
+      "sha256": "db0e674dc29ef7acbc91f9b45d0c531f9a17610e569a3624a32e525d6dad2b68"
+    },
+    {
+      "source": "docs/AUTH_FOUNDATION.md",
+      "destination": "experimental/p1/docs/AUTH_FOUNDATION.md",
+      "sha256": "02109f4ce6a39b8f3949af5b9ccebabfdcd09fa229cc8d66eaa20621587c66a3"
+    },
+    {
+      "source": "docs/DOMAIN_MODEL_MAP.md",
+      "destination": "experimental/p1/docs/DOMAIN_MODEL_MAP.md",
+      "sha256": "9b5968275a239a514b009012027e3e1bba0a37aa40bc62efac449eab824b0ca3"
+    },
+    {
+      "source": "docs/FOUNDATION_REMEDIATION.md",
+      "destination": "experimental/p1/docs/FOUNDATION_REMEDIATION.md",
+      "sha256": "a1fead1d48b25f4ae968d6c727ddbc66aecdf0af59df24749c1923b4e853af27"
+    },
+    {
+      "source": "docs/LOCAL_DECISIONS.md",
+      "destination": "experimental/p1/docs/LOCAL_DECISIONS.md",
+      "sha256": "21e629672720ffaf2b2c78a48fe10ea682c46cb564d9c5c5a285c7527875e479"
+    },
+    {
+      "source": "docs/M2_DEPENDENCY_PROVENANCE.json",
+      "destination": "experimental/p1/docs/M2_DEPENDENCY_PROVENANCE.json",
+      "sha256": "092fb3133a1d0134dcb053555f7c83fe26bb97a0b00e691ab1568bf4586c0839"
+    },
+    {
+      "source": "docs/M2_RESEARCH.md",
+      "destination": "experimental/p1/docs/M2_RESEARCH.md",
+      "sha256": "487b2f82b16d6710e1d4937fe0ee79138966f523d2b54e30396765e3eaa3971c"
+    },
+    {
+      "source": "docs/M2_RESEARCH_SOURCES.json",
+      "destination": "experimental/p1/docs/M2_RESEARCH_SOURCES.json",
+      "sha256": "387f8fcafee8f33ba8c95b7bf469e10d40a354c8e356cf7a976ef6da19fca7fb"
+    },
+    {
+      "source": "docs/M2_RISKS.md",
+      "destination": "experimental/p1/docs/M2_RISKS.md",
+      "sha256": "39d2e47c55ad47268bf44b1c020a59d072c22198ab033bf204640387b21aae63"
+    },
+    {
+      "source": "docs/M3B_PERSISTENCE.md",
+      "destination": "experimental/p1/docs/M3B_PERSISTENCE.md",
+      "sha256": "7a8fe1a55aae07d5cfd829b695e963fff1fbf5036d796088914d94ef924659ce"
+    },
+    {
+      "source": "docs/M3_ADR_001_PROFILES_AND_BOUNDARIES.md",
+      "destination": "experimental/p1/docs/M3_ADR_001_PROFILES_AND_BOUNDARIES.md",
+      "sha256": "e5b71c1393f81c79b3063623dbe7bec3e8bc4aedb9de5c4fecd03ef9c6405357"
+    },
+    {
+      "source": "docs/M3_ADR_002_INTENT_AND_RELEASE.md",
+      "destination": "experimental/p1/docs/M3_ADR_002_INTENT_AND_RELEASE.md",
+      "sha256": "ed26cf7aa0e86da75a1ce89d5230fbcd4c18d4ca23e669f7810505560a13492b"
+    },
+    {
+      "source": "docs/M3_ADR_003_CRYPTO_EXPERIMENT.md",
+      "destination": "experimental/p1/docs/M3_ADR_003_CRYPTO_EXPERIMENT.md",
+      "sha256": "dce3967714c0fb76d1ae35c603a8c326e06b0847aaabfc47069836f3fc8b5e2e"
+    },
+    {
+      "source": "docs/M3_ADR_005_LOCAL_KEYVAULT.md",
+      "destination": "experimental/p1/docs/M3_ADR_005_LOCAL_KEYVAULT.md",
+      "sha256": "ba571895c9dcf3e059bf2c1ba50094e3c2118f49c9fdfa0fcbfdcefcd01261f6"
+    },
+    {
+      "source": "docs/M3_ADR_006_CONTROLLED_RELEASE.md",
+      "destination": "experimental/p1/docs/M3_ADR_006_CONTROLLED_RELEASE.md",
+      "sha256": "00aed70e3874a6151afedb9fb922d872d7901fdfbb5a12715a6f22653539f30a"
+    },
+    {
+      "source": "docs/M3_ADR_007_NATIVE_OUTPUT_EXPERIMENT.md",
+      "destination": "experimental/p1/docs/M3_ADR_007_NATIVE_OUTPUT_EXPERIMENT.md",
+      "sha256": "f5016bdec71da2c9ec923e5cb58af094b9462febaddc4d9a57970334889ebf72"
+    },
+    {
+      "source": "docs/M3_ADR_008_SERVICE_OUTPUT_OWNER.md",
+      "destination": "experimental/p1/docs/M3_ADR_008_SERVICE_OUTPUT_OWNER.md",
+      "sha256": "8b4d71d933a40a6ca4a623d956a0af061098bd4ae8ab4afa33dddf0f8218da51"
+    },
+    {
+      "source": "docs/M3_ADR_009_OUTPUT_SETTLEMENT_AND_RECOVERY.md",
+      "destination": "experimental/p1/docs/M3_ADR_009_OUTPUT_SETTLEMENT_AND_RECOVERY.md",
+      "sha256": "45578e4d3e5fe45e4f7e45bd13dda6815854ba939212c81ff520ff59d758ad18"
+    },
+    {
+      "source": "docs/M3_ADR_010_DPAPI_IDENTITY_REWRAP.md",
+      "destination": "experimental/p1/docs/M3_ADR_010_DPAPI_IDENTITY_REWRAP.md",
+      "sha256": "db21e8f78b71b97a733a8f35fd9bb333817dac2381efd10c5613cd3a554218df"
+    },
+    {
+      "source": "docs/M3_ADR_011_IPC_PROTOCOL_CORE.md",
+      "destination": "experimental/p1/docs/M3_ADR_011_IPC_PROTOCOL_CORE.md",
+      "sha256": "482607a4bee39e349fec4e8bd87531288ca24f7e8f4afc27b30b3dd1c39afffb"
+    },
+    {
+      "source": "docs/M3_ADR_012_SYNTHETIC_DISPATCH.md",
+      "destination": "experimental/p1/docs/M3_ADR_012_SYNTHETIC_DISPATCH.md",
+      "sha256": "cafcdc93b1d58e27759fafbcb054d20fd207a48841e2a7aee1cb5cab89efd74f"
+    },
+    {
+      "source": "docs/M3_ADR_013_SECURITY_STATE_CLOSURE.md",
+      "destination": "experimental/p1/docs/M3_ADR_013_SECURITY_STATE_CLOSURE.md",
+      "sha256": "b85d0706ce89aeb4eab5a39ca497a0e5459caa82c870bc900eec2191bc9ad31f"
+    },
+    {
+      "source": "docs/M3_ADR_014_PROFILE10_CONTENT_WRITE.md",
+      "destination": "experimental/p1/docs/M3_ADR_014_PROFILE10_CONTENT_WRITE.md",
+      "sha256": "dc3406ac648245c650a712ecde0631c98789482c05abe960ccac54e39b263952"
+    },
+    {
+      "source": "docs/M3_ADR_015_OBJECT_RECOVERY_DELETION.md",
+      "destination": "experimental/p1/docs/M3_ADR_015_OBJECT_RECOVERY_DELETION.md",
+      "sha256": "3228af1fd31fd50b2a467674611015a3e17ed262ab7a80bc79584e3abcd03184"
+    },
+    {
+      "source": "docs/M3_ADR_016_DELETION_CLOSURE_REMEDIATION.md",
+      "destination": "experimental/p1/docs/M3_ADR_016_DELETION_CLOSURE_REMEDIATION.md",
+      "sha256": "cced2bdc025f3c69d78f1410e1ad1f82978a58ff1e735afde01c5115c98bc599"
+    },
+    {
+      "source": "docs/M3_IMPLEMENTATION_PLAN.md",
+      "destination": "experimental/p1/docs/M3_IMPLEMENTATION_PLAN.md",
+      "sha256": "59c4c42faa4c5e7d8e412a63c1802bf0b44e81108b4a8de2fe4ce06db6ffa8a3"
+    },
+    {
+      "source": "docs/M3_R5_OPEN_SOURCE_REFERENCES.md",
+      "destination": "experimental/p1/docs/M3_R5_OPEN_SOURCE_REFERENCES.md",
+      "sha256": "f0952c89861d4acf7dbff2914b3600a345dbaa72b8cd91758f1f73b0dc43bc74"
+    },
+    {
+      "source": "docs/M3_R6_B1_INDEPENDENT_REVIEW.md",
+      "destination": "experimental/p1/docs/M3_R6_B1_INDEPENDENT_REVIEW.md",
+      "sha256": "745a7ffdf96706c211e2427d25bd9cbffe020ba80f88ab6cb71980d21f97969f"
+    },
+    {
+      "source": "docs/M3_R6_B1_PROFILE10_WRITE.md",
+      "destination": "experimental/p1/docs/M3_R6_B1_PROFILE10_WRITE.md",
+      "sha256": "1a90afa8e49ccedf4bd1dddaa94f73ebaa1b36d71f027d8578327439ebb73bbd"
+    },
+    {
+      "source": "docs/M3_R6_B2_READ_REVISION.md",
+      "destination": "experimental/p1/docs/M3_R6_B2_READ_REVISION.md",
+      "sha256": "877c3e555de7f79d139d4b041bc62cb0bfca0f7f1f54c85dda3a653b2e04008e"
+    },
+    {
+      "source": "docs/M3_R6_B3_DELETION_RECOVERY.md",
+      "destination": "experimental/p1/docs/M3_R6_B3_DELETION_RECOVERY.md",
+      "sha256": "f8520c7f7a28ba35bfcc6097928b80741e51bb9004c5eacef2c5c288e063174e"
+    },
+    {
+      "source": "docs/M3_R6_LOCAL_CONTENT_ENGINE.md",
+      "destination": "experimental/p1/docs/M3_R6_LOCAL_CONTENT_ENGINE.md",
+      "sha256": "dc2706222754f25aeb6df92eb7c272d36927eeb9d50c692f532a76ef3dbb93f3"
+    },
+    {
+      "source": "docs/M3_R6_OPEN_SOURCE_REFERENCES.md",
+      "destination": "experimental/p1/docs/M3_R6_OPEN_SOURCE_REFERENCES.md",
+      "sha256": "d59019e01cc806cd6324307c995ac118f45e9eda8e2c0252f5e5b3efd88c5695"
+    },
+    {
+      "source": "docs/M3_THIRD_PARTY.md",
+      "destination": "experimental/p1/docs/M3_THIRD_PARTY.md",
+      "sha256": "f7c476bbad44221452449fb19a6e383b1c31890b56809fed6e2ac0d1a4696e80"
+    },
+    {
+      "source": "docs/M3_W1_NTFS.md",
+      "destination": "experimental/p1/docs/M3_W1_NTFS.md",
+      "sha256": "a0510322185830ea39fec683d8d86bfaf0c8d34ee8fd81a6c30c7672871bc07e"
+    },
+    {
+      "source": "docs/M3_W2_KEY_LIFECYCLE.md",
+      "destination": "experimental/p1/docs/M3_W2_KEY_LIFECYCLE.md",
+      "sha256": "eae7ccb368ae65700f58259d15bc678938d26be1a6207c4bf8cd73f0c2abbae2"
+    },
+    {
+      "source": "docs/M3_W3_RELEASE_PROTOCOL.md",
+      "destination": "experimental/p1/docs/M3_W3_RELEASE_PROTOCOL.md",
+      "sha256": "58b45da5ed74c887bc779b36e99dc484fbba97983a4deb27d84bd179b247432f"
+    },
+    {
+      "source": "docs/M3_W4A2_R1_RECOVERY_FINDINGS.md",
+      "destination": "experimental/p1/docs/M3_W4A2_R1_RECOVERY_FINDINGS.md",
+      "sha256": "fc72079cc9fc1b965e8e5ace75369177e2642f99b7c77b77486bd877f8cbcc08"
+    },
+    {
+      "source": "docs/M3_W4A2_R2_S1_PLAN.md",
+      "destination": "experimental/p1/docs/M3_W4A2_R2_S1_PLAN.md",
+      "sha256": "1bebe354a5b352036d96e26b3829c9cc1904523634c3877e8c2798b1fb22bd3f"
+    },
+    {
+      "source": "docs/M3_W4A2_R3_IPC_PROTOCOL.md",
+      "destination": "experimental/p1/docs/M3_W4A2_R3_IPC_PROTOCOL.md",
+      "sha256": "20e8209b6deaf04ae064915006b9a9a74d47961c9ae82ab15162493d4831e7be"
+    },
+    {
+      "source": "docs/M3_W4A2_R4_DISPATCH_SETTLEMENT.md",
+      "destination": "experimental/p1/docs/M3_W4A2_R4_DISPATCH_SETTLEMENT.md",
+      "sha256": "34ba503bc861dfcc0284a8946499c6d829afa169ff351fe341caf9fb91f0a58d"
+    },
+    {
+      "source": "docs/M3_W4A2_R5_SECURITY_STATE_CLOSURE.md",
+      "destination": "experimental/p1/docs/M3_W4A2_R5_SECURITY_STATE_CLOSURE.md",
+      "sha256": "3aca68b14e9322e66a3d7264c60f6faf6eb8ffd6704f4e2aa902befd370f2e81"
+    },
+    {
+      "source": "docs/MEMORY_ADR_004.md",
+      "destination": "experimental/p1/docs/MEMORY_ADR_004.md",
+      "sha256": "7d074b971b1c4f3a06670c952e2238db0d1cab72f4248df9c1ca4fb889ef71c8"
+    },
+    {
+      "source": "docs/MEMORY_ADR_005_TIME.md",
+      "destination": "experimental/p1/docs/MEMORY_ADR_005_TIME.md",
+      "sha256": "b4ff6e913e63f0b232a9ef89da7e3e7b1fa1b5edcc072e3bad5eb4f469962e0d"
+    },
+    {
+      "source": "docs/MEMORY_ADR_006_CONFLICT.md",
+      "destination": "experimental/p1/docs/MEMORY_ADR_006_CONFLICT.md",
+      "sha256": "faf51ef0387fae25fb38f9d8fa8ec7e767e7f394a48ca99a8379ae19c31e14e4"
+    },
+    {
+      "source": "docs/MEMORY_ADR_007_READS.md",
+      "destination": "experimental/p1/docs/MEMORY_ADR_007_READS.md",
+      "sha256": "9d3bd8bf0c6b452ed6f91a7006fba499e2bb056c67a8386c55cc4f58001b8488"
+    },
+    {
+      "source": "docs/MEMORY_M1.md",
+      "destination": "experimental/p1/docs/MEMORY_M1.md",
+      "sha256": "fc98e061a46b76d01fb58f47a377eff0c0a77757a3a27d42ca7a17535e244552"
+    },
+    {
+      "source": "docs/MEMORY_M2.md",
+      "destination": "experimental/p1/docs/MEMORY_M2.md",
+      "sha256": "dbd772c61c22a35b34c9c2fd3de932844213961da500bce115ed3943ce0590a6"
+    },
+    {
+      "source": "docs/PUBLICATION_GATE.md",
+      "destination": "experimental/p1/docs/PUBLICATION_GATE.md",
+      "sha256": "230b01354cc936ae20e9152c5446d650a03f938b6030f12be4a4b721364ca086"
+    },
+    {
+      "source": "docs/VERIFICATION.md",
+      "destination": "experimental/p1/docs/VERIFICATION.md",
+      "sha256": "8f626ad6fa4af771e41fd31934c83964dcc33044628e95b6e4189097adb9c47f"
+    },
+    {
+      "source": "experiments/w4a-r2-s1/Cargo.lock",
+      "destination": "experimental/p1/experiments/w4a-r2-s1/Cargo.lock",
+      "sha256": "bc9e9c4126cfd98fc4ea548f41db3a9ac53f524e18a90697487d9e6f4e76d7e0"
+    },
+    {
+      "source": "experiments/w4a-r2-s1/Cargo.toml",
+      "destination": "experimental/p1/experiments/w4a-r2-s1/Cargo.toml",
+      "sha256": "ca633c166ebcdc73eb88497f9547f151a7c04d28b5ba2ff4c833e742541e0a15"
+    },
+    {
+      "source": "experiments/w4a-r2-s1/src/main.rs",
+      "destination": "experimental/p1/experiments/w4a-r2-s1/src/main.rs",
+      "sha256": "2624e2564d8e6c6c63ea11859a3d0ca021cafa744d977f62639ac60493aa10bb"
+    },
+    {
+      "source": "rust-toolchain.toml",
+      "destination": "experimental/p1/rust-toolchain.toml",
+      "sha256": "d13306be0ecda81ce779baa290ffb417380d525928477f16200884b5169cca33"
+    },
+    {
+      "source": "scripts/audit_local.py",
+      "destination": "experimental/p1/scripts/audit_local.py",
+      "sha256": "c3695191d93864623e31b083c481c0a5f790912b679908459559fc57dbda0fcc"
+    },
+    {
+      "source": "scripts/check_surface.py",
+      "destination": "experimental/p1/scripts/check_surface.py",
+      "sha256": "744831297bdd9b524545aa45dc550cde88daa7dfab886ed2d1c8044247eefc9d"
+    },
+    {
+      "source": "scripts/enter-toolchain.ps1",
+      "destination": "experimental/p1/scripts/enter-toolchain.ps1",
+      "sha256": "3db6e90d77e227d09aa8c0e17e4e433d94e3057491380ca1604193cdc31d9a36"
+    },
+    {
+      "source": "tests/test_m2_contracts.py",
+      "destination": "experimental/p1/tests/test_m2_contracts.py",
+      "sha256": "9709f962178c2ae0648c8cc6c3662c0fc4a28fa427c60496c196524d2bf86e6a"
+    },
+    {
+      "source": "tests/test_profile10_contract.py",
+      "destination": "experimental/p1/tests/test_profile10_contract.py",
+      "sha256": "2a09e0f2f44095aae558a519a74e1bdcf9ff1ba3842708f657ae48ab91f4c3f7"
+    },
+    {
+      "source": "tests/test_profile11_contract.py",
+      "destination": "experimental/p1/tests/test_profile11_contract.py",
+      "sha256": "7dc465299867d55ed9f50056e70edb5f6bfc8cbacf089b08285d37707cde8cb8"
+    },
+    {
+      "source": "tests/test_r4_sqlite_contract.py",
+      "destination": "experimental/p1/tests/test_r4_sqlite_contract.py",
+      "sha256": "83599d9456546cfd9f13db29d0e5c36ed95e13024f0b1c6ec688911478b9a2a8"
+    }
+  ]
+}

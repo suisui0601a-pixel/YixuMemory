@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yixumemory.invalid/private/m2/time.schema.json",
+  "$defs": {
+    "Bound": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "earliest_ms": {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 9223372036854775807
+        },
+        "latest_ms": {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 9223372036854775807
+        },
+        "precision": {
+          "enum": [
+            "millisecond",
+            "day",
+            "month",
+            "year",
+            "uncertain"
+          ]
+        }
+      },
+      "required": [
+        "earliest_ms",
+        "latest_ms",
+        "precision"
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "unknown"
+        }
+      },
+      "required": [
+        "kind"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "known"
+        },
+        "from": {
+          "$ref": "#/$defs/Bound"
+        },
+        "to": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Bound"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "from",
+        "to"
+      ]
+    }
+  ],
+  "$comment": "Cross-field order, precision/bound consistency and half-open evaluation are executable Rust invariants. Unknown is not unbounded."
+}

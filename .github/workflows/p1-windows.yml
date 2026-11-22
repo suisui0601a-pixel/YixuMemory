@@ -1,0 +1,78 @@
+name: P1 Windows experimental validation
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: p1-windows-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  p1-windows:
+    runs-on: windows-2022
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: experimental/p1
+    env:
+      CARGO_BUILD_JOBS: '1'
+      CARGO_INCREMENTAL: '0'
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      CARGO_PROFILE_TEST_DEBUG: '0'
+      RUST_TEST_THREADS: '2'
+      PYTHONUTF8: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Prepare pinned toolchain and NTFS test realm
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $temp = Join-Path $env:LOCALAPPDATA ('yixu-p1-tests-' + $env:GITHUB_RUN_ID)
+          if ([IO.Path]::GetPathRoot($temp) -ine 'C:\') { throw 'This prototype requires C: NTFS' }
+          New-Item -ItemType Directory -Path $temp | Out-Null
+          $drive = Get-Volume -DriveLetter ([IO.Path]::GetPathRoot($temp).Substring(0,1))
+          if ($drive.FileSystem -ne 'NTFS') { throw 'Only NTFS is accepted' }
+          "TEMP=$temp" >> $env:GITHUB_ENV
+          "TMP=$temp" >> $env:GITHUB_ENV
+          "YIXU_VERIFICATION_OUT=$temp/evidence" >> $env:GITHUB_ENV
+          "CARGO_TARGET_DIR=$env:GITHUB_WORKSPACE/experimental/p1/target" >> $env:GITHUB_ENV
+          rustup toolchain install 1.99.1-x86_64-pc-windows-gnu --profile minimal --component rustfmt --component clippy
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          rustup override set 1.99.1-x86_64-pc-windows-gnu
+          gcc --version
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Fetch the complete locked dependency graph
+        run: cargo fetch --locked
+      - name: Python contracts
+        run: |
+          python -m pip install -r ../../requirements-dev.lock.txt
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          python -m pytest -q -p no:cacheprovider --basetemp="$env:RUNNER_TEMP/p1-pytest" tests
+          exit $LASTEXITCODE
+      - name: Rust default tests (Native output excluded)
+        run: |
+          cargo test --locked --workspace -- --skip ::output::native:: --skip dedicated_child_real_dpapi_pipe_and_cross_process_singleton --skip ::broker::tests::broker_child
+      - name: Rust all-features tests (Native output excluded)
+        run: |
+          cargo test --locked --workspace --all-features -- --skip ::output::native:: --skip dedicated_child_real_dpapi_pipe_and_cross_process_singleton --skip ::broker::tests::broker_child
+      - name: Formatting
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+      - name: API and dependency isolation
+        run: python scripts/check_surface.py
+      - name: Source and locked dependency audit
+        run: python scripts/audit_local.py
+      - name: Preserved provenance
+        working-directory: .
+        run: python checks/p1_provenance.py
