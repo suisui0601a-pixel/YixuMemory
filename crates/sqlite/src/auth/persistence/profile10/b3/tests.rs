@@ -5,6 +5,37 @@ use super::*;
 use std::io::Write;
 use std::time::Duration;
 
+fn expire_grant(app: &mut Application, memory: Id) {
+    let tx = app
+        .engine
+        .db
+        .transaction_with_behavior(TransactionBehavior::Immediate)
+        .unwrap();
+    tx.execute(
+        "INSERT INTO security_event(scope,kind) VALUES(?1,'Revocation')",
+        [actor().scope_bytes()],
+    )
+    .unwrap();
+    let event = tx.last_insert_rowid();
+    gates::make_effective(&tx, event).unwrap();
+    tx.execute("UPDATE authority SET expiry=1 WHERE target=?1", [memory])
+        .unwrap();
+    tx.execute("UPDATE runtime SET epoch=epoch+1", []).unwrap();
+    tx.execute("UPDATE authority SET epoch=(SELECT epoch FROM runtime)", [])
+        .unwrap();
+    tx.execute(
+        "INSERT INTO security_receipt(event,epoch) SELECT ?1,epoch FROM runtime",
+        [event],
+    )
+    .unwrap();
+    tx.execute(
+        "UPDATE security_event SET state='Applied' WHERE id=?1",
+        [event],
+    )
+    .unwrap();
+    tx.commit().unwrap();
+}
+
 #[test]
 fn f2_live_owner_observed_marker_missing_blocks_other_memory_and_write() {
     let root = owned_root();
@@ -84,34 +115,7 @@ fn f1_isolated_key_with_expired_a_grant_cannot_authorize_source_via_b() {
     let (a, _) = seed(&mut app);
     erase_key(&app, a);
     app.engine.isolate_objects().unwrap();
-    let tx = app
-        .engine
-        .db
-        .transaction_with_behavior(TransactionBehavior::Immediate)
-        .unwrap();
-    tx.execute(
-        "INSERT INTO security_event(scope,kind) VALUES(?1,'Revocation')",
-        [actor().scope_bytes()],
-    )
-    .unwrap();
-    let event = tx.last_insert_rowid();
-    gates::make_effective(&tx, event).unwrap();
-    tx.execute("UPDATE authority SET expiry=1 WHERE target=?1", [a.memory])
-        .unwrap();
-    tx.execute("UPDATE runtime SET epoch=epoch+1", []).unwrap();
-    tx.execute("UPDATE authority SET epoch=(SELECT epoch FROM runtime)", [])
-        .unwrap();
-    tx.execute(
-        "INSERT INTO security_receipt(event,epoch) SELECT ?1,epoch FROM runtime",
-        [event],
-    )
-    .unwrap();
-    tx.execute(
-        "UPDATE security_event SET state='Applied' WHERE id=?1",
-        [event],
-    )
-    .unwrap();
-    tx.commit().unwrap();
+    expire_grant(&mut app, a.memory);
     let before = stats(&app.engine);
     assert!(
         app.delete_content(DeleteCommand {
@@ -151,54 +155,61 @@ fn f1_frozen_source_set_equals_applied_set_at_all_stages() {
 
 #[test]
 fn f1_incomplete_isolated_source_denies_without_partial_closing() {
-    let root = owned_root();
-    let mut app = app(root.path());
-    seed(&mut app);
-    let definition: String = app
-        .engine
-        .db
-        .query_row(
-            "SELECT sql FROM sqlite_schema WHERE name='immutable_revision_evidence_DELETE'",
-            [],
-            |r| r.get(0),
-        )
-        .unwrap();
-    app.engine
-        .db
-        .execute_batch("PRAGMA foreign_keys=OFF; DROP TRIGGER immutable_revision_evidence_DELETE;")
-        .unwrap();
-    app.engine
-        .db
-        .execute(
-            "DELETE FROM revision_evidence WHERE memory=?1",
-            [[101u8; 16]],
-        )
-        .unwrap();
-    app.engine.db.execute_batch(&definition).unwrap();
-    app.engine
-        .db
-        .execute_batch("PRAGMA foreign_keys=ON")
-        .unwrap();
-    app.engine.isolate_objects().unwrap();
-    let before = stats(&app.engine);
-    let events = count(&app.engine.db, "security_event");
-    assert!(
-        app.delete_content(DeleteCommand {
-            request: fresh().unwrap(),
-            target: Target::Source([96; 16])
-        })
-        .is_err()
-    );
-    assert_eq!(count(&app.engine.db, "security_event"), events);
-    for table in [
-        "deletion_intent",
-        "deletion_member",
-        "deletion_work",
-        "r5_tombstone",
-    ] {
-        assert_eq!(count(&app.engine.db, table), 0);
+    for expired in [false, true] {
+        let root = owned_root();
+        let mut app = app(root.path());
+        seed(&mut app);
+        let definition: String = app
+            .engine
+            .db
+            .query_row(
+                "SELECT sql FROM sqlite_schema WHERE name='immutable_revision_evidence_DELETE'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        app.engine
+            .db
+            .execute_batch(
+                "PRAGMA foreign_keys=OFF; DROP TRIGGER immutable_revision_evidence_DELETE;",
+            )
+            .unwrap();
+        app.engine
+            .db
+            .execute(
+                "DELETE FROM revision_evidence WHERE memory=?1",
+                [[101u8; 16]],
+            )
+            .unwrap();
+        app.engine.db.execute_batch(&definition).unwrap();
+        app.engine
+            .db
+            .execute_batch("PRAGMA foreign_keys=ON")
+            .unwrap();
+        app.engine.isolate_objects().unwrap();
+        if expired {
+            expire_grant(&mut app, [101; 16]);
+        }
+        let before = stats(&app.engine);
+        let events = count(&app.engine.db, "security_event");
+        assert!(
+            app.delete_content(DeleteCommand {
+                request: fresh().unwrap(),
+                target: Target::Source([96; 16])
+            })
+            .is_err()
+        );
+        assert_eq!(count(&app.engine.db, "security_event"), events);
+        for table in [
+            "deletion_intent",
+            "deletion_member",
+            "deletion_work",
+            "r5_tombstone",
+        ] {
+            assert_eq!(count(&app.engine.db, table), 0);
+        }
+        assert_eq!(stats(&app.engine), before);
     }
-    assert_eq!(stats(&app.engine), before);
 }
 
 #[test]

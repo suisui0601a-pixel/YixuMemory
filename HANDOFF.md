@@ -1,5 +1,20 @@
 # R6-B3 Review Handoff
 
+## 2026-11-22 F1/F2 修复增量（优先于下列历史记录）
+
+失败基线 5fdfe3ef4c9515589531946deb876c78e33494d0；分支 local/p1-m3-w4a-r6-b3-remediation。
+
+- F1：aabe4863026ac9428480bd4fed4a3220f4debde9，唯一权威闭包 + Closing 冻结记录；Fence/Applied/Reconcile 对齐；不完整依赖整单拒绝；隔离不能跳过 Grant。
+- F2：2aa7ba6342884cdd06fb663d4c5e9933faba35ef，统一 MarkerState 判定；identity/observation 已提交后缺失即共享阻断；不重建 FileId；完整匹配回执保留合法对账。
+- P11 新增 deletion_closure，仅空目录新建；旧 P11 契约被显式拒绝，无自动迁移。P9/P10、W1/W2/W3、锁文件不变。ADR-M3-016 必须独立复核。
+- 新增5个测试，原47条保留。修复前 F1 47 pass/1 fail（依赖不完整却被接纳），F2 51 pass/1 fail（已观察 Marker 缺失未阻断）；最终52条定点通过。
+- F1 的依赖缺边隔离场景分别以 A Grant 有效/单独到期执行，B Grant 保持有效；两种均须整单拒绝且无部分 Closing。另验证 Key 损坏隔离的授权拒绝。正常闭包成功测试验证冻结集合与执行集合相等。
+- 证据目录 outputs/YixuMemory-R6-B3-Remediation-20261122，分别记录 F1/F2 原始失败及修复日志、完整回归、远端核验和源码归档。原 FAIL 审查及历史日志保持原样。
+- 现有专用远端 https://github.com/suisui0601a-pixel/YixuMemory-P1-Remediation 为 Private；仅同步当前修复分支，无 PR、无其他分支/标签推送。
+- 本轮是实施方自验；Luna 固定 HEAD 独立审查 NOT TESTED。B3/R6 及生产正文不自动获得通过；NoContentRuntime、RecoveryBlocked、Local/Protected 边界不变。
+
+请先读 ADR-M3-016、闭包冻结/不完整拒绝路径、MarkerState 和新增五项测试，再结合原 FAIL 报告做增量独立复核。
+
 ## 固定对象
 
 - 原始 B2：31549a5b6393c31f2d5bac40b3a9f27619eddb24；父 B1：fcbca0d4e097042734744f982c1c69d49b729f8b。
