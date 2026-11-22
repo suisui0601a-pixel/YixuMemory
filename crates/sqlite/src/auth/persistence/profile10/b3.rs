@@ -332,6 +332,60 @@ fn is_missing<T>(result: &std::io::Result<T>) -> bool {
     result.as_ref().is_err_and(|e| e.raw_os_error() == Some(2))
 }
 
+#[derive(PartialEq, Eq)]
+enum MarkerState {
+    Unpublished,
+    Published,
+    Recorded,
+    Settled,
+}
+impl Engine {
+    fn marker_state(
+        &self,
+        plan: &Plan,
+        event: i64,
+        bytes: &[u8],
+        recorded: Option<&[u8]>,
+    ) -> Result<MarkerState> {
+        if bytes != marker(plan, self.installation, event) {
+            return Err(Error::Integrity);
+        }
+        let observed: bool = sql(self.db.query_row("SELECT EXISTS(SELECT 1 FROM deletion_observation WHERE operation=?1 AND action='KeyUnavailable')", [plan.operation], |r|r.get(0)))?;
+        let receipt = has_receipt(&self.db, plan.operation, "KeyUnavailable")?;
+        if (observed && recorded.is_none()) || (receipt && (!observed || recorded.is_none())) {
+            return Err(Error::Integrity);
+        }
+        let name = marker_name(plan);
+        match self.vault.anchor.read(&name) {
+            Ok(actual) => {
+                if actual != bytes
+                    || recorded.is_some_and(|expected| {
+                        identity(&self.vault.anchor, &name)
+                            .as_ref()
+                            .map(|v| v.as_slice())
+                            != Ok(expected)
+                    })
+                {
+                    return Err(Error::Integrity);
+                }
+                Ok(if receipt {
+                    MarkerState::Settled
+                } else if recorded.is_some() {
+                    MarkerState::Recorded
+                } else {
+                    MarkerState::Published
+                })
+            }
+            Err(e)
+                if e.raw_os_error() == Some(2) && recorded.is_none() && !observed && !receipt =>
+            {
+                Ok(MarkerState::Unpublished)
+            }
+            _ => Err(Error::Integrity),
+        }
+    }
+}
+
 impl Engine {
     pub(super) fn b3_isolations(&self) -> Result<Vec<(Id, &'static str)>> {
         if version(&self.db)? != 11 {
@@ -404,24 +458,9 @@ impl Engine {
         let isolated = self.b3_isolations()?;
         for (plan, state) in plans(self)? {
             if let Some((event, bytes, observed_identity)) = work(&self.db, plan.operation)? {
-                let name = marker_name(&plan);
-                if bytes != marker(&plan, self.installation, event) {
-                    report.blocked = true;
-                }
-                let actual = self.vault.anchor.read(&name);
-                if let Ok(actual) = &actual {
-                    if *actual != bytes
-                        || observed_identity.as_ref().is_some_and(|expected| {
-                            identity(&self.vault.anchor, &name).as_ref() != Ok(expected)
-                        })
-                    {
-                        report.blocked = true;
-                    }
-                } else if !is_missing(&actual)
-                    || has_receipt(&self.db, plan.operation, "KeyUnavailable")?
-                {
-                    report.blocked = true;
-                }
+                report.blocked |= self
+                    .marker_state(&plan, event, &bytes, observed_identity.as_deref())
+                    .is_err();
                 for (action, anchor, name) in [
                     ("CiphertextRemoved", &self.files, filename(plan.payload)),
                     ("WrapperRemoved", &self.vault.anchor, filename(plan.key)),
@@ -642,6 +681,7 @@ impl Engine {
         event: i64,
         mut checkpoint: impl FnMut(&str, &Self) -> Result<()>,
     ) -> Result<()> {
+        self.b3_guard_storage()?;
         if self.recovery_only
             || version(&self.db)? != 11
             || sql(gates::closing(&self.db))?
@@ -811,26 +851,11 @@ impl Engine {
             if let Some((event, bytes, recorded)) = work(&self.db, plan.operation)? {
                 let name = marker_name(&plan);
                 expected_keys.insert(name.clone());
-                if bytes != marker(&plan, self.installation, event) {
+                if self
+                    .marker_state(&plan, event, &bytes, recorded.as_deref())
+                    .is_err()
+                {
                     return Ok(false);
-                }
-                let found = self.vault.anchor.read(&name);
-                match found {
-                    Ok(found) => {
-                        if found != bytes
-                            || recorded.as_ref().is_some_and(|expected| {
-                                identity(&self.vault.anchor, &name).as_ref() != Ok(expected)
-                            })
-                        {
-                            return Ok(false);
-                        }
-                    }
-                    Err(e) if e.raw_os_error() == Some(2) => {
-                        if has_receipt(&self.db, plan.operation, "KeyUnavailable")? {
-                            return Ok(false);
-                        }
-                    }
-                    _ => return Ok(false),
                 }
             }
         }

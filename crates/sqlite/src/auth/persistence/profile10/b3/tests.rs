@@ -6,6 +6,78 @@ use std::io::Write;
 use std::time::Duration;
 
 #[test]
+fn f2_live_owner_observed_marker_missing_blocks_other_memory_and_write() {
+    let root = owned_root();
+    let mut app = app(root.path());
+    let (a, _) = seed(&mut app);
+    let event = deletion(&mut app, Target::Memory(a.memory));
+    apply(&mut app, event);
+    assert!(
+        app.engine
+            .delete_cleanup(event, |point, _| if point == "KeyObserved" {
+                Err(Error::ResourceUnavailable)
+            } else {
+                Ok(())
+            })
+            .is_err()
+    );
+    assert_eq!(count(&app.engine.db, "deletion_receipt"), 0);
+    let plan = plans(&app.engine)
+        .unwrap()
+        .into_iter()
+        .find(|(p, _)| p.request.memory == a.memory)
+        .unwrap()
+        .0;
+    let name = marker_name(&plan);
+    let bytes = app.engine.vault.anchor.read(&name).unwrap();
+    app.engine.vault.anchor.erase(&name, &bytes).unwrap();
+    assert!(app.engine.reconcile(0).unwrap().blocked);
+    let mut calls = 0;
+    assert!(
+        app.read_revision(query(102), |_| {
+            calls += 1;
+        })
+        .is_err()
+    );
+    assert_eq!(calls, 0);
+    let b = request(102);
+    assert!(
+        app.revise_memory(
+            WriteRequest {
+                request: fresh().unwrap(),
+                revision: fresh().unwrap(),
+                expected_current: Some(b.revision),
+                ..b
+            },
+            &sentinel()
+        )
+        .is_err()
+    );
+    assert!(app.engine.delete_cleanup(event, |_, _| Ok(())).is_err());
+    assert!(is_missing(&app.engine.vault.anchor.read(&name)));
+    assert_eq!(count(&app.engine.db, "deletion_receipt"), 0);
+    assert_eq!(stats(&app.engine), (2, 2, 2, 2));
+}
+
+#[test]
+fn f2_complete_marker_receipt_remains_valid_after_clean_reopen() {
+    let root = owned_root();
+    let mut app = app(root.path());
+    seed(&mut app);
+    let event = deletion(&mut app, Target::Memory([101; 16]));
+    apply(&mut app, event);
+    app.engine.delete_cleanup(event, |_, _| Ok(())).unwrap();
+    assert!(!app.engine.reconcile(0).unwrap().blocked);
+    app.read_revision(query(102), |_| ()).unwrap();
+    app.engine.clean_stop(0).unwrap();
+    drop(app);
+    let engine = Engine::open_existing(root.path(), installation()).unwrap();
+    assert!(!engine.reconcile(0).unwrap().blocked);
+    assert_eq!(count(&engine.db, "deletion_receipt"), 3);
+    assert!(engine.recovery_only);
+}
+
+#[test]
 fn f1_isolated_key_with_expired_a_grant_cannot_authorize_source_via_b() {
     let root = owned_root();
     let mut app = app(root.path());
