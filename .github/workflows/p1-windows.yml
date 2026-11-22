@@ -51,6 +51,8 @@ jobs:
           rustup override set 1.99.1-x86_64-pc-windows-gnu
           gcc --version
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Fetch the complete locked dependency graph
+        run: cargo fetch --locked
       - name: Python contracts
         run: |
           python -m pip install -r ../../requirements-dev.lock.txt
