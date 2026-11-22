@@ -98,3 +98,12 @@ WHEN NOT EXISTS(SELECT 1 FROM deletion_work w JOIN security_event e ON e.id=w.ev
  OR (NEW.action='KeyUnavailable' AND NOT EXISTS(
  SELECT 1 FROM deletion_work WHERE operation=NEW.operation AND marker_identity IS NOT NULL))
 BEGIN SELECT RAISE(ABORT,'cleanup observation has no applied work or key receipt'); END;
+
+CREATE TABLE deletion_closure(
+ event INTEGER NOT NULL REFERENCES deletion_intent(event),
+ operation BLOB NOT NULL REFERENCES write_intent(operation),
+ PRIMARY KEY(event,operation)
+) STRICT;
+CREATE TRIGGER b3_closure_initial BEFORE INSERT ON deletion_closure
+WHEN NOT EXISTS(SELECT 1 FROM deletion_intent d JOIN security_event e ON e.id=d.event JOIN write_intent i ON i.operation=NEW.operation WHERE d.event=NEW.event AND e.state='Closing' AND d.scope=i.scope AND i.state='Committed')
+BEGIN SELECT RAISE(ABORT,'closure requires matching Closing'); END;

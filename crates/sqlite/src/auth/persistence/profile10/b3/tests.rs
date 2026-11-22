@@ -6,6 +6,130 @@ use std::io::Write;
 use std::time::Duration;
 
 #[test]
+fn f1_isolated_key_with_expired_a_grant_cannot_authorize_source_via_b() {
+    let root = owned_root();
+    let mut app = app(root.path());
+    let (a, _) = seed(&mut app);
+    erase_key(&app, a);
+    app.engine.isolate_objects().unwrap();
+    let tx = app
+        .engine
+        .db
+        .transaction_with_behavior(TransactionBehavior::Immediate)
+        .unwrap();
+    tx.execute(
+        "INSERT INTO security_event(scope,kind) VALUES(?1,'Revocation')",
+        [actor().scope_bytes()],
+    )
+    .unwrap();
+    let event = tx.last_insert_rowid();
+    gates::make_effective(&tx, event).unwrap();
+    tx.execute("UPDATE authority SET expiry=1 WHERE target=?1", [a.memory])
+        .unwrap();
+    tx.execute("UPDATE runtime SET epoch=epoch+1", []).unwrap();
+    tx.execute("UPDATE authority SET epoch=(SELECT epoch FROM runtime)", [])
+        .unwrap();
+    tx.execute(
+        "INSERT INTO security_receipt(event,epoch) SELECT ?1,epoch FROM runtime",
+        [event],
+    )
+    .unwrap();
+    tx.execute(
+        "UPDATE security_event SET state='Applied' WHERE id=?1",
+        [event],
+    )
+    .unwrap();
+    tx.commit().unwrap();
+    let before = stats(&app.engine);
+    assert!(
+        app.delete_content(DeleteCommand {
+            request: fresh().unwrap(),
+            target: Target::Source([96; 16])
+        })
+        .is_err()
+    );
+    assert_eq!(count(&app.engine.db, "deletion_intent"), 0);
+    assert_eq!(stats(&app.engine), before);
+    app.read_revision(query(102), |_| ()).unwrap();
+}
+
+#[test]
+fn f1_frozen_source_set_equals_applied_set_at_all_stages() {
+    let root = owned_root();
+    let mut app = app(root.path());
+    seed(&mut app);
+    let event = deletion(&mut app, Target::Source([96; 16]));
+    let expected: BTreeSet<Id> = frozen_closure(&app.engine.db, event)
+        .unwrap()
+        .iter()
+        .map(|p| p.operation)
+        .collect();
+    assert_eq!(expected.len(), 2);
+    apply(&mut app, event);
+    assert_eq!(
+        frozen_closure(&app.engine.db, event)
+            .unwrap()
+            .iter()
+            .map(|p| p.operation)
+            .collect::<BTreeSet<_>>(),
+        expected
+    );
+    assert!(!app.engine.reconcile(0).unwrap().blocked);
+}
+
+#[test]
+fn f1_incomplete_isolated_source_denies_without_partial_closing() {
+    let root = owned_root();
+    let mut app = app(root.path());
+    seed(&mut app);
+    let definition: String = app
+        .engine
+        .db
+        .query_row(
+            "SELECT sql FROM sqlite_schema WHERE name='immutable_revision_evidence_DELETE'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    app.engine
+        .db
+        .execute_batch("PRAGMA foreign_keys=OFF; DROP TRIGGER immutable_revision_evidence_DELETE;")
+        .unwrap();
+    app.engine
+        .db
+        .execute(
+            "DELETE FROM revision_evidence WHERE memory=?1",
+            [[101u8; 16]],
+        )
+        .unwrap();
+    app.engine.db.execute_batch(&definition).unwrap();
+    app.engine
+        .db
+        .execute_batch("PRAGMA foreign_keys=ON")
+        .unwrap();
+    app.engine.isolate_objects().unwrap();
+    let before = stats(&app.engine);
+    let events = count(&app.engine.db, "security_event");
+    assert!(
+        app.delete_content(DeleteCommand {
+            request: fresh().unwrap(),
+            target: Target::Source([96; 16])
+        })
+        .is_err()
+    );
+    assert_eq!(count(&app.engine.db, "security_event"), events);
+    for table in [
+        "deletion_intent",
+        "deletion_member",
+        "deletion_work",
+        "r5_tombstone",
+    ] {
+        assert_eq!(count(&app.engine.db, table), 0);
+    }
+    assert_eq!(stats(&app.engine), before);
+}
+
+#[test]
 fn source_deletion_covers_every_historical_revision_and_rejects_reuse() {
     let root = owned_root();
     let mut app = app(root.path());

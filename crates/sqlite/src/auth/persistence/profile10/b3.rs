@@ -8,6 +8,7 @@ const EXTENSION: &str = include_str!("../../../../migrations/0011_object_recover
 const TABLES: &[&str] = &[
     "object_quarantine",
     "deletion_intent",
+    "deletion_closure",
     "deletion_member",
     "copy_manifest_b3",
     "backup_registration",
@@ -136,33 +137,88 @@ fn shared_valid(db: &Connection) -> Result<bool> {
         [],|r|r.get(0)))
 }
 
+fn authoritative_closure(
+    db: &Connection,
+    scope: &[u8],
+    kind: &str,
+    target: Id,
+) -> Result<Vec<Plan>> {
+    let mut result = Vec::new();
+    for (plan, state) in plans_db(db)? {
+        if plan.identity.scope_bytes() != scope {
+            continue;
+        }
+        if state != "Committed" {
+            return Err(Error::Integrity);
+        }
+        let member = if kind == "Memory" {
+            plan.request.memory == target
+        } else {
+            let source: Option<Id> = sql(db
+                .query_row(
+                    "SELECT source FROM evidence WHERE scope=?1 AND id=?2 AND generation=?3",
+                    params![
+                        scope,
+                        plan.request.evidence,
+                        plan.request.evidence_generation
+                    ],
+                    |r| r.get(0),
+                )
+                .optional())?;
+            source.ok_or(Error::Integrity)? == target
+        };
+        if !member {
+            continue;
+        }
+        if kind == "Source" {
+            let complete: bool = sql(db.query_row("SELECT EXISTS(SELECT 1 FROM revision v JOIN revision_evidence re ON re.scope=v.scope AND re.memory=v.memory AND re.revision=v.id JOIN payload p ON p.scope=v.scope AND p.memory=v.memory AND p.revision=v.id AND p.id=v.payload WHERE v.scope=?1 AND v.memory=?2 AND v.id=?3 AND re.evidence=?4 AND re.generation=?5 AND p.operation=?6)", params![scope,plan.request.memory,plan.request.revision,plan.request.evidence,plan.request.evidence_generation,plan.operation], |r|r.get(0)))?;
+            if !complete {
+                return Err(Error::Integrity);
+            }
+        }
+        result.push(plan);
+    }
+    if result.is_empty() {
+        return Err(Error::ResourceUnavailable);
+    }
+    Ok(result)
+}
+fn frozen_closure(db: &Connection, event: i64) -> Result<Vec<Plan>> {
+    let (scope, kind, target): (Vec<u8>, String, Id) = sql(db.query_row(
+        "SELECT scope,kind,target FROM deletion_intent WHERE event=?1",
+        [event],
+        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+    ))?;
+    let selected = authoritative_closure(db, &scope, &kind, target)?;
+    let mut query = sql(db.prepare("SELECT operation FROM deletion_closure WHERE event=?1"))?;
+    let stored: BTreeSet<Id> = sql(sql(query.query_map([event], |r| r.get(0)))?.collect())?;
+    if stored != selected.iter().map(|p| p.operation).collect() {
+        return Err(Error::Integrity);
+    }
+    let applied: bool = sql(db.query_row(
+        "SELECT state='Applied' FROM security_event WHERE id=?1",
+        [event],
+        |r| r.get(0),
+    ))?;
+    if applied {
+        let mut q = sql(db.prepare("SELECT operation FROM deletion_member WHERE event=?1"))?;
+        let actual: BTreeSet<Id> = sql(sql(q.query_map([event], |r| r.get(0)))?.collect())?;
+        if actual != stored {
+            return Err(Error::Integrity);
+        }
+    }
+    Ok(selected)
+}
+
 fn authorize_delete(
     db: &Connection,
     identity: Identity,
     kind: &str,
     target: Id,
     epoch: i64,
-) -> Result<()> {
-    let memories: Vec<Id> = if kind == "Memory" {
-        if !sql(db.query_row(
-            "SELECT EXISTS(SELECT 1 FROM memory WHERE scope=?1 AND id=?2)",
-            params![identity.scope_bytes(), target],
-            |r| r.get::<_, bool>(0),
-        ))? {
-            return Err(Error::ResourceUnavailable);
-        }
-        vec![target]
-    } else {
-        let mut stmt = sql(db.prepare(
-            "SELECT DISTINCT re.memory FROM revision_evidence re JOIN evidence e
-             ON e.scope=re.scope AND e.id=re.evidence AND e.generation=re.generation
-             WHERE e.scope=?1 AND e.source=?2 ORDER BY re.memory",
-        ))?;
-        sql(sql(stmt.query_map(params![identity.scope_bytes(), target], |r| r.get(0)))?.collect())?
-    };
-    if memories.is_empty() {
-        return Err(Error::ResourceUnavailable);
-    }
+) -> Result<Vec<Plan>> {
+    let selected = authoritative_closure(db, &identity.scope_bytes(), kind, target)?;
+    let memories: BTreeSet<Id> = selected.iter().map(|p| p.request.memory).collect();
     for memory in memories {
         if sql(gates::authorized_snapshot(
             db,
@@ -177,7 +233,7 @@ fn authorize_delete(
             return Err(Error::AuthorizationDenied);
         }
     }
-    Ok(())
+    Ok(selected)
 }
 
 pub(super) fn persist_isolations(
@@ -340,6 +396,11 @@ impl Engine {
             states: Vec::new(),
         };
         report.blocked |= !shared_valid(&self.db)?;
+        let mut q = sql(self.db.prepare("SELECT event FROM deletion_intent"))?;
+        let events: Vec<i64> = sql(sql(q.query_map([], |r| r.get(0)))?.collect())?;
+        for event in events {
+            report.blocked |= frozen_closure(&self.db, event).is_err();
+        }
         let isolated = self.b3_isolations()?;
         for (plan, state) in plans(self)? {
             if let Some((event, bytes, observed_identity)) = work(&self.db, plan.operation)? {
@@ -441,7 +502,7 @@ impl Engine {
         {
             return Err(Error::CapabilityUnavailable);
         }
-        authorize_delete(&tx, identity, kind, target, epoch)?;
+        let selected = authorize_delete(&tx, identity, kind, target, epoch)?;
         if !shared_valid(&tx)? {
             return Err(Error::Integrity);
         }
@@ -472,6 +533,12 @@ impl Engine {
                 target
             ],
         ))?;
+        for plan in selected {
+            sql(tx.execute(
+                "INSERT INTO deletion_closure VALUES(?1,?2)",
+                params![event, plan.operation],
+            ))?;
+        }
         sql(tx.commit())?;
         Ok(event)
     }
@@ -488,6 +555,7 @@ impl Engine {
             [event],
             |r| r.get(0),
         ))?;
+        frozen_closure(&tx, event)?;
         if !exists || sql(gates::make_effective(&tx, event))? != 1 {
             return Err(Error::CapabilityUnavailable);
         }
@@ -502,7 +570,7 @@ impl Engine {
         let tx = sql(self
             .db
             .transaction_with_behavior(TransactionBehavior::Immediate))?;
-        let selected = plans_db(&tx)?;
+        let selected = frozen_closure(&tx, event)?;
         let (scope,kind,target,principal):(Vec<u8>,String,Id,Id)=sql(tx.query_row(
             "SELECT d.scope,d.kind,d.target,d.principal FROM deletion_intent d JOIN security_event e ON e.id=d.event
              WHERE d.event=?1 AND e.state='EffectiveFence'",[event],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?))))?;
@@ -519,19 +587,7 @@ impl Engine {
             principal,
         };
         authorize_delete(&tx, identity, &kind, target, epoch)?;
-        for (plan, state) in selected {
-            if plan.identity.scope_bytes() != scope || state != "Committed" {
-                continue;
-            }
-            let member = if kind == "Memory" {
-                plan.request.memory == target
-            } else {
-                sql(tx.query_row("SELECT EXISTS(SELECT 1 FROM evidence WHERE scope=?1 AND id=?2 AND generation=?3 AND source=?4)",
-                    params![scope,plan.request.evidence,plan.request.evidence_generation,target],|r|r.get(0)))?
-            };
-            if !member {
-                continue;
-            }
+        for plan in selected {
             sql(tx.execute(
                 "INSERT INTO deletion_member VALUES(?1,?2)",
                 params![event, plan.operation],
