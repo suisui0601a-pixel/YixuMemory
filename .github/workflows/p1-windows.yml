@@ -1,5 +1,7 @@
 name: P1 Windows experimental validation
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -35,13 +37,14 @@ jobs:
       - name: Prepare pinned toolchain and NTFS test realm
         run: |
           $ErrorActionPreference = 'Stop'
-          $temp = Join-Path $env:RUNNER_TEMP 'yixu-p1-tests'
+          $temp = Join-Path $env:LOCALAPPDATA ('yixu-p1-tests-' + $env:GITHUB_RUN_ID)
+          if ([IO.Path]::GetPathRoot($temp) -ine 'C:\') { throw 'This prototype requires C: NTFS' }
           New-Item -ItemType Directory -Path $temp | Out-Null
           $drive = Get-Volume -DriveLetter ([IO.Path]::GetPathRoot($temp).Substring(0,1))
           if ($drive.FileSystem -ne 'NTFS') { throw 'Only NTFS is accepted' }
           "TEMP=$temp" >> $env:GITHUB_ENV
           "TMP=$temp" >> $env:GITHUB_ENV
-          "YIXU_VERIFICATION_OUT=$env:RUNNER_TEMP/p1-evidence" >> $env:GITHUB_ENV
+          "YIXU_VERIFICATION_OUT=$temp/evidence" >> $env:GITHUB_ENV
           rustup toolchain install 1.99.1-x86_64-pc-windows-gnu --profile minimal --component rustfmt --component clippy
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           rustup override set 1.99.1-x86_64-pc-windows-gnu
