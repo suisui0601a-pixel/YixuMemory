@@ -42,6 +42,16 @@ Keep the private repository private and unchanged while review is pending. Archi
 after the integration is approved/merged and both histories are verified; do not delete it.
 Security acceptance of R6, production content and services remains separate from repository integration.
 
+## Known dependency maintenance issue
+
+The existing public requirements-dev.lock.txt pins pytest 8.4.2. The 2026-11-22 live PyPI OSV audit
+reports [GHSA-6w46-j5rx-g56g](https://osv.dev/vulnerability/GHSA-6w46-j5rx-g56g) and
+[PYSEC-2026-1845](https://osv.dev/vulnerability/PYSEC-2026-1845). This is an existing development
+dependency finding, not a clean dependency-security result. It is retained unchanged for a separate
+maintenance/review change. Do not treat green functional CI as proof that this advisory is resolved.
+The locked Rust inventory has no reported advisory in its latest recorded audit; that is not a
+guarantee against unknown vulnerabilities. No dependency upgrade is concealed in this integration.
+
 ## Validation
 
 P0 baseline CI remains intact. Additional Windows CI runs the pinned Rust toolchain, default and
