@@ -8,3 +8,7 @@
 // No feature, including --all-features, can activate identity or bootstrap issuance.
 #[cfg(test)]
 mod auth;
+
+// Standalone metadata-only schema package. No content/Application/runtime adapter.
+#[cfg(test)]
+mod profile12;

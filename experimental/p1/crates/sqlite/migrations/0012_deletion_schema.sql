@@ -1,0 +1,157 @@
+-- Fresh-only Profile 12 schema package. No migration or runtime/content admission.
+PRAGMA user_version=12;
+CREATE TABLE object_quarantine(
+ operation BLOB PRIMARY KEY REFERENCES write_intent(operation),
+ reason TEXT NOT NULL CHECK(reason IN ('Integrity','PayloadUnavailable','KeyUnavailable','Dependency')),
+ incarnation BLOB NOT NULL CHECK(length(incarnation)=16)
+) STRICT;
+CREATE TABLE deletion_intent(
+ event INTEGER PRIMARY KEY REFERENCES security_event(id),
+ scope BLOB NOT NULL CHECK(length(scope)=48),
+ principal BLOB NOT NULL CHECK(length(principal)=16),
+ request BLOB NOT NULL CHECK(length(request)=16 AND request<>zeroblob(16)),
+ kind TEXT NOT NULL CHECK(kind IN ('Memory','Source')),
+ target BLOB NOT NULL CHECK(length(target)=16),
+ UNIQUE(scope,principal,request)
+) STRICT;
+CREATE TABLE deletion_member(
+ event INTEGER NOT NULL REFERENCES deletion_intent(event),
+ operation BLOB NOT NULL CHECK(length(operation)=16) REFERENCES write_intent(operation),
+ PRIMARY KEY(event,operation),
+ FOREIGN KEY(event,operation) REFERENCES deletion_closure(event,operation)
+  ON UPDATE RESTRICT ON DELETE RESTRICT NOT DEFERRABLE INITIALLY IMMEDIATE,
+ FOREIGN KEY(event) REFERENCES security_receipt(event) DEFERRABLE INITIALLY DEFERRED
+) STRICT;
+CREATE TABLE copy_manifest_b3(
+ operation BLOB PRIMARY KEY REFERENCES publication(operation),
+ generation INTEGER NOT NULL CHECK(generation=1)
+) STRICT;
+CREATE TABLE backup_registration(
+ operation BLOB NOT NULL REFERENCES write_intent(operation),
+ backup BLOB NOT NULL CHECK(length(backup)=16),
+ generation INTEGER NOT NULL CHECK(generation>0),
+ artifact_hash BLOB NOT NULL CHECK(length(artifact_hash)=32),
+ artifact_identity BLOB NOT NULL CHECK(length(artifact_identity)=12),
+ PRIMARY KEY(operation,backup,generation)
+) STRICT;
+CREATE TABLE backup_receipt(
+ operation BLOB NOT NULL,
+ backup BLOB NOT NULL,
+ generation INTEGER NOT NULL,
+ PRIMARY KEY(operation,backup,generation),
+ FOREIGN KEY(operation,backup,generation) REFERENCES backup_registration(operation,backup,generation)
+) STRICT;
+CREATE TABLE deletion_work(
+ operation BLOB PRIMARY KEY REFERENCES write_intent(operation),
+ event INTEGER NOT NULL REFERENCES deletion_intent(event),
+ generation INTEGER NOT NULL CHECK(generation=1),
+ marker BLOB NOT NULL,
+ marker_identity BLOB CHECK(marker_identity IS NULL OR length(marker_identity)=12)
+) STRICT;
+CREATE TABLE deletion_observation(
+ operation BLOB NOT NULL REFERENCES deletion_work(operation),
+ action TEXT NOT NULL CHECK(action IN ('KeyUnavailable','CiphertextRemoved','WrapperRemoved')),
+ generation INTEGER NOT NULL CHECK(generation=1),
+ PRIMARY KEY(operation,action),
+ UNIQUE(operation,action,generation)
+) STRICT;
+CREATE TABLE deletion_receipt(
+ operation BLOB NOT NULL,
+ action TEXT NOT NULL,
+ generation INTEGER NOT NULL,
+ PRIMARY KEY(operation,action),
+ FOREIGN KEY(operation,action,generation) REFERENCES deletion_observation(operation,action,generation)
+) STRICT;
+CREATE VIEW content_outbox_v2 AS
+ SELECT o.operation,o.knowledge_seq,2 AS version,
+ CASE WHEN v.number=1 THEN 'MemoryCreated' ELSE 'RevisionCreated' END AS action,
+ v.memory,v.id AS revision,v.number
+ FROM outbox o JOIN receipt r USING(operation) JOIN revision v
+ ON v.scope=r.scope AND v.memory=r.memory AND v.id=r.revision;
+CREATE TRIGGER p12_copy_registered AFTER INSERT ON payload
+BEGIN INSERT INTO copy_manifest_b3 VALUES(NEW.operation,NEW.generation); END;
+CREATE TRIGGER p12_backup_fenced BEFORE INSERT ON backup_registration
+WHEN EXISTS(SELECT 1 FROM deletion_member WHERE operation=NEW.operation)
+ OR EXISTS(SELECT 1 FROM security_event WHERE state<>'Applied')
+BEGIN SELECT RAISE(ABORT,'backup registration blocked by deletion'); END;
+CREATE TRIGGER p12_backup_after_key BEFORE INSERT ON backup_receipt
+WHEN NOT EXISTS(SELECT 1 FROM deletion_receipt WHERE operation=NEW.operation AND action='KeyUnavailable')
+BEGIN SELECT RAISE(ABORT,'backup expiry requires key revocation receipt'); END;
+CREATE TRIGGER p12_quarantine_committed BEFORE INSERT ON object_quarantine
+WHEN NOT EXISTS(SELECT 1 FROM write_intent WHERE operation=NEW.operation AND state='Committed')
+BEGIN SELECT RAISE(ABORT,'unknown write cannot be downgraded to object isolation'); END;
+CREATE TRIGGER p12_member_fenced BEFORE INSERT ON deletion_member
+WHEN NOT EXISTS(SELECT 1 FROM deletion_intent d JOIN security_event e ON e.id=d.event
+ JOIN write_intent i ON i.operation=NEW.operation
+ WHERE d.event=NEW.event AND e.state='EffectiveFence' AND d.scope=i.scope)
+BEGIN SELECT RAISE(ABORT,'deletion closure requires matching fence'); END;
+CREATE TRIGGER p12_work_fenced BEFORE INSERT ON deletion_work
+WHEN NOT EXISTS(SELECT 1 FROM deletion_member m JOIN security_event e ON e.id=m.event
+ WHERE m.event=NEW.event AND m.operation=NEW.operation AND e.state='EffectiveFence')
+BEGIN SELECT RAISE(ABORT,'work requires frozen deletion member'); END;
+CREATE TRIGGER p12_work_identity BEFORE UPDATE ON deletion_work
+WHEN NEW.operation<>OLD.operation OR NEW.event<>OLD.event OR NEW.generation<>OLD.generation
+ OR NEW.marker<>OLD.marker OR OLD.marker_identity IS NOT NULL OR NEW.marker_identity IS NULL
+BEGIN SELECT RAISE(ABORT,'immutable work identity'); END;
+CREATE TRIGGER p12_observation_order BEFORE INSERT ON deletion_observation
+WHEN NOT EXISTS(SELECT 1 FROM deletion_work w JOIN security_event e ON e.id=w.event
+ WHERE w.operation=NEW.operation AND w.generation=NEW.generation AND e.state='Applied')
+ OR (NEW.action<>'KeyUnavailable' AND NOT EXISTS(
+ SELECT 1 FROM deletion_receipt WHERE operation=NEW.operation AND action='KeyUnavailable'))
+ OR (NEW.action='KeyUnavailable' AND NOT EXISTS(
+ SELECT 1 FROM deletion_work WHERE operation=NEW.operation AND marker_identity IS NOT NULL))
+BEGIN SELECT RAISE(ABORT,'cleanup observation has no applied work or key receipt'); END;
+
+CREATE TABLE deletion_closure(
+ event INTEGER NOT NULL REFERENCES deletion_intent(event),
+ operation BLOB NOT NULL CHECK(length(operation)=16) REFERENCES write_intent(operation),
+ PRIMARY KEY(event,operation)
+) STRICT;
+CREATE TRIGGER p12_closure_initial BEFORE INSERT ON deletion_closure
+WHEN NOT EXISTS(SELECT 1 FROM deletion_intent d JOIN security_event e ON e.id=d.event JOIN write_intent i ON i.operation=NEW.operation WHERE d.event=NEW.event AND e.state='Closing' AND e.kind='Revocation' AND e.scope=d.scope AND d.scope=i.scope AND i.state='Committed')
+ OR EXISTS(SELECT 1 FROM deletion_closure_seal WHERE event=NEW.event)
+BEGIN SELECT RAISE(ABORT,'closure requires matching Closing'); END;
+
+CREATE TABLE deletion_closure_seal(
+ event INT NOT NULL PRIMARY KEY REFERENCES deletion_intent(event)
+) STRICT;
+CREATE TRIGGER p12_intent_initial BEFORE INSERT ON deletion_intent
+WHEN NOT EXISTS(SELECT 1 FROM security_event e WHERE e.id=NEW.event
+ AND e.scope=NEW.scope AND e.kind='Revocation' AND e.state='Closing')
+BEGIN SELECT RAISE(ABORT,'intent requires matching Closing'); END;
+CREATE TRIGGER p12_seal_initial BEFORE INSERT ON deletion_closure_seal
+WHEN NOT EXISTS(SELECT 1 FROM deletion_intent d JOIN security_event e ON e.id=d.event
+ WHERE d.event=NEW.event AND e.state='Closing' AND e.kind='Revocation' AND e.scope=d.scope)
+ OR NOT EXISTS(SELECT 1 FROM deletion_closure WHERE event=NEW.event)
+ OR EXISTS(SELECT 1 FROM deletion_closure c JOIN deletion_intent d ON d.event=c.event
+ JOIN write_intent i ON i.operation=c.operation
+ WHERE c.event=NEW.event AND (i.scope<>d.scope OR i.state<>'Committed'))
+BEGIN SELECT RAISE(ABORT,'seal requires complete structured Closing'); END;
+CREATE TRIGGER p12_deletion_fence_guard BEFORE UPDATE OF state ON security_event
+WHEN NEW.state='EffectiveFence' AND EXISTS(SELECT 1 FROM deletion_intent WHERE event=NEW.id)
+ AND (NOT EXISTS(SELECT 1 FROM deletion_closure_seal WHERE event=NEW.id)
+ OR NOT EXISTS(SELECT 1 FROM deletion_closure WHERE event=NEW.id)
+ OR EXISTS(SELECT 1 FROM deletion_member WHERE event=NEW.id)
+ OR EXISTS(SELECT 1 FROM deletion_intent d WHERE d.event=NEW.id
+   AND (d.scope<>NEW.scope OR NEW.kind<>'Revocation')))
+BEGIN SELECT RAISE(ABORT,'fence requires sealed closure and no partial members'); END;
+CREATE TRIGGER p12_deletion_applied_set_guard BEFORE UPDATE OF state ON security_event
+WHEN NEW.state='Applied' AND EXISTS(SELECT 1 FROM deletion_intent WHERE event=NEW.id)
+ AND (NOT EXISTS(SELECT 1 FROM deletion_closure_seal WHERE event=NEW.id)
+ OR NOT EXISTS(SELECT 1 FROM deletion_closure WHERE event=NEW.id)
+ OR EXISTS(SELECT 1 FROM deletion_intent d WHERE d.event=NEW.id
+   AND (d.scope<>NEW.scope OR NEW.kind<>'Revocation'))
+ OR EXISTS(SELECT 1 FROM deletion_closure c JOIN write_intent i ON i.operation=c.operation
+   WHERE c.event=NEW.id AND (i.scope<>NEW.scope OR i.state<>'Committed'))
+ OR EXISTS(SELECT operation FROM deletion_closure WHERE event=NEW.id
+   EXCEPT SELECT operation FROM deletion_member WHERE event=NEW.id)
+ OR EXISTS(SELECT operation FROM deletion_member WHERE event=NEW.id
+   EXCEPT SELECT operation FROM deletion_closure WHERE event=NEW.id))
+BEGIN SELECT RAISE(ABORT,'Applied requires exact sealed member set'); END;
+CREATE TABLE profile12_format(
+ id INTEGER PRIMARY KEY CHECK(id=1),
+ profile INTEGER NOT NULL CHECK(profile=12),
+ content_format INTEGER NOT NULL CHECK(content_format=1),
+ format_tag TEXT NOT NULL CHECK(format_tag='YIXU/P12/SCHEMA/v1'),
+ schema_hash BLOB NOT NULL CHECK(length(schema_hash)=32)
+) STRICT;
