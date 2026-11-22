@@ -1,0 +1,457 @@
+{
+  "date": "2026-11-01",
+  "repositories": [
+    {
+      "repository": "xtdb/xtdb",
+      "commit": "b3d0a252c07e7573e49afa90b77daf78d5196d4a",
+      "default_branch": "main",
+      "api_license": "MPL-2.0",
+      "license_files": [
+        {
+          "path": "LICENSE",
+          "blob_sha": "a612ad9813b006ce81d1ee438dd784da99a54007",
+          "url": "https://github.com/xtdb/xtdb/blob/b3d0a252c07e7573e49afa90b77daf78d5196d4a/LICENSE"
+        }
+      ],
+      "files": [
+        {
+          "path": "core/src/main/kotlin/xtdb/api/query/QueryBasis.kt",
+          "read_lines": "1-160",
+          "url": "https://github.com/xtdb/xtdb/blob/b3d0a252c07e7573e49afa90b77daf78d5196d4a/core/src/main/kotlin/xtdb/api/query/QueryBasis.kt",
+          "blob_sha": "6cf2472ecec506487b65abf3091065ccc11ef6d5"
+        },
+        {
+          "path": "core/src/test/kotlin/xtdb/operator/scan/AsOfResolverNodeTest.kt",
+          "read_lines": "1-160",
+          "url": "https://github.com/xtdb/xtdb/blob/b3d0a252c07e7573e49afa90b77daf78d5196d4a/core/src/test/kotlin/xtdb/operator/scan/AsOfResolverNodeTest.kt",
+          "blob_sha": "758974de02ada55af96e32045b2d6bb7160a95d8"
+        }
+      ],
+      "scope": "Source inspection only; upstream tests not executed; no third-party source copied."
+    },
+    {
+      "repository": "getzep/graphiti",
+      "commit": "72b5c59c06607e09ea855be61b6ff5a3446fc951",
+      "default_branch": "main",
+      "api_license": "Apache-2.0",
+      "license_files": [
+        {
+          "path": "LICENSE",
+          "blob_sha": "5feb0d9d299a1107adfa8331306b13cc0eff2d78",
+          "url": "https://github.com/getzep/graphiti/blob/72b5c59c06607e09ea855be61b6ff5a3446fc951/LICENSE"
+        }
+      ],
+      "files": [
+        {
+          "path": "graphiti_core/edges.py",
+          "read_lines": "1-160",
+          "url": "https://github.com/getzep/graphiti/blob/72b5c59c06607e09ea855be61b6ff5a3446fc951/graphiti_core/edges.py",
+          "blob_sha": "6800438d9da1ea0f9d566a93bb4489c206726e2c"
+        },
+        {
+          "path": "tests/utils/maintenance/test_temporal_edge_utils.py",
+          "read_lines": "1-160",
+          "url": "https://github.com/getzep/graphiti/blob/72b5c59c06607e09ea855be61b6ff5a3446fc951/tests/utils/maintenance/test_temporal_edge_utils.py",
+          "blob_sha": "4e3df66584b85aeb03dbe92427317e923e58a0a8"
+        },
+        {
+          "path": "graphiti_core/edges.py",
+          "read_lines": "full tool-returned source",
+          "url": "https://github.com/getzep/graphiti/blob/72b5c59c06607e09ea855be61b6ff5a3446fc951/graphiti_core/edges.py",
+          "blob_sha": "6800438d9da1ea0f9d566a93bb4489c206726e2c"
+        },
+        {
+          "path": "graphiti_core/search/search.py",
+          "read_lines": "full tool-returned source",
+          "url": "https://github.com/getzep/graphiti/blob/72b5c59c06607e09ea855be61b6ff5a3446fc951/graphiti_core/search/search.py",
+          "blob_sha": "9a74c84172dd15a159d4d5e2e35c10fb14d56f4a"
+        }
+      ],
+      "scope": "Source inspection only; upstream tests not executed; no third-party source copied."
+    },
+    {
+      "repository": "Roenbaeck/positorium",
+      "commit": "c4cf913f5682f17c8af06b8e252c7c3b25390443",
+      "default_branch": "master",
+      "api_license": "Apache-2.0",
+      "license_files": [
+        {
+          "path": "LICENSE.Apache-2.0",
+          "blob_sha": "81549a7f7fbaf8f05782a2e195da102601a3ee0c",
+          "url": "https://github.com/Roenbaeck/positorium/blob/c4cf913f5682f17c8af06b8e252c7c3b25390443/LICENSE.Apache-2.0"
+        },
+        {
+          "path": "LICENSE.MIT",
+          "blob_sha": "dc1bf4f5f30ab7f15e593397de6d9644021619d6",
+          "url": "https://github.com/Roenbaeck/positorium/blob/c4cf913f5682f17c8af06b8e252c7c3b25390443/LICENSE.MIT"
+        }
+      ],
+      "files": [
+        {
+          "path": "src/construct.rs",
+          "read_lines": "1-160",
+          "url": "https://github.com/Roenbaeck/positorium/blob/c4cf913f5682f17c8af06b8e252c7c3b25390443/src/construct.rs",
+          "blob_sha": "7a4d67036f4f3bc2fed805988ba626b692e84440"
+        },
+        {
+          "path": "tests/single_married_snapshot.rs",
+          "read_lines": "1-160",
+          "url": "https://github.com/Roenbaeck/positorium/blob/c4cf913f5682f17c8af06b8e252c7c3b25390443/tests/single_married_snapshot.rs",
+          "blob_sha": "0b872e371773b7d5f1070e583fd3b9f5b639c1ff"
+        },
+        {
+          "path": "src/datatype.rs",
+          "read_lines": "full tool-returned source",
+          "url": "https://github.com/Roenbaeck/positorium/blob/c4cf913f5682f17c8af06b8e252c7c3b25390443/src/datatype.rs",
+          "blob_sha": "6cd5f3ec48123ab132e9a85b3bb3343a3fafb20e"
+        }
+      ],
+      "scope": "Source inspection only; upstream tests not executed; no third-party source copied."
+    },
+    {
+      "repository": "terminusdb/terminusdb",
+      "commit": "ba32d880664cf9ede2e34c7c20043dd60000ebdd",
+      "default_branch": "main",
+      "api_license": "Apache-2.0",
+      "license_files": [
+        {
+          "path": "LICENSE",
+          "blob_sha": "d37acc43defe97f5c39008296b9762271ebcf60f",
+          "url": "https://github.com/terminusdb/terminusdb/blob/ba32d880664cf9ede2e34c7c20043dd60000ebdd/LICENSE"
+        }
+      ],
+      "files": [
+        {
+          "path": "src/core/document/history.pl",
+          "read_lines": "1-160",
+          "url": "https://github.com/terminusdb/terminusdb/blob/ba32d880664cf9ede2e34c7c20043dd60000ebdd/src/core/document/history.pl",
+          "blob_sha": "0cb6a23707e762c5fbda6dc5480325600568165a"
+        },
+        {
+          "path": "src/core/transaction.pl",
+          "read_lines": "1-160",
+          "url": "https://github.com/terminusdb/terminusdb/blob/ba32d880664cf9ede2e34c7c20043dd60000ebdd/src/core/transaction.pl",
+          "blob_sha": "b5516a3f07de78e1839086eefd337e4dd3feba4f"
+        },
+        {
+          "path": "src/core/transaction.pl",
+          "read_lines": "full tool-returned source",
+          "url": "https://github.com/terminusdb/terminusdb/blob/ba32d880664cf9ede2e34c7c20043dd60000ebdd/src/core/transaction.pl",
+          "blob_sha": "b5516a3f07de78e1839086eefd337e4dd3feba4f"
+        },
+        {
+          "path": "src/core/transaction/validate.pl",
+          "read_lines": "full tool-returned source",
+          "blob_sha": "a65ae080938ac0eb8b3fd47b73f1b5dc5c1f6f8c",
+          "url": "https://github.com/terminusdb/terminusdb/blob/ba32d880664cf9ede2e34c7c20043dd60000ebdd/src/core/transaction/validate.pl"
+        }
+      ],
+      "scope": "Source inspection only; upstream tests not executed; no third-party source copied."
+    },
+    {
+      "repository": "dolthub/dolt",
+      "commit": "46d8805d8556599eb0a6472892e67e3bb1e0de03",
+      "default_branch": "main",
+      "api_license": "Apache-2.0",
+      "license_files": [
+        {
+          "path": "LICENSE",
+          "blob_sha": "d645695673349e3947e8e5ae42332d0ac3164cd7",
+          "url": "https://github.com/dolthub/dolt/blob/46d8805d8556599eb0a6472892e67e3bb1e0de03/LICENSE"
+        }
+      ],
+      "files": [
+        {
+          "path": "go/libraries/doltcore/sqle/history_table.go",
+          "read_lines": "1-160",
+          "url": "https://github.com/dolthub/dolt/blob/46d8805d8556599eb0a6472892e67e3bb1e0de03/go/libraries/doltcore/sqle/history_table.go",
+          "blob_sha": "296dcc761c2052b03c3d79cbe5a9fc1f501e5a92"
+        },
+        {
+          "path": "go/libraries/doltcore/sqle/integration_test/history_table_test.go",
+          "read_lines": "1-160",
+          "url": "https://github.com/dolthub/dolt/blob/46d8805d8556599eb0a6472892e67e3bb1e0de03/go/libraries/doltcore/sqle/integration_test/history_table_test.go",
+          "blob_sha": "4dea1d75245155d484f9d95041c5d4a09b43a6d6"
+        },
+        {
+          "path": "go/libraries/doltcore/merge/merge.go",
+          "read_lines": "full tool-returned source",
+          "url": "https://github.com/dolthub/dolt/blob/46d8805d8556599eb0a6472892e67e3bb1e0de03/go/libraries/doltcore/merge/merge.go",
+          "blob_sha": "0cb7b55b172c33d07f0d05ee1d7d7d8d247182b3"
+        }
+      ],
+      "scope": "Source inspection only; upstream tests not executed; no third-party source copied."
+    },
+    {
+      "repository": "vectorize-io/hindsight",
+      "commit": "bc5ea195a0fed1346ff171a5780bbb72a38c89c8",
+      "default_branch": "main",
+      "api_license": "MIT",
+      "license_files": [
+        {
+          "path": "LICENSE",
+          "blob_sha": "8dce7b4d4c2632990bdf8b4101694ea19ba6ad46",
+          "url": "https://github.com/vectorize-io/hindsight/blob/bc5ea195a0fed1346ff171a5780bbb72a38c89c8/LICENSE"
+        }
+      ],
+      "files": [
+        {
+          "path": "hindsight-api-slim/hindsight_api/engine/search/fusion.py",
+          "read_lines": "1-160",
+          "url": "https://github.com/vectorize-io/hindsight/blob/bc5ea195a0fed1346ff171a5780bbb72a38c89c8/hindsight-api-slim/hindsight_api/engine/search/fusion.py",
+          "blob_sha": "4ef33493d59aa87f129decd48aedef4187f3115b"
+        },
+        {
+          "path": "hindsight-api-slim/tests/test_full_recall_temporal_window.py",
+          "read_lines": "1-160",
+          "url": "https://github.com/vectorize-io/hindsight/blob/bc5ea195a0fed1346ff171a5780bbb72a38c89c8/hindsight-api-slim/tests/test_full_recall_temporal_window.py",
+          "blob_sha": "35e76c6d88fce5bf8376b44fc6a46b059ab80b1e"
+        },
+        {
+          "path": "hindsight-api-slim/hindsight_api/alembic/versions/5a366d414dce_initial_schema.py",
+          "read_lines": "full tool-returned source",
+          "url": "https://github.com/vectorize-io/hindsight/blob/bc5ea195a0fed1346ff171a5780bbb72a38c89c8/hindsight-api-slim/hindsight_api/alembic/versions/5a366d414dce_initial_schema.py",
+          "blob_sha": "749fea8b7ba35dd61bd337cc974ac324686d64fa"
+        }
+      ],
+      "scope": "Source inspection only; upstream tests not executed; no third-party source copied."
+    },
+    {
+      "repository": "mem0ai/mem0",
+      "commit": "753496cf1435d76c3a711f3af51303f7fdcb6420",
+      "default_branch": "main",
+      "api_license": "Apache-2.0",
+      "license_files": [
+        {
+          "path": "LICENSE",
+          "blob_sha": "d20d5102c3cf97ecbee54afd65893de4a11d26fe",
+          "url": "https://github.com/mem0ai/mem0/blob/753496cf1435d76c3a711f3af51303f7fdcb6420/LICENSE"
+        }
+      ],
+      "files": [
+        {
+          "path": "mem0/memory/storage.py",
+          "read_lines": "1-160",
+          "url": "https://github.com/mem0ai/mem0/blob/753496cf1435d76c3a711f3af51303f7fdcb6420/mem0/memory/storage.py",
+          "blob_sha": "5bd5512436cc6f3cbd5ce03d10808d3e6eef067b"
+        },
+        {
+          "path": "tests/memory/test_storage.py",
+          "read_lines": "1-160",
+          "url": "https://github.com/mem0ai/mem0/blob/753496cf1435d76c3a711f3af51303f7fdcb6420/tests/memory/test_storage.py",
+          "blob_sha": "4205025a79c4d647f1b2ca01922c53bda27d81d3"
+        }
+      ],
+      "scope": "Source inspection only; upstream tests not executed; no third-party source copied."
+    },
+    {
+      "repository": "topoteretes/cognee",
+      "commit": "525b1d1179c550cd5b5661bcbf8f00f57a676928",
+      "default_branch": "main",
+      "api_license": "Apache-2.0",
+      "license_files": [
+        {
+          "path": "LICENSE",
+          "blob_sha": "fd57f68790eb9919fc622902caf31f831f9c4e8f",
+          "url": "https://github.com/topoteretes/cognee/blob/525b1d1179c550cd5b5661bcbf8f00f57a676928/LICENSE"
+        }
+      ],
+      "files": [
+        {
+          "path": "cognee/modules/retrieval/temporal_hybrid/models.py",
+          "read_lines": "1-160",
+          "url": "https://github.com/topoteretes/cognee/blob/525b1d1179c550cd5b5661bcbf8f00f57a676928/cognee/modules/retrieval/temporal_hybrid/models.py",
+          "blob_sha": "3500cc9ddca98f68849c859c75d43a70ee0a900c"
+        },
+        {
+          "path": "cognee/tests/unit/modules/engine/test_temporal_hints.py",
+          "read_lines": "1-160",
+          "url": "https://github.com/topoteretes/cognee/blob/525b1d1179c550cd5b5661bcbf8f00f57a676928/cognee/tests/unit/modules/engine/test_temporal_hints.py",
+          "blob_sha": "8045e1ecd27346823bfae60bda0f97320757baca"
+        }
+      ],
+      "scope": "Source inspection only; upstream tests not executed; no third-party source copied."
+    },
+    {
+      "repository": "langchain-ai/langmem",
+      "commit": "839c3fa0fc2c118734611d5d86503e52fc3a3dd1",
+      "default_branch": "main",
+      "api_license": "MIT",
+      "license_files": [
+        {
+          "path": "LICENSE",
+          "blob_sha": "c38f6f284dc464af69e9f618bc0304d299d0bdf0",
+          "url": "https://github.com/langchain-ai/langmem/blob/839c3fa0fc2c118734611d5d86503e52fc3a3dd1/LICENSE"
+        }
+      ],
+      "files": [
+        {
+          "path": "src/langmem/knowledge/tools.py",
+          "read_lines": "1-160",
+          "url": "https://github.com/langchain-ai/langmem/blob/839c3fa0fc2c118734611d5d86503e52fc3a3dd1/src/langmem/knowledge/tools.py",
+          "blob_sha": "769325d953db392b60006fbbce318824e8b6c4c4"
+        },
+        {
+          "path": "src/langmem/graphs/auth.py",
+          "read_lines": "1-160",
+          "url": "https://github.com/langchain-ai/langmem/blob/839c3fa0fc2c118734611d5d86503e52fc3a3dd1/src/langmem/graphs/auth.py",
+          "blob_sha": "a4c1871901ae3138d267d008618ff1e85e339b3d"
+        }
+      ],
+      "scope": "Source inspection only; upstream tests not executed; no third-party source copied."
+    },
+    {
+      "repository": "letta-ai/letta-code",
+      "commit": "59df5424838419e083de0691fa4d08524f348937",
+      "default_branch": "main",
+      "api_license": "Apache-2.0",
+      "license_files": [
+        {
+          "path": "LICENSE",
+          "blob_sha": "e72f5de5dd5610ee3fee7feb791ebff246cc931e",
+          "url": "https://github.com/letta-ai/letta-code/blob/59df5424838419e083de0691fa4d08524f348937/LICENSE"
+        }
+      ],
+      "files": [
+        {
+          "path": "src/agent/memory-conflict-repair.ts",
+          "read_lines": "1-160",
+          "url": "https://github.com/letta-ai/letta-code/blob/59df5424838419e083de0691fa4d08524f348937/src/agent/memory-conflict-repair.ts",
+          "blob_sha": "122400e6a2f0415d8bd334cf58d3d054879b4909"
+        },
+        {
+          "path": "src/agent/memory-conflict-repair.test.ts",
+          "read_lines": "1-160",
+          "url": "https://github.com/letta-ai/letta-code/blob/59df5424838419e083de0691fa4d08524f348937/src/agent/memory-conflict-repair.test.ts",
+          "blob_sha": "71e2c829196f5d53b63e08bbe558fa7490dfaff5"
+        }
+      ],
+      "scope": "Source inspection only; upstream tests not executed; no third-party source copied."
+    },
+    {
+      "repository": "cozodb/cozo",
+      "commit": "481af058abac9444ea8c9c52c78f096ed4b5bfc4",
+      "default_branch": "main",
+      "api_license": "MPL-2.0",
+      "license_files": [
+        {
+          "path": "LICENSE.txt",
+          "blob_sha": "f4bbcd200ad42bbb2fe2faf67e87e8619fafc17a",
+          "url": "https://github.com/cozodb/cozo/blob/481af058abac9444ea8c9c52c78f096ed4b5bfc4/LICENSE.txt"
+        }
+      ],
+      "files": [
+        {
+          "path": "cozo-core/src/runtime/transact.rs",
+          "read_lines": "1-160",
+          "url": "https://github.com/cozodb/cozo/blob/481af058abac9444ea8c9c52c78f096ed4b5bfc4/cozo-core/src/runtime/transact.rs",
+          "blob_sha": "38f7f9c013b70d07cc9c57608f0e4a05376349e4"
+        },
+        {
+          "path": "cozo-core/src/data/tests/validity.rs",
+          "read_lines": "1-160",
+          "url": "https://github.com/cozodb/cozo/blob/481af058abac9444ea8c9c52c78f096ed4b5bfc4/cozo-core/src/data/tests/validity.rs",
+          "blob_sha": "dcb839c533040ea73a9cc8df04a37598f52e9814"
+        }
+      ],
+      "scope": "Source inspection only; upstream tests not executed; no third-party source copied."
+    },
+    {
+      "repository": "quickwit-oss/tantivy",
+      "commit": "360a5ebbbb6fa493d06b777a3c6890fbb1afbe7b",
+      "default_branch": "main",
+      "api_license": "MIT",
+      "license_files": [
+        {
+          "path": "LICENSE",
+          "blob_sha": "7b1fc849b042df2e7607138009e81bd078d9db4a",
+          "url": "https://github.com/quickwit-oss/tantivy/blob/360a5ebbbb6fa493d06b777a3c6890fbb1afbe7b/LICENSE"
+        }
+      ],
+      "files": [
+        {
+          "path": "src/query/bm25.rs",
+          "read_lines": "1-160",
+          "url": "https://github.com/quickwit-oss/tantivy/blob/360a5ebbbb6fa493d06b777a3c6890fbb1afbe7b/src/query/bm25.rs",
+          "blob_sha": "d662f0eb5632c3edbfea529ba5733c28d3dc3249"
+        },
+        {
+          "path": "src/indexer/index_writer.rs",
+          "read_lines": "1-160",
+          "url": "https://github.com/quickwit-oss/tantivy/blob/360a5ebbbb6fa493d06b777a3c6890fbb1afbe7b/src/indexer/index_writer.rs",
+          "blob_sha": "22a251ccf0e7abfbf8b3b026c88d90daf0ead429"
+        },
+        {
+          "path": "src/indexer/index_writer.rs",
+          "read_lines": "full tool-returned source",
+          "url": "https://github.com/quickwit-oss/tantivy/blob/360a5ebbbb6fa493d06b777a3c6890fbb1afbe7b/src/indexer/index_writer.rs",
+          "blob_sha": "22a251ccf0e7abfbf8b3b026c88d90daf0ead429"
+        }
+      ],
+      "scope": "Source inspection only; upstream tests not executed; no third-party source copied."
+    },
+    {
+      "repository": "autumn-foundation/AletheiaDB",
+      "commit": "e3ef79ff0f1497ffd567959f5653f0f6b8359c6f",
+      "default_branch": "trunk",
+      "api_license": "NOASSERTION",
+      "license_files": [
+        {
+          "path": "LICENSE-APACHE",
+          "blob_sha": "30a95cf634e8c22396b43b0a23cfbbff7519b073",
+          "url": "https://github.com/autumn-foundation/AletheiaDB/blob/e3ef79ff0f1497ffd567959f5653f0f6b8359c6f/LICENSE-APACHE"
+        },
+        {
+          "path": "LICENSE-MIT",
+          "blob_sha": "7a273013cd128127218d504ac6541b5f80820272",
+          "url": "https://github.com/autumn-foundation/AletheiaDB/blob/e3ef79ff0f1497ffd567959f5653f0f6b8359c6f/LICENSE-MIT"
+        }
+      ],
+      "files": [
+        {
+          "path": "src/core/temporal.rs",
+          "read_lines": "1-160",
+          "url": "https://github.com/autumn-foundation/AletheiaDB/blob/e3ef79ff0f1497ffd567959f5653f0f6b8359c6f/src/core/temporal.rs",
+          "blob_sha": "232ca9db828a9cc81e55358977d5ebc9fc1b3626"
+        },
+        {
+          "path": "tests/regressions/temporal_query_visibility.rs",
+          "read_lines": "1-160",
+          "url": "https://github.com/autumn-foundation/AletheiaDB/blob/e3ef79ff0f1497ffd567959f5653f0f6b8359c6f/tests/regressions/temporal_query_visibility.rs",
+          "blob_sha": "dab5409d00733451fc8895f62fae83b6c082d06b"
+        }
+      ],
+      "scope": "Source inspection only; upstream tests not executed; no third-party source copied."
+    },
+    {
+      "repository": "basicmachines-co/basic-memory",
+      "commit": "d7b16128351e8eb6570fe38f7b006d433f5e8d62",
+      "default_branch": "main",
+      "api_license": "AGPL-3.0",
+      "license_files": [
+        {
+          "path": "LICENSE",
+          "blob_sha": "0ad25db4bd1d86c452db3f9602ccdbe172438f52",
+          "url": "https://github.com/basicmachines-co/basic-memory/blob/d7b16128351e8eb6570fe38f7b006d433f5e8d62/LICENSE"
+        }
+      ],
+      "files": [
+        {
+          "path": "src/basic_memory/repository/sqlite_search_query.py",
+          "read_lines": "1-160",
+          "url": "https://github.com/basicmachines-co/basic-memory/blob/d7b16128351e8eb6570fe38f7b006d433f5e8d62/src/basic_memory/repository/sqlite_search_query.py",
+          "blob_sha": "026ccbf41a9d992ca65243495ecdcf329a937d8c"
+        },
+        {
+          "path": "tests/repository/test_search_scope.py",
+          "read_lines": "1-160",
+          "url": "https://github.com/basicmachines-co/basic-memory/blob/d7b16128351e8eb6570fe38f7b006d433f5e8d62/tests/repository/test_search_scope.py",
+          "blob_sha": "8120614a09ba7e2bdbe1b97f71e95f8bf0bc9105"
+        }
+      ],
+      "scope": "Source inspection only; upstream tests not executed; no third-party source copied."
+    }
+  ],
+  "sqlite_documentation": "https://www.sqlite.org/fts5.html",
+  "cryptography_reference": "https://docs.rs/hmac/0.13.0/hmac/"
+}

@@ -1,0 +1,163 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "profile": {
+      "const": 5
+    },
+    "projection": {
+      "const": "metadata"
+    },
+    "tenant_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "space_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "mode": {
+      "enum": [
+        "current",
+        "one",
+        "history"
+      ]
+    },
+    "memory_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "uuid"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "as_of": {
+      "anyOf": [
+        {
+          "type": "string",
+          "contentEncoding": "base64",
+          "minLength": 1,
+          "maxLength": 2732,
+          "description": "Opaque server-MAC bytes; shape validation is not signature verification or authorization."
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "valid_at_ms": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": -9223372036854775808,
+          "maximum": 9223372036854775807
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "include_uncertain": {
+      "type": "boolean"
+    },
+    "evidence_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "uuid"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "assertion_kind": {
+      "anyOf": [
+        {
+          "enum": [
+            "extracted_fact",
+            "model_inference",
+            "fictional_setting",
+            "user_assertion"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "state": {
+      "const": "source_blocked"
+    },
+    "retrieval": {
+      "const": "metadata"
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "cursor": {
+      "anyOf": [
+        {
+          "type": "string",
+          "contentEncoding": "base64",
+          "minLength": 1,
+          "maxLength": 2732,
+          "description": "Opaque server-MAC bytes; shape validation is not signature verification or authorization."
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "profile",
+    "projection",
+    "tenant_id",
+    "space_id",
+    "mode",
+    "memory_id",
+    "as_of",
+    "valid_at_ms",
+    "include_uncertain",
+    "evidence_id",
+    "assertion_kind",
+    "state",
+    "retrieval",
+    "limit",
+    "cursor"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "mode": {
+            "const": "current"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "memory_id": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "memory_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      }
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yixumemory.invalid/private/m2/query.schema.json"
+}

@@ -1,0 +1,147 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "conflict": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "left": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "right": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9223372036854775807
+          },
+          "status": {
+            "enum": [
+              "open",
+              "resolved"
+            ]
+          },
+          "resolution_revision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "basis_revision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "event": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "knowledge_seq": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9223372036854775807
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "status",
+          "resolution_revision",
+          "basis_revision",
+          "event",
+          "knowledge_seq"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "resolved"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "resolution_revision": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "basis_revision": {
+                  "type": "null"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "resolution_revision": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "number": {
+                  "const": 1
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "status": {
+                  "const": "open"
+                },
+                "basis_revision": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "minItems": 1
+    },
+    "snapshot": {
+      "type": "string",
+      "contentEncoding": "base64",
+      "minLength": 1,
+      "maxLength": 2732,
+      "description": "Opaque server-MAC bytes; shape validation is not signature verification or authorization."
+    }
+  },
+  "required": [
+    "conflict",
+    "left",
+    "right",
+    "decisions",
+    "snapshot"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://yixumemory.invalid/private/m2/conflict-history.schema.json"
+}
