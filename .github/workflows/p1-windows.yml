@@ -54,9 +54,11 @@ jobs:
           python -m pytest -q -p no:cacheprovider --basetemp="$env:RUNNER_TEMP/p1-pytest" tests
           exit $LASTEXITCODE
       - name: Rust default tests (Native output excluded)
-        run: cargo test --locked --workspace -- --skip ::output::native:: --skip dedicated_child_real_dpapi_pipe_and_cross_process_singleton --skip ::broker::tests::broker_child
+        run: |
+          cargo test --locked --workspace -- --skip ::output::native:: --skip dedicated_child_real_dpapi_pipe_and_cross_process_singleton --skip ::broker::tests::broker_child
       - name: Rust all-features tests (Native output excluded)
-        run: cargo test --locked --workspace --all-features -- --skip ::output::native:: --skip dedicated_child_real_dpapi_pipe_and_cross_process_singleton --skip ::broker::tests::broker_child
+        run: |
+          cargo test --locked --workspace --all-features -- --skip ::output::native:: --skip dedicated_child_real_dpapi_pipe_and_cross_process_singleton --skip ::broker::tests::broker_child
       - name: Formatting
         run: cargo fmt --all -- --check
       - name: Clippy
