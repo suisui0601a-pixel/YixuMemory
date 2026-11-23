@@ -19,6 +19,44 @@ fn sql<T>(r: rusqlite::Result<T>) -> Result<T> {
 fn require(value: bool) -> Result<()> {
     if value { Ok(()) } else { Err(Error::Integrity) }
 }
+// One global ledger invariant, independent of the requested Memory/Source.
+// PKs provide cardinality; these bidirectional relations provide identity.
+fn validate_global_ledger(db: &Connection) -> Result<()> {
+    require(sql(db.query_row(
+        "SELECT epoch=7+(SELECT count(*) FROM security_receipt)
+         AND knowledge_seq=(SELECT count(*) FROM receipt)
+         AND NOT EXISTS(SELECT 1 FROM authority WHERE epoch<>runtime.epoch)
+         AND NOT EXISTS(SELECT 1 FROM write_intent i WHERE (i.state='Committed')<>
+             EXISTS(SELECT 1 FROM receipt r WHERE r.operation=i.operation))
+         AND NOT EXISTS(SELECT 1 FROM receipt r WHERE NOT EXISTS(
+             SELECT 1 FROM write_intent i WHERE i.operation=r.operation AND i.state='Committed'
+             AND i.scope=r.scope AND i.memory=r.memory AND i.revision=r.revision))
+         AND NOT EXISTS(SELECT 1 FROM receipt r WHERE NOT EXISTS(
+             SELECT 1 FROM security_event e JOIN security_receipt s ON s.event=e.id
+             WHERE e.id=r.event AND e.scope=r.scope AND e.kind='Write'
+             AND e.state='Applied' AND s.phase='Applied'))
+         AND NOT EXISTS(SELECT 1 FROM receipt r WHERE NOT EXISTS(
+             SELECT 1 FROM outbox o WHERE o.operation=r.operation
+             AND o.knowledge_seq=r.knowledge_seq AND o.action='MemoryCreated'))
+         AND NOT EXISTS(SELECT 1 FROM outbox o WHERE o.action<>'MemoryCreated' OR NOT EXISTS(
+             SELECT 1 FROM receipt r JOIN write_intent i ON i.operation=r.operation
+             WHERE r.operation=o.operation AND r.knowledge_seq=o.knowledge_seq
+             AND i.state='Committed' AND i.scope=r.scope AND i.memory=r.memory AND i.revision=r.revision))
+         FROM runtime WHERE id=1", [], |r| r.get(0),
+    ))?)
+}
+fn persisted_intent_links_valid(db: &Connection) -> rusqlite::Result<bool> {
+    db.query_row(
+        "SELECT NOT EXISTS(SELECT 1 FROM deletion_intent d WHERE NOT EXISTS(
+             SELECT 1 FROM security_event e WHERE e.id=d.event AND e.scope=d.scope AND e.kind='Revocation'))
+         AND NOT EXISTS(SELECT 1 FROM deletion_work w WHERE NOT EXISTS(
+             SELECT 1 FROM deletion_intent d JOIN security_event e ON e.id=d.event
+             JOIN write_intent i ON i.operation=w.operation
+             WHERE d.event=w.event AND d.scope=i.scope AND e.scope=d.scope
+             AND e.kind='Revocation' AND e.state='Applied' AND w.generation=i.generation))",
+        [], |r| r.get(0),
+    )
+}
 trait Clock: Send + Sync {
     fn now(&self) -> Result<i64>;
 }
@@ -144,13 +182,49 @@ impl Member {
 struct RealmOrder {
     gate: Arc<Mutex<()>>,
     blocked: Arc<AtomicBool>,
+    // Private test observation only. None retains the original lock() path.
+    contention_observer: Arc<Mutex<Option<std::sync::mpsc::Sender<LockObservation>>>>,
+}
+#[derive(Debug, PartialEq, Eq)]
+enum LockObservation {
+    Contended,
+    Acquired,
 }
 impl RealmOrder {
     fn new() -> Self {
         Self {
             gate: Arc::new(Mutex::new(())),
             blocked: Arc::new(AtomicBool::new(false)),
+            contention_observer: Arc::new(Mutex::new(None)),
         }
+    }
+    fn enter(&self) -> Result<std::sync::MutexGuard<'_, ()>> {
+        let observer = self
+            .contention_observer
+            .lock()
+            .map_err(|_| Error::CapabilityUnavailable)?
+            .clone();
+        if let Some(observer) = observer {
+            let guard = match self.gate.try_lock() {
+                Ok(guard) => guard,
+                Err(std::sync::TryLockError::WouldBlock) => {
+                    // An actual RealmOrder mutex contention result, not "about to call"
+                    // or arrival at a scheduling barrier.
+                    observer
+                        .send(LockObservation::Contended)
+                        .map_err(|_| Error::CapabilityUnavailable)?;
+                    self.gate.lock().map_err(|_| Error::CapabilityUnavailable)?
+                }
+                Err(std::sync::TryLockError::Poisoned(_)) => {
+                    return Err(Error::CapabilityUnavailable);
+                }
+            };
+            observer
+                .send(LockObservation::Acquired)
+                .map_err(|_| Error::CapabilityUnavailable)?;
+            return Ok(guard);
+        }
+        self.gate.lock().map_err(|_| Error::CapabilityUnavailable)
     }
 }
 struct Application {
@@ -247,7 +321,16 @@ impl Application {
         if self.order.blocked.load(Ordering::SeqCst) {
             return Err(Error::CapabilityUnavailable);
         }
-        attest(db)?;
+        if let Err(original) = attest(db) {
+            // Attestation also diagnoses data FKs. Refine a known persisted
+            // intent-link fault to Integrity without ever turning a denial into
+            // admission. Missing schema/query failures retain the original error.
+            return match persisted_intent_links_valid(db) {
+                Ok(false) => Err(Error::Integrity),
+                _ => Err(original),
+            };
+        }
+        require(sql(persisted_intent_links_valid(db))?)?;
         // S1's readback gap is additionally closed for these S2 connections only.
         require(sql(db.pragma_query_value(None, "temp_store", |r| r.get::<_, i64>(0)))? == 2)?;
         require(
@@ -283,6 +366,9 @@ impl Application {
                 }),
             )? == super::schema_hash(),
         )?;
+        // Distinguish a normal unfinished intent from a corrupt intent that
+        // already owns a committed receipt before applying the pending gate.
+        validate_global_ledger(db)?;
         if sql(db.query_row(
             "SELECT EXISTS(SELECT 1 FROM write_intent WHERE state<>'Committed')",
             [],
@@ -290,26 +376,11 @@ impl Application {
         ))? {
             return Err(Error::CapabilityUnavailable);
         }
-        require(sql(db.query_row(
-            "SELECT epoch=7+(SELECT count(*) FROM security_receipt)
-            AND knowledge_seq=(SELECT count(*) FROM receipt)
-            AND NOT EXISTS(SELECT 1 FROM authority WHERE epoch<>runtime.epoch)
-            AND NOT EXISTS(SELECT 1 FROM write_intent i WHERE (state='Committed')<>
-                EXISTS(SELECT 1 FROM receipt r WHERE r.operation=i.operation))
-            AND NOT EXISTS(SELECT 1 FROM receipt r JOIN security_event e ON e.id=r.event
-                WHERE e.scope<>r.scope OR e.kind<>'Write' OR e.state<>'Applied')
-            FROM runtime WHERE id=1",
-            [],
-            |r| r.get(0),
-        ))?)?;
         Ok(epoch)
     }
     fn transaction<T>(&mut self, work: impl FnOnce(&Self, &Connection) -> Result<T>) -> Result<T> {
         let order = self.order.clone();
-        let _guard = order
-            .gate
-            .lock()
-            .map_err(|_| Error::CapabilityUnavailable)?;
+        let _guard = order.enter()?;
         if order.blocked.load(Ordering::SeqCst) {
             return Err(Error::CapabilityUnavailable);
         }
@@ -398,7 +469,9 @@ impl Application {
         self.transaction(|app, db| {
             let epoch = app.owner(db)?;
             app.graph_guard(db)?;
-            let (bound, _, state) = app.intent(db, event)?;
+            let (bound, _, state) = app
+                .intent_optional(db, event)?
+                .ok_or(Error::ResourceUnavailable)?;
             if bound.scope != actor.scope || bound.principal != actor.principal {
                 return Err(Error::AuthorizationDenied);
             }
@@ -425,7 +498,9 @@ impl Application {
         self.transaction(|app, db| {
             let epoch = app.owner(db)?;
             app.graph_guard(db)?;
-            let (bound, target, state) = app.intent(db, event)?;
+            let (bound, target, state) = app
+                .intent_optional(db, event)?
+                .ok_or(Error::ResourceUnavailable)?;
             if bound.scope != actor.scope || bound.principal != actor.principal {
                 return Err(Error::AuthorizationDenied);
             }
@@ -483,18 +558,40 @@ impl Application {
             Ok(())
         })
     }
-    fn intent(&self, db: &Connection, event: i64) -> Result<(Actor, Target, String)> {
-        let (scope,principal,kind,target,state):(Scope,Id,String,Id,String)=sql(db.query_row(
-            "SELECT d.scope,d.principal,d.kind,d.target,e.state FROM deletion_intent d JOIN security_event e
-            ON e.id=d.event WHERE d.event=?1 AND d.scope=e.scope AND e.kind='Revocation'",[event],
-            |r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?))))?;
+    fn intent_optional(
+        &self,
+        db: &Connection,
+        event: i64,
+    ) -> Result<Option<(Actor, Target, String)>> {
+        let row: Option<(Scope, Id, String, Id)> = sql(db
+            .query_row(
+                "SELECT scope,principal,kind,target FROM deletion_intent WHERE event=?1",
+                [event],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+            )
+            .optional())?;
+        let Some((scope, principal, kind, target)) = row else {
+            return Ok(None);
+        };
+        let parent: Option<(Scope, String, String)> = sql(db
+            .query_row(
+                "SELECT scope,kind,state FROM security_event WHERE id=?1",
+                [event],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .optional())?;
+        let (event_scope, event_kind, state) = parent.ok_or(Error::Integrity)?;
+        require(event_scope == scope && event_kind == "Revocation")?;
         require(scope[..16] == self.realm)?;
         let target = match kind.as_str() {
             "Memory" => Target::Memory(target),
             "Source" => Target::Source(target),
             _ => return Err(Error::Integrity),
         };
-        Ok((Actor { scope, principal }, target, state))
+        Ok(Some((Actor { scope, principal }, target, state)))
+    }
+    fn intent_required(&self, db: &Connection, event: i64) -> Result<(Actor, Target, String)> {
+        self.intent_optional(db, event)?.ok_or(Error::Integrity)
     }
     fn operations(db: &Connection, table: &str, event: i64) -> Result<BTreeSet<Id>> {
         let mut q = sql(db.prepare(&format!(
@@ -513,7 +610,7 @@ impl Application {
         ))?)
     }
     fn frozen(&self, db: &Connection, event: i64) -> Result<Vec<Member>> {
-        let (actor, target, state) = self.intent(db, event)?;
+        let (actor, target, state) = self.intent_required(db, event)?;
         require(sql(db.query_row(
             "SELECT EXISTS(SELECT 1 FROM deletion_closure_seal WHERE event=?1)",
             [event],
@@ -705,15 +802,18 @@ impl Application {
             AND e.scope=t.scope AND e.state='Applied')",params![scope,object,generation],|r|r.get(0)))?)
     }
     fn validate_work(&self, db: &Connection, m: &Member, event: i64) -> Result<()> {
-        let (canonical, generation, marker): (i64, i64, Vec<u8>) = sql(db.query_row(
-            "SELECT event,generation,marker FROM deletion_work WHERE operation=?1",
-            [m.operation],
-            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-        ))?;
+        let (canonical, generation, marker): (i64, i64, Vec<u8>) = sql(db
+            .query_row(
+                "SELECT event,generation,marker FROM deletion_work WHERE operation=?1",
+                [m.operation],
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+            )
+            .optional())?
+        .ok_or(Error::Integrity)?;
         require(generation == m.generation && marker == m.marker(self.installation, canonical))?;
         if canonical != event {
             require(canonical < event)?;
-            let (actor, _, state) = self.intent(db, canonical)?;
+            let (actor, _, state) = self.intent_required(db, canonical)?;
             require(actor.scope == m.scope && state == "Applied")?;
             self.equal_sets(db, canonical)?;
             require(Self::operations(db, "deletion_closure", canonical)?.contains(&m.operation))?;
@@ -753,10 +853,7 @@ impl Application {
     }
     fn reconcile(&self) -> Result<()> {
         let order = self.order.clone();
-        let _guard = order
-            .gate
-            .lock()
-            .map_err(|_| Error::CapabilityUnavailable)?;
+        let _guard = order.enter()?;
         // Read-only snapshot, never repairs or advances an event, never produces Ready.
         sql(self.db.execute_batch("BEGIN"))?;
         let result = self

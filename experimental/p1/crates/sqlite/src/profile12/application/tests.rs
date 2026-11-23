@@ -801,7 +801,7 @@ fn two_connections_order_delete_apply_before_waiting_revocation() {
     .unwrap();
     let (entered, wait_entered) = mpsc::channel();
     let (release, wait_release) = mpsc::channel();
-    let (attempted, wait_attempted) = mpsc::channel();
+    let (observe, observations) = mpsc::channel();
     let mut app = c.app;
     let output = std::thread::spawn(move || {
         let result = app.apply_checked(actor(), e, |_| {
@@ -812,8 +812,10 @@ fn two_connections_order_delete_apply_before_waiting_revocation() {
         (app, result)
     });
     wait_entered.recv().unwrap();
+    // The first connection is now inside Applied with RealmOrder held. Install
+    // the observer only now, so its events belong to the waiting second command.
+    *peer.order.contention_observer.lock().unwrap() = Some(observe);
     let revocation = std::thread::spawn(move || {
-        attempted.send(()).unwrap();
         let r = peer.security_change(SecurityChange::Grant {
             actor: actor(),
             memory: id(11),
@@ -821,13 +823,40 @@ fn two_connections_order_delete_apply_before_waiting_revocation() {
         });
         (peer, r)
     });
-    wait_attempted.recv().unwrap();
+    assert_eq!(
+        observations
+            .recv_timeout(std::time::Duration::from_secs(30))
+            .unwrap(),
+        LockObservation::Contended
+    );
+    assert!(matches!(
+        observations.try_recv(),
+        Err(mpsc::TryRecvError::Empty)
+    ));
+    let held_state: String = c
+        .fixture
+        .db
+        .query_row("SELECT state FROM security_event WHERE id=?1", [e], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert_eq!(held_state, "EffectiveFence");
+    println!(
+        "R3 second=try_lock(WouldBlock) first_event={e} committed_state={held_state}; releasing_only_after_contention"
+    );
     release.send(()).unwrap();
+    assert_eq!(
+        observations
+            .recv_timeout(std::time::Duration::from_secs(30))
+            .unwrap(),
+        LockObservation::Acquired
+    );
     let (app, result) = output.join().unwrap();
     result.unwrap();
     c.app = app;
     let (_peer, result) = revocation.join().unwrap();
     let revoke = result.unwrap();
+    *c.app.order.contention_observer.lock().unwrap() = None;
     assert!(revoke > e);
     let state: String = c
         .app
@@ -837,6 +866,19 @@ fn two_connections_order_delete_apply_before_waiting_revocation() {
         })
         .unwrap();
     assert_eq!(state, "Applied");
+    let (revoked, epoch): (bool, i64) = c
+        .app
+        .db
+        .query_row(
+            "SELECT grant_ok=0,epoch FROM authority WHERE scope=?1 AND principal=?2 AND target=?3",
+            params![actor().scope, actor().principal, id(11)],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
+    assert!(revoked);
+    println!(
+        "R3 order=Contended->release_first->Acquired->revocation_completed delete_event={e} delete_state={state} revoke_event={revoke} grant_revoked={revoked} epoch={epoch}"
+    );
     assert_eq!(
         c.app.close(actor(), id(91), Target::Memory(id(11))),
         Err(Error::AuthorizationDenied)
@@ -1032,5 +1074,246 @@ fn runtime_package_binding_is_not_replaced_by_the_format_rows_claim() {
         c.app.close(actor(), id(90), Target::Source(id(60))),
         Err(Error::Integrity)
     );
+    assert_eq!(c.snapshot(), before);
+}
+
+#[derive(Clone, Copy, Debug)]
+enum LedgerDamage {
+    MissingOutbox,
+    MisboundReceipt,
+    SwappedOutboxSequence,
+    NonCommittedWithReceipt,
+}
+fn damage_ledger(c: &Case, damage: LedgerDamage) {
+    let (trigger, mutation) = match damage {
+        LedgerDamage::MissingOutbox => (
+            "immutable_outbox_DELETE",
+            "DELETE FROM outbox WHERE operation=x'1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e';",
+        ),
+        LedgerDamage::MisboundReceipt => (
+            "immutable_receipt_UPDATE",
+            "UPDATE receipt SET memory=x'15151515151515151515151515151515',revision=x'16161616161616161616161616161616' WHERE operation=x'1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e';",
+        ),
+        LedgerDamage::SwappedOutboxSequence => (
+            "immutable_outbox_DELETE",
+            "DELETE FROM outbox WHERE operation IN(x'0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a',x'1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e'); INSERT INTO outbox VALUES(x'0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a','MemoryCreated',3); INSERT INTO outbox VALUES(x'1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e','MemoryCreated',1);",
+        ),
+        LedgerDamage::NonCommittedWithReceipt => (
+            "intent_progress",
+            "UPDATE write_intent SET state='Unknown' WHERE operation=x'1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e';",
+        ),
+    };
+    let definition: String = c
+        .fixture
+        .db
+        .query_row(
+            "SELECT sql FROM sqlite_schema WHERE name=?1",
+            [trigger],
+            |r| r.get(0),
+        )
+        .unwrap();
+    c.fixture
+        .db
+        .execute_batch(&format!(
+            "BEGIN IMMEDIATE; DROP TRIGGER {trigger}; {mutation}"
+        ))
+        .unwrap();
+    c.fixture.db.execute_batch(&definition).unwrap();
+    c.fixture.db.execute_batch("COMMIT").unwrap();
+    // The exact schema and actual foreign keys still pass: this is a data ledger
+    // invariant, not a weakened-schema or dangling-FK test.
+    attest(&c.app.db).unwrap();
+}
+fn ledger_rejection(damage: LedgerDamage) {
+    let mut all_correct = true;
+    for entry in ["reconcile", "admit_metadata", "close"] {
+        let mut c = Case::new();
+        damage_ledger(&c, damage);
+        let before = c.snapshot();
+        let result = match entry {
+            "reconcile" => c.app.reconcile(),
+            "admit_metadata" => c.app.admit_metadata(actor(), id(11)),
+            _ => c
+                .app
+                .close(actor(), id(90), Target::Source(id(60)))
+                .map(|_| ()),
+        };
+        let unchanged = c.snapshot() == before;
+        let blocked = c.app.order.blocked.load(Ordering::SeqCst);
+        println!(
+            "R1 damage={damage:?} entry={entry} result={result:?} blocked={blocked} autocommit={} snapshot_unchanged={unchanged}",
+            c.app.db.is_autocommit()
+        );
+        all_correct &=
+            result == Err(Error::Integrity) && unchanged && blocked && c.app.db.is_autocommit();
+    }
+    assert!(
+        all_correct,
+        "all entry points must reject the same shared ledger corruption"
+    );
+}
+#[test]
+fn remediation_r1_unrelated_outbox_missing_blocks_every_entry() {
+    ledger_rejection(LedgerDamage::MissingOutbox);
+}
+#[test]
+fn remediation_r1_fk_valid_receipt_rebinding_blocks_every_entry() {
+    ledger_rejection(LedgerDamage::MisboundReceipt);
+}
+#[test]
+fn remediation_r1_fk_valid_outbox_sequence_swap_blocks_every_entry() {
+    ledger_rejection(LedgerDamage::SwappedOutboxSequence);
+}
+#[test]
+fn remediation_r1_non_committed_intent_with_receipt_is_integrity_not_pending() {
+    ledger_rejection(LedgerDamage::NonCommittedWithReceipt);
+}
+
+#[test]
+fn remediation_r2_unknown_external_event_never_latches_or_leaves_a_transaction() {
+    let mut all_correct = true;
+    for method in ["fence", "apply"] {
+        let mut c = Case::new();
+        let before = c.snapshot();
+        let result = if method == "fence" {
+            c.app.fence(actor(), 9_999_999)
+        } else {
+            c.app.apply(actor(), 9_999_999)
+        };
+        let unchanged = c.snapshot() == before;
+        let blocked = c.app.order.blocked.load(Ordering::SeqCst);
+        let live = c.app.db.is_autocommit();
+        let next = c.app.close(actor(), id(90), Target::Source(id(60)));
+        let progressed = match next {
+            Ok(e) => c
+                .app
+                .fence(actor(), e)
+                .and_then(|_| c.app.apply(actor(), e)),
+            Err(e) => Err(e),
+        };
+        println!(
+            "R2 method={method} result={result:?} blocked={blocked} autocommit={live} snapshot_unchanged={unchanged} subsequent_legal={progressed:?}"
+        );
+        all_correct &= result == Err(Error::ResourceUnavailable)
+            && !blocked
+            && live
+            && unchanged
+            && progressed.is_ok();
+    }
+    assert!(all_correct, "unknown input is not shared corruption");
+}
+
+fn mutate_fixture(db: &Connection, trigger: &str, statement: &str) {
+    let definition: String = db
+        .query_row(
+            "SELECT sql FROM sqlite_schema WHERE name=?1",
+            [trigger],
+            |r| r.get(0),
+        )
+        .unwrap();
+    db.execute_batch("PRAGMA foreign_keys=OFF; BEGIN IMMEDIATE")
+        .unwrap();
+    db.execute_batch(&format!("DROP TRIGGER {trigger}; {statement}"))
+        .unwrap();
+    db.execute_batch(&definition).unwrap();
+    db.execute_batch("COMMIT; PRAGMA foreign_keys=ON").unwrap();
+}
+#[test]
+fn remediation_r2_persisted_intent_parent_damage_remains_integrity_and_blocking() {
+    for fault in ["scope", "kind", "missing_parent"] {
+        let mut c = Case::new();
+        let e = c.event();
+        match fault {
+            "scope" => mutate_fixture(
+                &c.fixture.db,
+                "immutable_p12_deletion_intent_UPDATE",
+                &format!("UPDATE deletion_intent SET scope=zeroblob(48) WHERE event={e}"),
+            ),
+            "kind" => mutate_fixture(
+                &c.fixture.db,
+                "security_progress",
+                &format!("UPDATE security_event SET kind='Write' WHERE id={e}"),
+            ),
+            _ => mutate_fixture(
+                &c.fixture.db,
+                "keep_security_event",
+                &format!("DELETE FROM security_event WHERE id={e}"),
+            ),
+        }
+        let before = c.snapshot();
+        // Direct internal lookup and the externally initiated transaction must
+        // both classify a persisted broken relation as Integrity, not absence.
+        assert!(matches!(
+            c.app.intent_required(&c.app.db, e),
+            Err(Error::Integrity)
+        ));
+        let result = c.app.fence(actor(), e);
+        println!(
+            "R2 persisted_fault={fault} result={result:?} blocked={} autocommit={} snapshot_unchanged={}",
+            c.app.order.blocked.load(Ordering::SeqCst),
+            c.app.db.is_autocommit(),
+            c.snapshot() == before
+        );
+        assert_eq!(result, Err(Error::Integrity));
+        assert!(c.app.order.blocked.load(Ordering::SeqCst));
+        assert!(c.app.db.is_autocommit());
+        assert_eq!(c.snapshot(), before);
+    }
+}
+#[test]
+fn remediation_r2_internal_missing_intent_or_work_is_not_external_absence() {
+    let mut c = Case::new();
+    let e = c.fence();
+    c.app.apply(actor(), e).unwrap();
+    let selected = c.app.frozen(&c.app.db, e).unwrap();
+    assert!(
+        c.app
+            .intent_optional(&c.app.db, 9_999_999)
+            .unwrap()
+            .is_none()
+    );
+    assert!(matches!(
+        c.app.intent_required(&c.app.db, 9_999_999),
+        Err(Error::Integrity)
+    ));
+    assert!(matches!(
+        c.app.frozen(&c.app.db, 9_999_999),
+        Err(Error::Integrity)
+    ));
+    // Work points to a real Write event with no deletion intent, and its marker
+    // metadata matches that reference. No marker file is published or observed.
+    let marker = selected[0].marker(id(2), 1);
+    let guard: String = c
+        .fixture
+        .db
+        .query_row(
+            "SELECT sql FROM sqlite_schema WHERE name='p12_work_identity'",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    c.fixture
+        .db
+        .execute_batch("PRAGMA foreign_keys=OFF; BEGIN IMMEDIATE; DROP TRIGGER p12_work_identity")
+        .unwrap();
+    c.fixture
+        .db
+        .execute(
+            "UPDATE deletion_work SET event=1,marker=?1 WHERE operation=?2",
+            params![marker, selected[0].operation],
+        )
+        .unwrap();
+    c.fixture.db.execute_batch(&guard).unwrap();
+    c.fixture
+        .db
+        .execute_batch("COMMIT; PRAGMA foreign_keys=ON")
+        .unwrap();
+    assert_eq!(
+        c.app.validate_work(&c.app.db, &selected[0], e),
+        Err(Error::Integrity)
+    );
+    let before = c.snapshot();
+    assert_eq!(c.app.reconcile(), Err(Error::Integrity));
+    assert!(c.app.order.blocked.load(Ordering::SeqCst));
     assert_eq!(c.snapshot(), before);
 }
