@@ -9,6 +9,11 @@
 #[cfg(test)]
 mod auth;
 
-// Standalone metadata-only schema package. No content/Application/runtime adapter.
+// Private metadata-only P12 package/Application. No production content adapter.
 #[cfg(test)]
 mod profile12;
+
+// One private copy shared by the historical experiment and P12 Application.
+#[cfg(test)]
+#[path = "../../ipc/src/tests/transaction_gates.rs"]
+mod transaction_gates;

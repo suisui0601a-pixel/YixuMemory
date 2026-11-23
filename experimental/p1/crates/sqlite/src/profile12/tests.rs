@@ -13,13 +13,13 @@ fn hex(bytes: impl AsRef<[u8]>) -> String {
     bytes.as_ref().iter().map(|v| format!("{v:02x}")).collect()
 }
 
-struct Fixture {
-    db: Connection,
+pub(super) struct Fixture {
+    pub(super) db: Connection,
     _dir: Option<tempfile::TempDir>,
-    path: PathBuf,
+    pub(super) path: PathBuf,
 }
 impl Fixture {
-    fn fresh() -> Self {
+    pub(super) fn fresh() -> Self {
         let dir = tempfile::Builder::new()
             .prefix("yixu-p12-schema-")
             .tempdir()
@@ -106,6 +106,9 @@ impl Fixture {
 // A completely synthetic, content-free committed metadata graph, constructed through
 // all real schema phases/constraints. These hashes/identities are NOT crypto evidence.
 fn seed(c: &Connection, op: u8, source: u8) {
+    seed_with_binding(c, op, source, [6; 32]);
+}
+pub(super) fn seed_with_binding(c: &Connection, op: u8, source: u8, binding: [u8; 32]) {
     c.execute_batch("BEGIN IMMEDIATE").unwrap();
     c.execute("INSERT INTO authority(scope,principal,target,epoch,expiry) SELECT ?1,?2,?3,epoch,2000000000000 FROM runtime",
         params![scope(),id(9),id(op+1)]).unwrap();
@@ -120,7 +123,7 @@ fn seed(c: &Connection, op: u8, source: u8) {
     )
     .unwrap();
     c.execute("INSERT INTO write_intent VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,1,1,NULL,?10,(SELECT epoch FROM runtime),?11,'Pending')",
-        params![id(op),scope(),id(9),id(op+6),id(op+1),id(op+2),id(op+3),id(op+4),id(op+5),id(3),id32(6)]).unwrap();
+        params![id(op),scope(),id(9),id(op+6),id(op+1),id(op+2),id(op+3),id(op+4),id(op+5),id(3),binding]).unwrap();
     c.execute(
         "UPDATE write_intent SET state='Staged' WHERE operation=?1",
         [id(op)],

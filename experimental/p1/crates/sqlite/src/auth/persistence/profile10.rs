@@ -8,8 +8,7 @@ use std::{fs::File, path::Path};
 #[path = "../../../../application/src/internal_content.rs"]
 mod application;
 mod b3;
-#[path = "../../../../ipc/src/tests/transaction_gates.rs"]
-mod gates;
+use crate::transaction_gates as gates;
 mod read;
 mod recovery;
 mod tests;

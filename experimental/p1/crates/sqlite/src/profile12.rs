@@ -1,4 +1,4 @@
-//! S1-only fresh schema package; private test assembly, not an Application or runtime.
+//! Fresh schema package and private S2 metadata Application; not a content runtime.
 use rusqlite::{Connection, TransactionBehavior, params};
 use sha2::{Digest, Sha256};
 use yixu_domain::{Error, Result};
@@ -208,3 +208,6 @@ fn attest(connection: &Connection) -> Result<()> {
 
 #[cfg(test)]
 mod tests;
+
+mod application;
+use crate::transaction_gates as gates;

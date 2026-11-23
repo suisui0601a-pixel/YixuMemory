@@ -71,6 +71,18 @@ def main() -> None:
     application = APPLICATION.as_posix()
     cases = [
         (
+            "p12_s2_application_is_not_public",
+            {"yixu-sqlite-foundation": (sqlite, 'default-features = false')},
+            "use yixu_sqlite_foundation::profile12::application::Application; fn main(){}",
+            ["--all-features"], "could not find `profile12`",
+        ),
+        (
+            "p12_s2_actor_and_order_are_not_public",
+            {"yixu-sqlite-foundation": (sqlite, 'default-features = false')},
+            "use yixu_sqlite_foundation::profile12::application::{Actor,RealmOrder}; fn main(){}",
+            [], "could not find `profile12`",
+        ),
+        (
             "b3_recovery_api_is_not_public",
             {"yixu-sqlite-foundation": (sqlite, 'default-features = false')},
             "use yixu_sqlite_foundation::auth::persistence::profile10::b3::DeleteCommand; fn main(){}",
