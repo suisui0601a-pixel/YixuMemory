@@ -110,7 +110,12 @@ impl Case {
         self.app.fence(actor(), e).unwrap();
         e
     }
-    fn snapshot(&self) -> Vec<(String, Vec<String>)> {
+    /// Logical row values and rowids for the enumerated P12 tables only.
+    /// This is not a complete SQLite database-state snapshot: schema objects,
+    /// constraints, PRAGMAs, TEMP/attached namespaces and external files are not
+    /// compared. Schema attestation and native evidence remain separate checks.
+    /// The fixture must be quiescent across these per-table SELECTs.
+    fn table_rows_snapshot(&self) -> Vec<(String, Vec<String>)> {
         let mut result = Vec::new();
         for table in [
             "runtime",
@@ -364,12 +369,12 @@ fn quarantine_is_included_and_missing_grant_rejects_without_any_closing() {
             enabled: false,
         })
         .unwrap();
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     assert_eq!(
         c.app.close(actor(), id(90), Target::Source(id(60))),
         Err(Error::AuthorizationDenied)
     );
-    assert_eq!(c.snapshot(), before);
+    assert_eq!(c.table_rows_snapshot(), before);
 }
 #[test]
 fn quarantined_key_unavailable_objects_still_authorize_and_remain_in_closure() {
@@ -398,13 +403,13 @@ fn missing_dependency_rejects_whole_operation_without_side_effects() {
         "DELETE FROM revision_evidence WHERE memory=x'0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b';",
     );
     attest(&c.app.db).unwrap(); // Exact guards restored; local FK diagnosis is allowed by S1.
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     assert!(
         c.app
             .close(actor(), id(90), Target::Source(id(60)))
             .is_err()
     );
-    assert_eq!(c.snapshot(), before);
+    assert_eq!(c.table_rows_snapshot(), before);
 }
 #[test]
 fn structurally_valid_but_rebound_source_is_rejected_by_committed_binding() {
@@ -416,38 +421,38 @@ fn structurally_valid_but_rebound_source_is_rejected_by_committed_binding() {
             params![id(70), id(15)],
         )
         .unwrap();
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     assert_eq!(
         c.app.close(actor(), id(90), Target::Source(id(60))),
         Err(Error::Integrity)
     );
-    assert_eq!(c.snapshot(), before);
+    assert_eq!(c.table_rows_snapshot(), before);
 }
 #[test]
 fn expired_grant_at_closing_has_no_partial_records() {
     let mut c = Case::new();
     c.clock.0.store(2_000_000_000_001, Ordering::SeqCst);
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     assert_eq!(
         c.app.close(actor(), id(90), Target::Source(id(60))),
         Err(Error::AuthorizationDenied)
     );
-    assert_eq!(c.snapshot(), before);
+    assert_eq!(c.table_rows_snapshot(), before);
 }
 #[test]
 fn expired_after_closing_and_before_fence_remains_closing() {
     let mut c = Case::new();
     let e = c.event();
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     c.clock.0.store(2_000_000_000_001, Ordering::SeqCst);
     assert_eq!(c.app.fence(actor(), e), Err(Error::AuthorizationDenied));
-    assert_eq!(c.snapshot(), before);
+    assert_eq!(c.table_rows_snapshot(), before);
 }
 #[test]
 fn final_policy_sample_observes_expiry_and_rolls_back_work_epoch_and_receipt() {
     let mut c = Case::new();
     let e = c.fence();
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     let clock = c.clock.clone();
     assert_eq!(
         c.app.apply_checked(actor(), e, move |_| {
@@ -456,20 +461,20 @@ fn final_policy_sample_observes_expiry_and_rolls_back_work_epoch_and_receipt() {
         }),
         Err(Error::AuthorizationDenied)
     );
-    assert_eq!(c.snapshot(), before);
+    assert_eq!(c.table_rows_snapshot(), before);
     assert!(c.app.db.is_autocommit());
 }
 #[test]
 fn applied_injected_failure_rolls_back_all_rows_and_keeps_prior_fence() {
     let mut c = Case::new();
     let e = c.fence();
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     assert_eq!(
         c.app
             .apply_checked(actor(), e, |_| Err(Error::InvalidInput)),
         Err(Error::InvalidInput)
     );
-    assert_eq!(c.snapshot(), before);
+    assert_eq!(c.table_rows_snapshot(), before);
     c.app.apply(actor(), e).unwrap();
 }
 #[test]
@@ -488,9 +493,9 @@ fn seal_and_request_replay_are_bound_and_currently_authorized() {
     );
     c.app.fence(actor(), e).unwrap();
     c.app.apply(actor(), e).unwrap();
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     c.app.apply(actor(), e).unwrap();
-    assert_eq!(before, c.snapshot());
+    assert_eq!(before, c.table_rows_snapshot());
     c.app
         .security_change(SecurityChange::Grant {
             actor: actor(),
@@ -498,18 +503,18 @@ fn seal_and_request_replay_are_bound_and_currently_authorized() {
             enabled: false,
         })
         .unwrap();
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     assert_eq!(
         c.app.close(actor(), id(90), Target::Source(id(60))),
         Err(Error::AuthorizationDenied)
     );
-    assert_eq!(before, c.snapshot());
+    assert_eq!(before, c.table_rows_snapshot());
 }
 #[test]
 fn closing_blocks_later_security_changes_and_new_business_facts() {
     let mut c = Case::new();
     let _e = c.event();
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     assert_eq!(
         c.app.security_change(SecurityChange::Epoch {
             scope: actor().scope
@@ -521,7 +526,7 @@ fn closing_blocks_later_security_changes_and_new_business_facts() {
         Err(Error::CapabilityUnavailable)
     );
     assert!(c.fixture.db.execute("INSERT INTO write_intent SELECT x'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',scope,principal,x'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',memory,x'cccccccccccccccccccccccccccccccc',x'dddddddddddddddddddddddddddddddd',x'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',evidence,evidence_generation,generation,revision,incarnation,epoch,dispatch_binding,'Pending' FROM write_intent LIMIT 1",[]).is_err());
-    assert_eq!(c.snapshot(), before);
+    assert_eq!(c.table_rows_snapshot(), before);
 }
 #[test]
 fn epoch_changes_are_currently_revalidated_and_inconsistent_epoch_is_rejected() {
@@ -536,9 +541,9 @@ fn epoch_changes_are_currently_revalidated_and_inconsistent_epoch_is_rejected() 
         .db
         .execute("UPDATE runtime SET epoch=epoch+1", [])
         .unwrap();
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     assert!(c.app.fence(actor(), 4).is_err());
-    assert_eq!(c.snapshot(), before);
+    assert_eq!(c.table_rows_snapshot(), before);
 }
 #[test]
 fn overlapping_deletions_share_only_valid_canonical_work_without_rebinding() {
@@ -576,17 +581,17 @@ fn overlapping_deletions_share_only_valid_canonical_work_without_rebinding() {
 fn read_only_reconcile_never_advances_committed_closing_or_repairs_a_missing_seal() {
     let mut c = Case::new();
     let e = c.event();
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     c.app.reconcile().unwrap();
-    assert_eq!(c.snapshot(), before);
+    assert_eq!(c.table_rows_snapshot(), before);
     remove_fixture_row(
         &c.fixture.db,
         "deletion_closure_seal",
         "DELETE FROM deletion_closure_seal;",
     );
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     assert!(c.app.reconcile().is_err());
-    assert_eq!(c.snapshot(), before);
+    assert_eq!(c.table_rows_snapshot(), before);
     assert!(c.app.fence(actor(), e).is_err());
 }
 #[test]
@@ -602,17 +607,17 @@ fn wrong_principal_scope_and_unknown_target_are_denied_without_records() {
         },
     ] {
         let mut c = Case::new();
-        let before = c.snapshot();
+        let before = c.table_rows_snapshot();
         assert!(c.app.close(a, id(90), Target::Source(id(60))).is_err());
-        assert_eq!(c.snapshot(), before);
+        assert_eq!(c.table_rows_snapshot(), before);
     }
     let mut c = Case::new();
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     assert_eq!(
         c.app.close(actor(), id(90), Target::Source(id(99))),
         Err(Error::ResourceUnavailable)
     );
-    assert_eq!(c.snapshot(), before);
+    assert_eq!(c.table_rows_snapshot(), before);
 }
 #[test]
 fn security_qualification_changes_share_order_and_cannot_reenable_retired_objects() {
@@ -664,12 +669,12 @@ fn default_clock_is_server_time_not_a_request_parameter() {
 fn s2_connection_rejects_temp_store_drift_without_changing_s1_package() {
     let mut c = Case::new();
     c.app.db.execute_batch("PRAGMA temp_store=FILE").unwrap();
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     assert_eq!(
         c.app.close(actor(), id(90), Target::Memory(id(11))),
         Err(Error::Integrity)
     );
-    assert_eq!(before, c.snapshot());
+    assert_eq!(before, c.table_rows_snapshot());
     assert_eq!(
         schema_hash(),
         [
@@ -712,7 +717,7 @@ fn application_final_difference_check_rejects_missing_and_equal_count_wrong_memb
     for wrong_count_equal in [false, true] {
         let mut c = Case::new();
         let e = c.fence();
-        let before = c.snapshot();
+        let before = c.table_rows_snapshot();
         let result = c.app.apply_checked(actor(), e, |db| {
             let trigger = if wrong_count_equal {
                 "immutable_p12_deletion_member_UPDATE"
@@ -741,7 +746,7 @@ fn application_final_difference_check_rejects_missing_and_equal_count_wrong_memb
             Ok(())
         });
         assert_eq!(result, Err(Error::Integrity));
-        assert_eq!(c.snapshot(), before);
+        assert_eq!(c.table_rows_snapshot(), before);
         assert!(c.app.db.is_autocommit());
     }
 }
@@ -750,7 +755,7 @@ fn application_final_difference_check_rejects_missing_and_equal_count_wrong_memb
 fn failed_deferred_commit_explicitly_rolls_back_and_latches_shared_admission() {
     let mut c = Case::new();
     let e = c.fence();
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     let result = c.app.apply_checked(actor(), e, |db| {
         sql(db.execute_batch("PRAGMA defer_foreign_keys=ON"))?;
         sql(db.execute(
@@ -761,7 +766,7 @@ fn failed_deferred_commit_explicitly_rolls_back_and_latches_shared_admission() {
     });
     assert_eq!(result, Err(Error::CapabilityUnavailable));
     assert!(c.app.db.is_autocommit());
-    assert_eq!(c.snapshot(), before);
+    assert_eq!(c.table_rows_snapshot(), before);
     assert!(c.app.order.blocked.load(Ordering::SeqCst));
     assert!(c.app.apply(actor(), e).is_err());
 }
@@ -777,15 +782,15 @@ fn unknown_write_is_not_replayed_or_admitted_by_reconcile() {
             [id(80)],
         )
         .unwrap();
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     assert_eq!(c.app.reconcile(), Err(Error::CapabilityUnavailable));
-    assert_eq!(c.snapshot(), before);
+    assert_eq!(c.table_rows_snapshot(), before);
     assert!(
         c.app
             .close(actor(), id(90), Target::Source(id(60)))
             .is_err()
     );
-    assert_eq!(c.snapshot(), before);
+    assert_eq!(c.table_rows_snapshot(), before);
 }
 
 #[test]
@@ -910,12 +915,12 @@ fn second_connection_revocation_before_closing_denies_all_members_atomically() {
     .join()
     .unwrap()
     .unwrap();
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     assert_eq!(
         c.app.close(actor(), id(90), Target::Source(id(60))),
         Err(Error::AuthorizationDenied)
     );
-    assert_eq!(c.snapshot(), before);
+    assert_eq!(c.table_rows_snapshot(), before);
 }
 
 #[test]
@@ -929,9 +934,9 @@ fn before_applied_graph_changes_are_rejected_not_sealed_over() {
             params![id(70), id(15)],
         )
         .unwrap();
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     assert_eq!(c.app.fence(actor(), e), Err(Error::Integrity));
-    assert_eq!(c.snapshot(), before);
+    assert_eq!(c.table_rows_snapshot(), before);
 }
 
 #[test]
@@ -944,18 +949,18 @@ fn applied_member_damage_blocks_reconcile_and_an_unrelated_metadata_request() {
         "deletion_member",
         "DELETE FROM deletion_member WHERE operation=x'0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a';",
     );
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     assert_eq!(c.app.reconcile(), Err(Error::Integrity));
-    assert_eq!(c.snapshot(), before);
+    assert_eq!(c.table_rows_snapshot(), before);
     assert!(c.app.admit_metadata(actor(), id(31)).is_err());
-    assert_eq!(c.snapshot(), before);
+    assert_eq!(c.table_rows_snapshot(), before);
 }
 
 #[test]
 fn closure_parent_replace_paths_are_permanent_same_sqlite_version_regressions() {
     let mut c = Case::new();
     let _e = c.event();
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     for sql in [
         "INSERT OR REPLACE INTO deletion_closure SELECT * FROM deletion_closure",
         "UPDATE OR REPLACE deletion_closure SET operation=operation",
@@ -964,7 +969,7 @@ fn closure_parent_replace_paths_are_permanent_same_sqlite_version_regressions() 
         "INSERT OR REPLACE INTO deletion_closure_seal SELECT * FROM deletion_closure_seal",
     ] {
         assert!(c.fixture.db.execute_batch(sql).is_err());
-        assert_eq!(c.snapshot(), before);
+        assert_eq!(c.table_rows_snapshot(), before);
     }
     c.app.reconcile().unwrap();
 }
@@ -997,19 +1002,19 @@ fn incorrect_shared_work_binding_is_not_silently_ignored() {
         .execute("UPDATE deletion_work SET marker=x'00'", [])
         .unwrap();
     c.fixture.db.execute_batch(&guard).unwrap();
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     assert_eq!(
         c.app.close(actor(), id(91), Target::Source(id(60))),
         Err(Error::Integrity)
     );
-    assert_eq!(c.snapshot(), before);
+    assert_eq!(c.table_rows_snapshot(), before);
 }
 
 #[test]
 fn epoch_changed_inside_apply_is_not_accepted_as_the_original_authorization() {
     let mut c = Case::new();
     let e = c.fence();
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     assert_eq!(
         c.app.apply_checked(actor(), e, |db| {
             sql(db.execute("UPDATE runtime SET epoch=epoch+1", []))?;
@@ -1018,7 +1023,7 @@ fn epoch_changed_inside_apply_is_not_accepted_as_the_original_authorization() {
         }),
         Err(Error::AuthorizationDenied)
     );
-    assert_eq!(c.snapshot(), before);
+    assert_eq!(c.table_rows_snapshot(), before);
 }
 
 #[test]
@@ -1072,12 +1077,12 @@ fn runtime_package_binding_is_not_replaced_by_the_format_rows_claim() {
         .unwrap();
     c.fixture.db.execute_batch(&guard).unwrap();
     attest(&c.app.db).unwrap(); // The trusted package/format is intact; Owner binding is not.
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     assert_eq!(
         c.app.close(actor(), id(90), Target::Source(id(60))),
         Err(Error::Integrity)
     );
-    assert_eq!(c.snapshot(), before);
+    assert_eq!(c.table_rows_snapshot(), before);
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -1132,7 +1137,7 @@ fn ledger_rejection(damage: LedgerDamage) {
     for entry in ["reconcile", "admit_metadata", "close"] {
         let mut c = Case::new();
         damage_ledger(&c, damage);
-        let before = c.snapshot();
+        let before = c.table_rows_snapshot();
         let result = match entry {
             "reconcile" => c.app.reconcile(),
             "admit_metadata" => c.app.admit_metadata(actor(), id(11)),
@@ -1141,10 +1146,10 @@ fn ledger_rejection(damage: LedgerDamage) {
                 .close(actor(), id(90), Target::Source(id(60)))
                 .map(|_| ()),
         };
-        let unchanged = c.snapshot() == before;
+        let unchanged = c.table_rows_snapshot() == before;
         let blocked = c.app.order.blocked.load(Ordering::SeqCst);
         println!(
-            "R1 damage={damage:?} entry={entry} result={result:?} blocked={blocked} autocommit={} snapshot_unchanged={unchanged}",
+            "R1 damage={damage:?} entry={entry} result={result:?} blocked={blocked} autocommit={} table_rows_unchanged={unchanged}",
             c.app.db.is_autocommit()
         );
         all_correct &=
@@ -1177,13 +1182,13 @@ fn remediation_r2_unknown_external_event_never_latches_or_leaves_a_transaction()
     let mut all_correct = true;
     for method in ["fence", "apply"] {
         let mut c = Case::new();
-        let before = c.snapshot();
+        let before = c.table_rows_snapshot();
         let result = if method == "fence" {
             c.app.fence(actor(), 9_999_999)
         } else {
             c.app.apply(actor(), 9_999_999)
         };
-        let unchanged = c.snapshot() == before;
+        let unchanged = c.table_rows_snapshot() == before;
         let blocked = c.app.order.blocked.load(Ordering::SeqCst);
         let live = c.app.db.is_autocommit();
         let next = c.app.close(actor(), id(90), Target::Source(id(60)));
@@ -1195,7 +1200,7 @@ fn remediation_r2_unknown_external_event_never_latches_or_leaves_a_transaction()
             Err(e) => Err(e),
         };
         println!(
-            "R2 method={method} result={result:?} blocked={blocked} autocommit={live} snapshot_unchanged={unchanged} subsequent_legal={progressed:?}"
+            "R2 method={method} result={result:?} blocked={blocked} autocommit={live} table_rows_unchanged={unchanged} subsequent_legal={progressed:?}"
         );
         all_correct &= result == Err(Error::ResourceUnavailable)
             && !blocked
@@ -1243,7 +1248,7 @@ fn remediation_r2_persisted_intent_parent_damage_remains_integrity_and_blocking(
                 &format!("DELETE FROM security_event WHERE id={e}"),
             ),
         }
-        let before = c.snapshot();
+        let before = c.table_rows_snapshot();
         // Direct internal lookup and the externally initiated transaction must
         // both classify a persisted broken relation as Integrity, not absence.
         assert!(matches!(
@@ -1252,15 +1257,15 @@ fn remediation_r2_persisted_intent_parent_damage_remains_integrity_and_blocking(
         ));
         let result = c.app.fence(actor(), e);
         println!(
-            "R2 persisted_fault={fault} result={result:?} blocked={} autocommit={} snapshot_unchanged={}",
+            "R2 persisted_fault={fault} result={result:?} blocked={} autocommit={} table_rows_unchanged={}",
             c.app.order.blocked.load(Ordering::SeqCst),
             c.app.db.is_autocommit(),
-            c.snapshot() == before
+            c.table_rows_snapshot() == before
         );
         assert_eq!(result, Err(Error::Integrity));
         assert!(c.app.order.blocked.load(Ordering::SeqCst));
         assert!(c.app.db.is_autocommit());
-        assert_eq!(c.snapshot(), before);
+        assert_eq!(c.table_rows_snapshot(), before);
     }
 }
 #[test]
@@ -1315,10 +1320,10 @@ fn remediation_r2_internal_missing_intent_or_work_is_not_external_absence() {
         c.app.validate_work(&c.app.db, &selected[0], e),
         Err(Error::Integrity)
     );
-    let before = c.snapshot();
+    let before = c.table_rows_snapshot();
     assert_eq!(c.app.reconcile(), Err(Error::Integrity));
     assert!(c.app.order.blocked.load(Ordering::SeqCst));
-    assert_eq!(c.snapshot(), before);
+    assert_eq!(c.table_rows_snapshot(), before);
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -1396,7 +1401,7 @@ fn followup_reject(fault: FollowupFault) {
     for entry in ["owner", "reconcile", "admit", "close"] {
         let mut c = Case::new();
         followup_fault(&mut c, fault);
-        let before = c.snapshot();
+        let before = c.table_rows_snapshot();
         let result = match entry {
             "owner" => c.app.transaction(|app, db| app.owner(db).map(|_| ())),
             "reconcile" => c.app.reconcile(),
@@ -1407,9 +1412,9 @@ fn followup_reject(fault: FollowupFault) {
                 .map(|_| ()),
         };
         let blocked = c.app.order.blocked.load(Ordering::SeqCst);
-        let unchanged = before == c.snapshot();
+        let unchanged = before == c.table_rows_snapshot();
         println!(
-            "R1b fault={fault:?} entry={entry} result={result:?} blocked={blocked} unchanged={unchanged} autocommit={}",
+            "R1b fault={fault:?} entry={entry} result={result:?} blocked={blocked} table_rows_unchanged={unchanged} autocommit={}",
             c.app.db.is_autocommit()
         );
         all &= result == Err(Error::Integrity) && blocked && unchanged && c.app.db.is_autocommit();
@@ -1547,18 +1552,18 @@ fn followup_b3_invalid_work_scope_generation_canonical_and_marker_are_blocked() 
                 "UPDATE deletion_work SET marker=x'00';",
             ),
         }
-        let before = c.snapshot();
+        let before = c.table_rows_snapshot();
         let result = c.app.reconcile();
         println!(
-            "R1b B3 fault={fault} result={result:?} blocked={} unchanged={}",
+            "R1b B3 fault={fault} result={result:?} blocked={} table_rows_unchanged={}",
             c.app.order.blocked.load(Ordering::SeqCst),
-            before == c.snapshot()
+            before == c.table_rows_snapshot()
         );
         assert_eq!(result, Err(Error::Integrity));
         assert!(c.app.order.blocked.load(Ordering::SeqCst));
-        assert_eq!(before, c.snapshot());
+        assert_eq!(before, c.table_rows_snapshot());
         assert!(c.app.admit_metadata(actor(), id(31)).is_err());
-        assert_eq!(before, c.snapshot());
+        assert_eq!(before, c.table_rows_snapshot());
     }
 }
 
@@ -1630,7 +1635,7 @@ fn isolation_a2_duplicate_receipt_event_without_orphan_write() {
     for entry in ["owner", "reconcile", "admit", "close"] {
         let mut c = Case::new();
         isolation_a2_fixture(&c);
-        let before = c.snapshot();
+        let before = c.table_rows_snapshot();
         let result = match entry {
             "owner" => c.app.transaction(|app, db| app.owner(db).map(|_| ())),
             "reconcile" => c.app.reconcile(),
@@ -1641,14 +1646,14 @@ fn isolation_a2_duplicate_receipt_event_without_orphan_write() {
                 .map(|_| ()),
         };
         println!(
-            "ISOLATION A2 entry={entry} result={result:?} blocked={} unchanged={}",
+            "ISOLATION A2 entry={entry} result={result:?} blocked={} table_rows_unchanged={}",
             c.app.order.blocked.load(Ordering::SeqCst),
-            before == c.snapshot()
+            before == c.table_rows_snapshot()
         );
         assert_eq!(result, Err(Error::Integrity));
         assert!(c.app.order.blocked.load(Ordering::SeqCst));
         assert!(c.app.db.is_autocommit());
-        assert_eq!(before, c.snapshot());
+        assert_eq!(before, c.table_rows_snapshot());
     }
 }
 
@@ -1742,7 +1747,7 @@ fn isolation_b3_later_applied_event_is_not_the_original_canonical() {
         c.app.frozen(db, b).unwrap();
         assert_eq!(c.app.validate_work(db, &member, a), Err(Error::Integrity));
         assert!(matches!(c.app.frozen(db, a), Err(Error::Integrity)));
-        let before = c.snapshot();
+        let before = c.table_rows_snapshot();
         let result = match entry {
             "reconcile" => c.app.reconcile(),
             "admit" => c.app.admit_metadata(actor(), id(31)),
@@ -1752,20 +1757,20 @@ fn isolation_b3_later_applied_event_is_not_the_original_canonical() {
                 .map(|_| ()),
         };
         println!(
-            "ISOLATION B3 earlier={a} later={b} valid_later_binding=true earlier_rejects=true entry={entry} result={result:?} unchanged={}",
-            before == c.snapshot()
+            "ISOLATION B3 earlier={a} later={b} valid_later_binding=true earlier_rejects=true entry={entry} result={result:?} table_rows_unchanged={}",
+            before == c.table_rows_snapshot()
         );
         assert_eq!(result, Err(Error::Integrity));
         assert!(c.app.order.blocked.load(Ordering::SeqCst));
         assert!(c.app.db.is_autocommit());
-        assert_eq!(before, c.snapshot());
+        assert_eq!(before, c.table_rows_snapshot());
     }
 }
 
 #[test]
-fn snapshot_covers_every_p12_table_once_with_stable_typed_rows() {
+fn table_rows_snapshot_covers_every_p12_table_once_with_stable_typed_rows() {
     let c = Case::new();
-    let snapshot = c.snapshot();
+    let snapshot = c.table_rows_snapshot();
     let names: BTreeSet<_> = snapshot.iter().map(|(name, _)| name.clone()).collect();
     let mut query = c
         .fixture
@@ -1780,7 +1785,11 @@ fn snapshot_covers_every_p12_table_once_with_stable_typed_rows() {
     assert_eq!(names.len(), snapshot.len(), "duplicate snapshot table");
     assert_eq!(names, actual, "snapshot must include all actual P12 tables");
     assert_eq!(names.len(), 31);
-    assert_eq!(snapshot, c.snapshot(), "row ordering must be repeatable");
+    assert_eq!(
+        snapshot,
+        c.table_rows_snapshot(),
+        "row ordering must be repeatable"
+    );
     // ValueRef Debug retains SQLite type tags and every text/blob byte rather
     // than coercing values into strings or lossy UTF-8. The fixture exercises
     // NULL parent pointers, integer counters, text states and binary identities.
@@ -1789,12 +1798,12 @@ fn snapshot_covers_every_p12_table_once_with_stable_typed_rows() {
         assert!(rows.iter().any(|row| row.contains(tag)), "missing {tag}");
     }
     println!(
-        "SNAPSHOT tables=31 unique=true all_schema_tables=true stable=true typed_null_integer_text_blob=true"
+        "TABLE_ROWS_SNAPSHOT tables=31 unique=true all_table_names=true stable=true typed_null_integer_text_blob=true"
     );
 }
 
-fn assert_snapshot_detects_rolled_back_change(c: &Case, table: &str, change: &str) {
-    let before = c.snapshot();
+fn assert_table_rows_snapshot_detects_rolled_back_change(c: &Case, table: &str, change: &str) {
+    let before = c.table_rows_snapshot();
     let db = &c.fixture.db;
     let prefix = if table == "publication" {
         "immutable"
@@ -1815,7 +1824,7 @@ fn assert_snapshot_detects_rolled_back_change(c: &Case, table: &str, change: &st
     db.execute_batch(&format!("DROP TRIGGER {trigger}"))
         .unwrap();
     assert_eq!(db.execute(change, []).unwrap(), 1);
-    let after = c.snapshot();
+    let after = c.table_rows_snapshot();
     let changed: Vec<_> = before
         .iter()
         .zip(&after)
@@ -1827,7 +1836,7 @@ fn assert_snapshot_detects_rolled_back_change(c: &Case, table: &str, change: &st
     assert_eq!(changed, vec![table]);
     db.execute_batch("ROLLBACK").unwrap();
     assert!(db.is_autocommit());
-    assert_eq!(before, c.snapshot());
+    assert_eq!(before, c.table_rows_snapshot());
     let restored: String = db
         .query_row(
             "SELECT sql FROM main.sqlite_schema WHERE name=?1",
@@ -1846,14 +1855,14 @@ fn assert_snapshot_detects_rolled_back_change(c: &Case, table: &str, change: &st
         0
     );
     println!(
-        "SNAPSHOT table={table} changed_rows=1 detected=true only_this_table=true rollback_restored=true trigger_restored=true attestation=true fk=0"
+        "TABLE_ROWS_SNAPSHOT table={table} changed_rows=1 detected=true only_this_table=true rollback_restored=true trigger_restored=true attestation=true fk=0"
     );
 }
 
 #[test]
-fn snapshot_detects_publication_change_and_rollback() {
+fn table_rows_snapshot_detects_publication_change_and_rollback() {
     let c = Case::new();
-    assert_snapshot_detects_rolled_back_change(
+    assert_table_rows_snapshot_detects_rolled_back_change(
         &c,
         "publication",
         "UPDATE publication SET cipher_hash=zeroblob(32) WHERE rowid=(SELECT min(rowid) FROM publication)",
@@ -1861,7 +1870,7 @@ fn snapshot_detects_publication_change_and_rollback() {
 }
 
 #[test]
-fn snapshot_detects_object_quarantine_change_and_rollback() {
+fn table_rows_snapshot_detects_object_quarantine_change_and_rollback() {
     let c = Case::new();
     c.fixture
         .db
@@ -1870,7 +1879,7 @@ fn snapshot_detects_object_quarantine_change_and_rollback() {
             params![id(10), id(3)],
         )
         .unwrap();
-    assert_snapshot_detects_rolled_back_change(
+    assert_table_rows_snapshot_detects_rolled_back_change(
         &c,
         "object_quarantine",
         "UPDATE object_quarantine SET reason='Dependency'",
@@ -1878,9 +1887,9 @@ fn snapshot_detects_object_quarantine_change_and_rollback() {
 }
 
 #[test]
-fn snapshot_detects_profile12_format_change_and_rollback() {
+fn table_rows_snapshot_detects_profile12_format_change_and_rollback() {
     let c = Case::new();
-    assert_snapshot_detects_rolled_back_change(
+    assert_table_rows_snapshot_detects_rolled_back_change(
         &c,
         "profile12_format",
         "UPDATE profile12_format SET schema_hash=zeroblob(32) WHERE id=1",
