@@ -1317,3 +1317,244 @@ fn remediation_r2_internal_missing_intent_or_work_is_not_external_absence() {
     assert!(c.app.order.blocked.load(Ordering::SeqCst));
     assert_eq!(c.snapshot(), before);
 }
+
+#[derive(Clone, Copy, Debug)]
+enum FollowupFault {
+    OrphanWrite,
+    SharedWrite,
+    ExtraWork,
+}
+fn followup_fault(c: &mut Case, fault: FollowupFault) {
+    match fault {
+        FollowupFault::OrphanWrite => {
+            let db = &c.fixture.db;
+            db.execute_batch("BEGIN IMMEDIATE").unwrap();
+            db.execute(
+                "INSERT INTO security_event(scope,kind) VALUES(?1,'Write')",
+                [actor().scope],
+            )
+            .unwrap();
+            let e = db.last_insert_rowid();
+            db.execute(
+                "UPDATE security_event SET state='EffectiveFence' WHERE id=?1",
+                [e],
+            )
+            .unwrap();
+            db.execute_batch("UPDATE runtime SET epoch=epoch+1; UPDATE authority SET epoch=(SELECT epoch FROM runtime)").unwrap();
+            db.execute(
+                "INSERT INTO security_receipt(event,epoch) SELECT ?1,epoch FROM runtime",
+                [e],
+            )
+            .unwrap();
+            db.execute("UPDATE security_event SET state='Applied' WHERE id=?1", [e])
+                .unwrap();
+            db.execute_batch("COMMIT").unwrap();
+        }
+        FollowupFault::SharedWrite => mutate_fixture(
+            &c.fixture.db,
+            "immutable_receipt_UPDATE",
+            "UPDATE receipt SET event=1 WHERE operation=x'1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e';",
+        ),
+        FollowupFault::ExtraWork => {
+            let e = c
+                .app
+                .close(actor(), id(90), Target::Memory(id(11)))
+                .unwrap();
+            c.app.fence(actor(), e).unwrap();
+            c.app.apply(actor(), e).unwrap();
+            let m = c
+                .app
+                .authoritative_closure(&c.app.db, &actor().scope, Target::Memory(id(31)))
+                .unwrap()
+                .remove(0);
+            let db = &c.fixture.db;
+            let guard: String = db
+                .query_row(
+                    "SELECT sql FROM sqlite_schema WHERE name='p12_work_fenced'",
+                    [],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            db.execute_batch("BEGIN IMMEDIATE; DROP TRIGGER p12_work_fenced")
+                .unwrap();
+            db.execute(
+                "INSERT INTO deletion_work(operation,event,generation,marker) VALUES(?1,?2,1,?3)",
+                params![m.operation, e, m.marker(id(2), e)],
+            )
+            .unwrap();
+            db.execute_batch(&guard).unwrap();
+            db.execute_batch("COMMIT").unwrap();
+        }
+    }
+    attest(&c.app.db).unwrap();
+}
+fn followup_reject(fault: FollowupFault) {
+    let mut all = true;
+    for entry in ["owner", "reconcile", "admit", "close"] {
+        let mut c = Case::new();
+        followup_fault(&mut c, fault);
+        let before = c.snapshot();
+        let result = match entry {
+            "owner" => c.app.transaction(|app, db| app.owner(db).map(|_| ())),
+            "reconcile" => c.app.reconcile(),
+            "admit" => c.app.admit_metadata(actor(), id(21)),
+            _ => c
+                .app
+                .close(actor(), id(91), Target::Source(id(70)))
+                .map(|_| ()),
+        };
+        let blocked = c.app.order.blocked.load(Ordering::SeqCst);
+        let unchanged = before == c.snapshot();
+        println!(
+            "R1b fault={fault:?} entry={entry} result={result:?} blocked={blocked} unchanged={unchanged} autocommit={}",
+            c.app.db.is_autocommit()
+        );
+        all &= result == Err(Error::Integrity) && blocked && unchanged && c.app.db.is_autocommit();
+    }
+    assert!(
+        all,
+        "shared inconsistency cannot hide outside requested objects"
+    );
+}
+#[test]
+fn followup_a1_write_without_business_receipt_is_rejected() {
+    followup_reject(FollowupFault::OrphanWrite);
+}
+#[test]
+fn followup_a2_two_receipts_sharing_write_event_are_rejected() {
+    followup_reject(FollowupFault::SharedWrite);
+}
+#[test]
+fn followup_b1_extra_work_outside_canonical_members_is_rejected() {
+    followup_reject(FollowupFault::ExtraWork);
+}
+
+#[test]
+fn followup_b2_canonical_historical_work_is_reused_without_rebinding() {
+    let mut c = Case::new();
+    let a = c
+        .app
+        .close(actor(), id(90), Target::Memory(id(11)))
+        .unwrap();
+    c.app.fence(actor(), a).unwrap();
+    c.app.apply(actor(), a).unwrap();
+    let before: (i64, Vec<u8>) = c
+        .app
+        .db
+        .query_row(
+            "SELECT event,marker FROM deletion_work WHERE operation=?1",
+            [id(10)],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
+    let b = c
+        .app
+        .close(actor(), id(91), Target::Source(id(60)))
+        .unwrap();
+    c.app.fence(actor(), b).unwrap();
+    c.app.apply(actor(), b).unwrap();
+    c.app.reconcile().unwrap();
+    let after: (i64, Vec<u8>) = c
+        .app
+        .db
+        .query_row(
+            "SELECT event,marker FROM deletion_work WHERE operation=?1",
+            [id(10)],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap();
+    assert_eq!(before, after);
+    assert_eq!(after.0, a);
+    assert!(
+        Application::operations(&c.app.db, "deletion_member", b)
+            .unwrap()
+            .contains(&id(10))
+    );
+    c.app.admit_metadata(actor(), id(31)).unwrap();
+    let rev = c
+        .app
+        .security_change(SecurityChange::Grant {
+            actor: actor(),
+            memory: id(31),
+            enabled: false,
+        })
+        .unwrap();
+    assert_eq!(
+        c.app
+            .db
+            .query_row("SELECT count(*) FROM receipt WHERE event=?1", [rev], |r| {
+                r.get::<_, i64>(0)
+            })
+            .unwrap(),
+        0
+    );
+    c.app.reconcile().unwrap();
+    println!(
+        "R1b B2 canonical={a} reused_by={b} unchanged_marker=true revocation_without_business_receipt={rev}"
+    );
+}
+#[test]
+fn followup_b3_invalid_work_scope_generation_canonical_and_marker_are_blocked() {
+    for fault in ["scope", "generation", "canonical", "marker"] {
+        let mut c = Case::new();
+        let e = c.fence();
+        c.app.apply(actor(), e).unwrap();
+        match fault {
+            "scope" => {
+                let mut other = actor().scope;
+                other[47] = 2;
+                let hex = other.iter().map(|x| format!("{x:02x}")).collect::<String>();
+                mutate_fixture(
+                    &c.fixture.db,
+                    "immutable_p12_deletion_intent_UPDATE",
+                    &format!("UPDATE deletion_intent SET scope=x'{hex}' WHERE event={e}"),
+                );
+                mutate_fixture(
+                    &c.fixture.db,
+                    "security_progress",
+                    &format!("UPDATE security_event SET scope=x'{hex}' WHERE id={e}"),
+                );
+                // Parent/intent scopes match and all FKs are valid. Only the
+                // Work's operation belongs to a different Space.
+                attest(&c.app.db).unwrap();
+            }
+            "generation" => {
+                c.fixture
+                    .db
+                    .execute_batch("PRAGMA ignore_check_constraints=ON")
+                    .unwrap();
+                mutate_fixture(
+                    &c.fixture.db,
+                    "p12_work_identity",
+                    "UPDATE deletion_work SET generation=2;",
+                );
+                c.fixture
+                    .db
+                    .execute_batch("PRAGMA ignore_check_constraints=OFF")
+                    .unwrap();
+            }
+            "canonical" => mutate_fixture(
+                &c.fixture.db,
+                "p12_work_identity",
+                "UPDATE deletion_work SET event=1;",
+            ),
+            _ => mutate_fixture(
+                &c.fixture.db,
+                "p12_work_identity",
+                "UPDATE deletion_work SET marker=x'00';",
+            ),
+        }
+        let before = c.snapshot();
+        let result = c.app.reconcile();
+        println!(
+            "R1b B3 fault={fault} result={result:?} blocked={} unchanged={}",
+            c.app.order.blocked.load(Ordering::SeqCst),
+            before == c.snapshot()
+        );
+        assert_eq!(result, Err(Error::Integrity));
+        assert!(c.app.order.blocked.load(Ordering::SeqCst));
+        assert_eq!(before, c.snapshot());
+        assert!(c.app.admit_metadata(actor(), id(31)).is_err());
+        assert_eq!(before, c.snapshot());
+    }
+}

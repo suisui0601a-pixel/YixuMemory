@@ -35,6 +35,11 @@ fn validate_global_ledger(db: &Connection) -> Result<()> {
              SELECT 1 FROM security_event e JOIN security_receipt s ON s.event=e.id
              WHERE e.id=r.event AND e.scope=r.scope AND e.kind='Write'
              AND e.state='Applied' AND s.phase='Applied'))
+         AND NOT EXISTS(SELECT 1 FROM security_event e WHERE e.kind='Write' AND (
+             e.state<>'Applied' OR NOT EXISTS(SELECT 1 FROM receipt r WHERE r.event=e.id AND r.scope=e.scope)
+             OR NOT EXISTS(SELECT 1 FROM security_receipt s WHERE s.event=e.id AND s.phase='Applied')))
+         AND NOT EXISTS(SELECT 1 FROM receipt a JOIN receipt b ON a.event=b.event
+             WHERE a.operation<>b.operation)
          AND NOT EXISTS(SELECT 1 FROM receipt r WHERE NOT EXISTS(
              SELECT 1 FROM outbox o WHERE o.operation=r.operation
              AND o.knowledge_seq=r.knowledge_seq AND o.action='MemoryCreated'))
@@ -52,8 +57,11 @@ fn persisted_intent_links_valid(db: &Connection) -> rusqlite::Result<bool> {
          AND NOT EXISTS(SELECT 1 FROM deletion_work w WHERE NOT EXISTS(
              SELECT 1 FROM deletion_intent d JOIN security_event e ON e.id=d.event
              JOIN write_intent i ON i.operation=w.operation
+             JOIN deletion_member m ON m.event=d.event AND m.operation=w.operation
+             JOIN deletion_closure c ON c.event=m.event AND c.operation=m.operation
              WHERE d.event=w.event AND d.scope=i.scope AND e.scope=d.scope
-             AND e.kind='Revocation' AND e.state='Applied' AND w.generation=i.generation))",
+             AND e.kind='Revocation' AND e.state='Applied' AND i.state='Committed'
+             AND w.generation=i.generation))",
         [], |r| r.get(0),
     )
 }
@@ -811,12 +819,13 @@ impl Application {
             .optional())?
         .ok_or(Error::Integrity)?;
         require(generation == m.generation && marker == m.marker(self.installation, canonical))?;
+        let (actor, _, state) = self.intent_required(db, canonical)?;
+        require(actor.scope == m.scope && state == "Applied")?;
+        self.equal_sets(db, canonical)?;
+        require(Self::operations(db, "deletion_member", canonical)?.contains(&m.operation))?;
+        require(Self::operations(db, "deletion_closure", canonical)?.contains(&m.operation))?;
         if canonical != event {
             require(canonical < event)?;
-            let (actor, _, state) = self.intent_required(db, canonical)?;
-            require(actor.scope == m.scope && state == "Applied")?;
-            self.equal_sets(db, canonical)?;
-            require(Self::operations(db, "deletion_closure", canonical)?.contains(&m.operation))?;
         }
         Ok(())
     }
@@ -848,6 +857,30 @@ impl Application {
         )?;
         for event in events {
             self.frozen(db, event)?;
+        }
+        // Reverse traversal starts at every Work, never at only selected members.
+        // Even a well-formed extra Work must not hide outside an event's closure.
+        let mut q =
+            sql(db.prepare("SELECT operation,event FROM deletion_work ORDER BY operation"))?;
+        let work = sql(
+            sql(q.query_map([], |r| Ok((r.get::<_, Id>(0)?, r.get::<_, i64>(1)?))))?
+                .collect::<rusqlite::Result<Vec<_>>>(),
+        )?;
+        for (operation, canonical) in work {
+            let (scope, memory): (Scope, Id) = sql(db
+                .query_row(
+                    "SELECT scope,memory FROM write_intent WHERE operation=?1",
+                    [operation],
+                    |r| Ok((r.get(0)?, r.get(1)?)),
+                )
+                .optional())?
+            .ok_or(Error::Integrity)?;
+            let members = self.authoritative_closure(db, &scope, Target::Memory(memory))?;
+            let member = members
+                .iter()
+                .find(|m| m.operation == operation)
+                .ok_or(Error::Integrity)?;
+            self.validate_work(db, member, canonical)?;
         }
         Ok(())
     }
