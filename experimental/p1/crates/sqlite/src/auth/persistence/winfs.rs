@@ -222,7 +222,71 @@ pub(super) struct Anchor {
     pins: Vec<File>,
     id: (u32, u32, u32),
 }
+
+/// Private S3 observation: bytes and identity originate from this one live File.
+/// No raw handle, Clone, or path-based identity accessor is exposed by this Pin.
+pub(super) struct VerifiedMarkerHandle {
+    file: File,
+    bytes: Vec<u8>,
+    identity: [u8; 12],
+}
+impl VerifiedMarkerHandle {
+    pub(super) fn bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+    pub(super) fn identity(&self) -> [u8; 12] {
+        self.identity
+    }
+    pub(super) fn verify(&mut self, anchor: &Anchor) -> io::Result<()> {
+        anchor.root()?;
+        let before = anchor.check(&self.file)?;
+        self.file.seek(SeekFrom::Start(0))?;
+        let mut bytes = Vec::new();
+        Read::by_ref(&mut self.file)
+            .take(8193)
+            .read_to_end(&mut bytes)?;
+        let after = anchor.check(&self.file)?;
+        let id: Vec<u8> = [after.volume, after.index_hi, after.index_lo]
+            .iter()
+            .flat_map(|v| v.to_be_bytes())
+            .collect();
+        if ident(&before) != ident(&after)
+            || id != self.identity
+            || bytes != self.bytes
+            || bytes.len() != after.size_lo as usize
+        {
+            return Err(denied());
+        }
+        Ok(())
+    }
+}
 impl Anchor {
+    /// Only exact FILE_NOT_FOUND becomes Absent; other I/O failures stay errors.
+    /// Uses the existing read-only share policy, so the retained File denies
+    /// ordinary write/delete opens for the lifetime of the Pin.
+    pub(super) fn observe_marker(&self, name: &str) -> io::Result<Option<VerifiedMarkerHandle>> {
+        let mut file = match relative(self.root()?, name, false, false, false) {
+            Ok(file) => file,
+            Err(e) if e.raw_os_error() == Some(2) => return Ok(None),
+            Err(e) => return Err(e),
+        };
+        let before = self.check(&file)?;
+        let mut bytes = Vec::new();
+        Read::by_ref(&mut file).take(8193).read_to_end(&mut bytes)?;
+        let after = self.check(&file)?;
+        if ident(&before) != ident(&after) || bytes.len() != after.size_lo as usize {
+            return Err(denied());
+        }
+        let identity: Vec<u8> = [after.volume, after.index_hi, after.index_lo]
+            .iter()
+            .flat_map(|v| v.to_be_bytes())
+            .collect();
+        Ok(Some(VerifiedMarkerHandle {
+            file,
+            bytes,
+            identity: identity.try_into().map_err(|_| denied())?,
+        }))
+    }
     pub(super) fn directory_identity(&self) -> io::Result<[u32; 3]> {
         let (volume, high, low) = ident(&info(self.root()?)?);
         Ok([volume, high, low])

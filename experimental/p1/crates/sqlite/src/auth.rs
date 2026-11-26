@@ -23,6 +23,8 @@ mod memory;
 #[cfg(target_os = "windows")]
 mod persistence;
 use ids::{OsResourceIds, ResourceIds};
+#[cfg(target_os = "windows")]
+pub(crate) use persistence::marker_io;
 #[derive(Clone)]
 struct AuthContext {
     realm: Id,

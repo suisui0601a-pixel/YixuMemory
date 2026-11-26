@@ -26,6 +26,7 @@ mod broker;
 mod content_crypto;
 mod dpapi;
 mod local_keys;
+pub(crate) mod marker_io;
 mod output;
 mod profile10;
 #[path = "persistence/winfs.rs"]
