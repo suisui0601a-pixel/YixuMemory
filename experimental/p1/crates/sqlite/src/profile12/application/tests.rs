@@ -116,6 +116,7 @@ impl Case {
             "runtime",
             "authority",
             "write_intent",
+            "publication",
             "transition",
             "source",
             "evidence",
@@ -138,9 +139,11 @@ impl Case {
             "deletion_work",
             "deletion_observation",
             "deletion_receipt",
+            "object_quarantine",
             "r5_tombstone",
             "stop_receipt",
             "resume_receipt",
+            "profile12_format",
         ] {
             let mut q = self
                 .fixture
@@ -1757,4 +1760,129 @@ fn isolation_b3_later_applied_event_is_not_the_original_canonical() {
         assert!(c.app.db.is_autocommit());
         assert_eq!(before, c.snapshot());
     }
+}
+
+#[test]
+fn snapshot_covers_every_p12_table_once_with_stable_typed_rows() {
+    let c = Case::new();
+    let snapshot = c.snapshot();
+    let names: BTreeSet<_> = snapshot.iter().map(|(name, _)| name.clone()).collect();
+    let mut query = c
+        .fixture
+        .db
+        .prepare("SELECT name FROM main.sqlite_schema WHERE type='table' ORDER BY name")
+        .unwrap();
+    let actual = query
+        .query_map([], |r| r.get::<_, String>(0))
+        .unwrap()
+        .collect::<rusqlite::Result<BTreeSet<_>>>()
+        .unwrap();
+    assert_eq!(names.len(), snapshot.len(), "duplicate snapshot table");
+    assert_eq!(names, actual, "snapshot must include all actual P12 tables");
+    assert_eq!(names.len(), 31);
+    assert_eq!(snapshot, c.snapshot(), "row ordering must be repeatable");
+    // ValueRef Debug retains SQLite type tags and every text/blob byte rather
+    // than coercing values into strings or lossy UTF-8. The fixture exercises
+    // NULL parent pointers, integer counters, text states and binary identities.
+    let rows: Vec<_> = snapshot.iter().flat_map(|(_, rows)| rows).collect();
+    for tag in ["Null", "Integer(", "Text([", "Blob(["] {
+        assert!(rows.iter().any(|row| row.contains(tag)), "missing {tag}");
+    }
+    println!(
+        "SNAPSHOT tables=31 unique=true all_schema_tables=true stable=true typed_null_integer_text_blob=true"
+    );
+}
+
+fn assert_snapshot_detects_rolled_back_change(c: &Case, table: &str, change: &str) {
+    let before = c.snapshot();
+    let db = &c.fixture.db;
+    let prefix = if table == "publication" {
+        "immutable"
+    } else {
+        "immutable_p12"
+    };
+    let trigger = format!("{prefix}_{table}_UPDATE");
+    let original: String = db
+        .query_row(
+            "SELECT sql FROM main.sqlite_schema WHERE name=?1 AND type='trigger'",
+            [&trigger],
+            |r| r.get(0),
+        )
+        .unwrap();
+    // Only this isolated fixture is changed. SQLite transactional DDL rollback
+    // restores the original immutable trigger together with the table contents.
+    db.execute_batch("BEGIN IMMEDIATE").unwrap();
+    db.execute_batch(&format!("DROP TRIGGER {trigger}"))
+        .unwrap();
+    assert_eq!(db.execute(change, []).unwrap(), 1);
+    let after = c.snapshot();
+    let changed: Vec<_> = before
+        .iter()
+        .zip(&after)
+        .filter_map(|((name, old), (other, new))| {
+            assert_eq!(name, other);
+            (old != new).then_some(name.as_str())
+        })
+        .collect();
+    assert_eq!(changed, vec![table]);
+    db.execute_batch("ROLLBACK").unwrap();
+    assert!(db.is_autocommit());
+    assert_eq!(before, c.snapshot());
+    let restored: String = db
+        .query_row(
+            "SELECT sql FROM main.sqlite_schema WHERE name=?1",
+            [&trigger],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(original, restored);
+    attest(db).unwrap();
+    assert_eq!(
+        db.query_row("SELECT count(*) FROM pragma_foreign_key_check", [], |r| r
+            .get::<_, i64>(
+            0
+        ))
+        .unwrap(),
+        0
+    );
+    println!(
+        "SNAPSHOT table={table} changed_rows=1 detected=true only_this_table=true rollback_restored=true trigger_restored=true attestation=true fk=0"
+    );
+}
+
+#[test]
+fn snapshot_detects_publication_change_and_rollback() {
+    let c = Case::new();
+    assert_snapshot_detects_rolled_back_change(
+        &c,
+        "publication",
+        "UPDATE publication SET cipher_hash=zeroblob(32) WHERE rowid=(SELECT min(rowid) FROM publication)",
+    );
+}
+
+#[test]
+fn snapshot_detects_object_quarantine_change_and_rollback() {
+    let c = Case::new();
+    c.fixture
+        .db
+        .execute(
+            "INSERT INTO object_quarantine VALUES(?1,'Integrity',?2)",
+            params![id(10), id(3)],
+        )
+        .unwrap();
+    assert_snapshot_detects_rolled_back_change(
+        &c,
+        "object_quarantine",
+        "UPDATE object_quarantine SET reason='Dependency'",
+    );
+}
+
+#[test]
+fn snapshot_detects_profile12_format_change_and_rollback() {
+    let c = Case::new();
+    assert_snapshot_detects_rolled_back_change(
+        &c,
+        "profile12_format",
+        "UPDATE profile12_format SET schema_hash=zeroblob(32) WHERE id=1",
+    );
 }
