@@ -1558,3 +1558,203 @@ fn followup_b3_invalid_work_scope_generation_canonical_and_marker_are_blocked() 
         assert_eq!(before, c.snapshot());
     }
 }
+
+fn isolation_a2_fixture(c: &Case) {
+    let db = &c.fixture.db;
+    let original: i64 = db
+        .query_row(
+            "SELECT event FROM receipt WHERE operation=?1",
+            [id(30)],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_ne!(original, 1);
+    let guards = ["security_progress", "immutable_receipt_UPDATE"].map(|name| {
+        db.query_row("SELECT sql FROM sqlite_schema WHERE name=?1", [name], |r| {
+            r.get::<_, String>(0)
+        })
+        .unwrap()
+    });
+    db.execute_batch(
+        "BEGIN IMMEDIATE; DROP TRIGGER security_progress; DROP TRIGGER immutable_receipt_UPDATE",
+    )
+    .unwrap();
+    db.execute(
+        "UPDATE security_event SET kind='Revocation' WHERE id=?1",
+        [original],
+    )
+    .unwrap();
+    db.execute("UPDATE receipt SET event=1 WHERE operation=?1", [id(30)])
+        .unwrap();
+    for guard in guards {
+        db.execute_batch(&guard).unwrap();
+    }
+    db.execute_batch("COMMIT").unwrap();
+    attest(db).unwrap();
+    assert_eq!(
+        db.query_row("SELECT count(*) FROM pragma_foreign_key_check", [], |r| r
+            .get::<_, i64>(
+            0
+        ))
+        .unwrap(),
+        0
+    );
+    assert_eq!(db.query_row("SELECT count(*) FROM security_event e WHERE e.kind='Write' AND
+        (e.state<>'Applied' OR NOT EXISTS(SELECT 1 FROM receipt r WHERE r.event=e.id AND r.scope=e.scope)
+         OR NOT EXISTS(SELECT 1 FROM security_receipt s WHERE s.event=e.id AND s.phase='Applied'))",[],|r|r.get::<_,i64>(0)).unwrap(),0);
+    assert_eq!(db.query_row("SELECT count(*) FROM receipt r WHERE NOT EXISTS(SELECT 1 FROM security_event e
+        JOIN security_receipt s ON s.event=e.id WHERE e.id=r.event AND e.scope=r.scope AND e.kind='Write'
+        AND e.state='Applied' AND s.phase='Applied')",[],|r|r.get::<_,i64>(0)).unwrap(),0);
+    // Test-only projection of the exact implementation SQL. No source mutation:
+    // demonstrate that removing only the duplicate predicate admits this fixture.
+    let source = include_str!("../application.rs");
+    let start = source.find("\"SELECT epoch=7+").unwrap() + 1;
+    let suffix = "FROM runtime WHERE id=1";
+    let end = start + source[start..].find(suffix).unwrap() + suffix.len();
+    let query = &source[start..end];
+    let duplicate = "         AND NOT EXISTS(SELECT 1 FROM receipt a JOIN receipt b ON a.event=b.event\n             WHERE a.operation<>b.operation)\n";
+    assert_eq!(query.matches(duplicate).count(), 1);
+    let without = query.replacen(duplicate, "", 1);
+    assert!(!db.query_row(query, [], |r| r.get::<_, bool>(0)).unwrap());
+    assert!(db.query_row(&without, [], |r| r.get::<_, bool>(0)).unwrap());
+    println!(
+        "ISOLATION A2 original_event={original} converted=Revocation orphan_writes=0 receipt_parents_valid=true exact_ledger=false without_duplicate_predicate=true"
+    );
+}
+
+#[test]
+fn isolation_a2_duplicate_receipt_event_without_orphan_write() {
+    for entry in ["owner", "reconcile", "admit", "close"] {
+        let mut c = Case::new();
+        isolation_a2_fixture(&c);
+        let before = c.snapshot();
+        let result = match entry {
+            "owner" => c.app.transaction(|app, db| app.owner(db).map(|_| ())),
+            "reconcile" => c.app.reconcile(),
+            "admit" => c.app.admit_metadata(actor(), id(21)),
+            _ => c
+                .app
+                .close(actor(), id(91), Target::Source(id(70)))
+                .map(|_| ()),
+        };
+        println!(
+            "ISOLATION A2 entry={entry} result={result:?} blocked={} unchanged={}",
+            c.app.order.blocked.load(Ordering::SeqCst),
+            before == c.snapshot()
+        );
+        assert_eq!(result, Err(Error::Integrity));
+        assert!(c.app.order.blocked.load(Ordering::SeqCst));
+        assert!(c.app.db.is_autocommit());
+        assert_eq!(before, c.snapshot());
+    }
+}
+
+#[test]
+fn isolation_b3_later_applied_event_is_not_the_original_canonical() {
+    for entry in ["reconcile", "admit", "close"] {
+        let mut c = Case::new();
+        let a = c
+            .app
+            .close(actor(), id(90), Target::Memory(id(11)))
+            .unwrap();
+        c.app.fence(actor(), a).unwrap();
+        c.app.apply(actor(), a).unwrap();
+        let b = c
+            .app
+            .close(actor(), id(91), Target::Source(id(60)))
+            .unwrap();
+        c.app.fence(actor(), b).unwrap();
+        c.app.apply(actor(), b).unwrap();
+        let member = c
+            .app
+            .frozen(&c.app.db, a)
+            .unwrap()
+            .into_iter()
+            .find(|m| m.operation == id(10))
+            .unwrap();
+        c.app.frozen(&c.app.db, b).unwrap();
+        c.app.reconcile().unwrap();
+        assert!(a < b);
+        assert_eq!(
+            c.app
+                .db
+                .query_row(
+                    "SELECT event FROM deletion_work WHERE operation=?1",
+                    [id(10)],
+                    |r| r.get::<_, i64>(0)
+                )
+                .unwrap(),
+            a
+        );
+        let marker = member.marker(id(2), b);
+        let db = &c.fixture.db;
+        let guard: String = db
+            .query_row(
+                "SELECT sql FROM sqlite_schema WHERE name='p12_work_identity'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        db.execute_batch("BEGIN IMMEDIATE; DROP TRIGGER p12_work_identity")
+            .unwrap();
+        db.execute(
+            "UPDATE deletion_work SET event=?1,marker=?2 WHERE operation=?3",
+            params![b, marker, id(10)],
+        )
+        .unwrap();
+        db.execute_batch(&guard).unwrap();
+        db.execute_batch("COMMIT").unwrap();
+        attest(db).unwrap();
+        assert_eq!(
+            db.query_row("SELECT count(*) FROM pragma_foreign_key_check", [], |r| r
+                .get::<_, i64>(
+                0
+            ))
+            .unwrap(),
+            0
+        );
+        validate_global_ledger(db).unwrap();
+        assert!(persisted_intent_links_valid(db).unwrap());
+        for e in [a, b] {
+            assert_eq!(c.app.intent_required(db, e).unwrap().2, "Applied");
+            assert_eq!(
+                db.query_row(
+                    "SELECT count(*) FROM deletion_closure_seal WHERE event=?1",
+                    [e],
+                    |r| r.get::<_, i64>(0)
+                )
+                .unwrap(),
+                1
+            );
+            c.app.equal_sets(db, e).unwrap();
+            assert!(
+                Application::operations(db, "deletion_member", e)
+                    .unwrap()
+                    .contains(&id(10))
+            );
+        }
+        // B accepts its own well-formed member/work binding; only earlier A
+        // rejects borrowing a later canonical event. No missing-parent shortcut.
+        c.app.validate_work(db, &member, b).unwrap();
+        c.app.frozen(db, b).unwrap();
+        assert_eq!(c.app.validate_work(db, &member, a), Err(Error::Integrity));
+        assert!(matches!(c.app.frozen(db, a), Err(Error::Integrity)));
+        let before = c.snapshot();
+        let result = match entry {
+            "reconcile" => c.app.reconcile(),
+            "admit" => c.app.admit_metadata(actor(), id(31)),
+            _ => c
+                .app
+                .close(actor(), id(92), Target::Source(id(70)))
+                .map(|_| ()),
+        };
+        println!(
+            "ISOLATION B3 earlier={a} later={b} valid_later_binding=true earlier_rejects=true entry={entry} result={result:?} unchanged={}",
+            before == c.snapshot()
+        );
+        assert_eq!(result, Err(Error::Integrity));
+        assert!(c.app.order.blocked.load(Ordering::SeqCst));
+        assert!(c.app.db.is_autocommit());
+        assert_eq!(before, c.snapshot());
+    }
+}
