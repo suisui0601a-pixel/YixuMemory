@@ -13,6 +13,7 @@ pub(super) enum Fault {
     Integrity,
     StorageUnknown,
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct Ledger {
     pub(super) generation: i64,
     pub(super) identity: Option<Identity>,

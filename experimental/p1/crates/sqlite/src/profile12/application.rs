@@ -1,4 +1,5 @@
-//! Private metadata-only Application. No file, KeyVault, output, migration or Ready API.
+//! Private metadata Application with opt-in S3 synthetic Marker health assembly.
+//! No content, KeyVault, output, migration or Ready recovery API.
 //! A trusted synthetic host supplies actor/owner and one shared ordering capability.
 use super::{attest, configure, gates};
 use rusqlite::{Connection, OptionalExtension, params};
@@ -192,6 +193,8 @@ struct RealmOrder {
     blocked: Arc<AtomicBool>,
     // Private test observation only. None retains the original lock() path.
     contention_observer: Arc<Mutex<Option<std::sync::mpsc::Sender<LockObservation>>>>,
+    #[cfg(target_os = "windows")]
+    marker_health: Arc<Mutex<Option<Arc<marker::OwnerHealth>>>>,
 }
 #[derive(Debug, PartialEq, Eq)]
 enum LockObservation {
@@ -204,6 +207,8 @@ impl RealmOrder {
             gate: Arc::new(Mutex::new(())),
             blocked: Arc::new(AtomicBool::new(false)),
             contention_observer: Arc::new(Mutex::new(None)),
+            #[cfg(target_os = "windows")]
+            marker_health: Arc::new(Mutex::new(None)),
         }
     }
     fn enter(&self) -> Result<std::sync::MutexGuard<'_, ()>> {
@@ -386,17 +391,46 @@ impl Application {
         }
         Ok(epoch)
     }
+    fn ordered<'a>(&self, order: &'a RealmOrder) -> Result<std::sync::MutexGuard<'a, ()>> {
+        match order.enter() {
+            Ok(guard) => Ok(guard),
+            Err(e) => {
+                order.blocked.store(true, Ordering::SeqCst);
+                #[cfg(target_os = "windows")]
+                if let Some(h) = self.marker_health()? {
+                    h.block(self, marker::Cause::CommitUnknown);
+                }
+                Err(e)
+            }
+        }
+    }
     fn transaction<T>(&mut self, work: impl FnOnce(&Self, &Connection) -> Result<T>) -> Result<T> {
         let order = self.order.clone();
-        let _guard = order.enter()?;
+        let _guard = self.ordered(&order)?;
         if order.blocked.load(Ordering::SeqCst) {
             return Err(Error::CapabilityUnavailable);
         }
+        #[cfg(target_os = "windows")]
+        let health = self.marker_health()?;
         if !self.db.is_autocommit() {
             order.blocked.store(true, Ordering::SeqCst);
+            #[cfg(target_os = "windows")]
+            if let Some(h) = &health {
+                h.block(self, marker::Cause::CommitUnknown);
+            }
             return Err(Error::CapabilityUnavailable);
         }
-        sql(self.db.execute_batch("BEGIN IMMEDIATE"))?;
+        // Native observation finishes before BEGIN IMMEDIATE. Retained Pins,
+        // rather than a write transaction, protect objects through commit.
+        #[cfg(target_os = "windows")]
+        let _pins = health.as_ref().map(|h| h.admit(self)).transpose()?;
+        if self.db.execute_batch("BEGIN IMMEDIATE").is_err() {
+            #[cfg(target_os = "windows")]
+            if let Some(h) = &health {
+                h.block(self, marker::Cause::MetadataFault);
+            }
+            return Err(Error::Database);
+        }
         let result = work(self, &self.db);
         match result {
             Ok(value) => match self.db.execute_batch("COMMIT") {
@@ -408,6 +442,10 @@ impl Application {
                         let _ = self.db.execute_batch("ROLLBACK");
                     }
                     order.blocked.store(true, Ordering::SeqCst);
+                    #[cfg(target_os = "windows")]
+                    if let Some(h) = &health {
+                        h.block(self, marker::Cause::CommitUnknown);
+                    }
                     Err(Error::CapabilityUnavailable)
                 }
             },
@@ -415,6 +453,10 @@ impl Application {
                 let rollback = self.db.execute_batch("ROLLBACK");
                 if rollback.is_err() || !self.db.is_autocommit() {
                     order.blocked.store(true, Ordering::SeqCst);
+                    #[cfg(target_os = "windows")]
+                    if let Some(h) = &health {
+                        h.block(self, marker::Cause::CommitUnknown);
+                    }
                     return Err(Error::CapabilityUnavailable);
                 }
                 if matches!(
@@ -422,6 +464,10 @@ impl Application {
                     Error::Integrity | Error::Database | Error::IncompatibleSchema
                 ) {
                     order.blocked.store(true, Ordering::SeqCst);
+                    #[cfg(target_os = "windows")]
+                    if let Some(h) = &health {
+                        h.block(self, marker::Cause::MetadataFault);
+                    }
                 }
                 Err(e)
             }
@@ -886,15 +932,29 @@ impl Application {
     }
     fn reconcile(&self) -> Result<()> {
         let order = self.order.clone();
-        let _guard = order.enter()?;
+        let _guard = self.ordered(&order)?;
+        #[cfg(target_os = "windows")]
+        let health = self.marker_health()?;
+        #[cfg(target_os = "windows")]
+        let _pins = health.as_ref().map(|h| h.admit(self)).transpose()?;
         // Read-only snapshot, never repairs or advances an event, never produces Ready.
-        sql(self.db.execute_batch("BEGIN"))?;
+        if self.db.execute_batch("BEGIN").is_err() {
+            #[cfg(target_os = "windows")]
+            if let Some(h) = &health {
+                h.block(self, marker::Cause::MetadataFault);
+            }
+            return Err(Error::Database);
+        }
         let result = self
             .owner(&self.db)
             .and_then(|_| self.graph_guard(&self.db));
         let rollback = self.db.execute_batch("ROLLBACK");
         if result.is_err() || rollback.is_err() {
             order.blocked.store(true, Ordering::SeqCst);
+            #[cfg(target_os = "windows")]
+            if let Some(h) = &health {
+                h.block(self, marker::Cause::MetadataFault);
+            }
         }
         rollback.map_err(|_| Error::CapabilityUnavailable)?;
         result
@@ -925,4 +985,6 @@ impl Application {
 #[cfg(test)]
 mod tests;
 
+#[cfg(target_os = "windows")]
+mod marker;
 mod marker_state;

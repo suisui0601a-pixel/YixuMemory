@@ -54,6 +54,40 @@ commit failures are labelled separately from real OS errors. Process termination
 is not physical power loss; no strong deletion, backup freshness, production ACL
 or Windows service identity claim follows from this work.
 
-Until final S3 integration and regression evidence exists, later staged items in
-this ADR are requirements, not completion claims. The final report must list any
-remaining NOT TESTED/NOT IMPLEMENTED items and retain the independent review gate.
+## Concrete S3 assembly and remaining gates
+
+`application/marker_state.rs` contains the pure classifier. The private
+`application/marker.rs` coordinator shares the trusted host's RealmOrder across
+SQLite connections, consumes PublishPermit by value, retains real Marker Pins,
+and revalidates persistent D inside each short transition transaction. Native
+publication, observation and Pin verification happen outside write transactions.
+`auth/persistence/marker_io.rs` wraps the additive W1 handle observation only.
+The ordinary build, including all Cargo features, does not compile these private
+test-host modules. There is no feature-gated substitute for production authority.
+
+KeyUnavailable here records the applied synthetic work's local refusal stage;
+there is no real key, decryptor, content callback or physical cleanup adapter in
+this host. It is not evidence of DPAPI revocation or cryptographic erasure.
+Other physical-cleanup observations/receipts are explicitly unavailable in S3;
+they cannot be imported as trusted outcomes. S3 never erases a legal Marker.
+
+Only a trusted fresh SQL construction and the exact newly pinned roots can bind
+the test host. This is not old-root validation or an OS single-instance proof.
+Successful P12 clean stop, reopened-root admission, blocked-owner recovery and
+process-level isolation remain unavailable. Report::Ready describes only that
+fresh host's in-memory status; it is not a recovery admission proof. A lock,
+FileId, schema hash or confirmed blocked bit cannot issue Ready.
+
+On a newly attached S3 host, a failed reconcile may persist only the shared
+`runtime.blocked` health fact after ending its read transaction. It does not
+repair business history, rewrite Marker identity, issue a cleanup receipt or
+advance a deletion. S2-only reference hosts retain their original read-only
+reconcile path. S3 failure snapshots explicitly exclude this one permitted
+health field and assert it separately; they prove row stability, not full
+SQLite schema/PRAGMA/file-state immutability.
+
+Source/NTFS/SQLite/self-validation results belong in the external S3 evidence
+package. They do not retroactively approve S2, establish production capability,
+or replace independent S3 review. Real OS errors and injected commit/reply-loss
+faults must remain distinguishable. No new process-kill or physical-power-loss
+claim follows from those injected faults.

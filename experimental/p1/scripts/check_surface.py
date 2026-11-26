@@ -71,6 +71,24 @@ def main() -> None:
     application = APPLICATION.as_posix()
     cases = [
         (
+            "s3_publish_permit_is_not_public",
+            {"yixu-sqlite-foundation": (sqlite, 'default-features = false')},
+            "use yixu_sqlite_foundation::profile12::application::marker::PublishPermit; fn main(){}",
+            ["--all-features"], "could not find `profile12`",
+        ),
+        (
+            "s3_health_and_durable_receipt_are_not_public",
+            {"yixu-sqlite-foundation": (sqlite, 'default-features = false')},
+            "use yixu_sqlite_foundation::profile12::application::marker::{OwnerHealth,DurableBlockReceipt}; fn main(){}",
+            [], "could not find `profile12`",
+        ),
+        (
+            "s3_marker_pin_and_raw_store_are_not_public",
+            {"yixu-sqlite-foundation": (sqlite, 'default-features = false')},
+            "use yixu_sqlite_foundation::auth::marker_io::{MarkerPin,MarkerStore}; fn main(){}",
+            ["--all-features"], "could not find `auth`",
+        ),
+        (
             "p12_s2_application_is_not_public",
             {"yixu-sqlite-foundation": (sqlite, 'default-features = false')},
             "use yixu_sqlite_foundation::profile12::application::Application; fn main(){}",
