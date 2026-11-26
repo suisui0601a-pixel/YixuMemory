@@ -718,3 +718,241 @@ fn no_fresh_token_for_existing_database_and_no_successful_clean_stop_issuer() {
         0
     );
 }
+
+fn independent_main_blocked(c: &Case) -> i64 {
+    // An independent read-only connection has neither the original connection's
+    // TEMP namespace nor its pending transaction. This is not Owner recovery.
+    let db =
+        Connection::open_with_flags(&c.path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    db.query_row("SELECT blocked FROM main.runtime WHERE id=1", [], |r| {
+        r.get(0)
+    })
+    .unwrap()
+}
+
+#[test]
+fn durable_temp_runtime_shadow_cannot_sign_main_persistence() {
+    let mut c = Case::new();
+    assert_eq!(independent_main_blocked(&c), 0);
+    let before = c.snapshot_except_health();
+    c.app
+        .db
+        .execute_batch("CREATE TEMP TABLE runtime AS SELECT * FROM main.runtime")
+        .unwrap();
+    // The original main-only definition comparison still passes this fixture.
+    let expected = Connection::open_in_memory().unwrap();
+    crate::profile12::configure(&expected).unwrap();
+    crate::profile12::write_schema(&expected).unwrap();
+    assert_eq!(
+        crate::profile12::definitions(&c.app.db).unwrap(),
+        crate::profile12::definitions(&expected).unwrap()
+    );
+    c.health.block(&c.app, Cause::MetadataFault);
+    let temp: i64 = c
+        .app
+        .db
+        .query_row("SELECT blocked FROM temp.runtime WHERE id=1", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    let main = independent_main_blocked(&c);
+    println!(
+        "DURABLE_TEMP_SHADOW report={:?} main.blocked={main} temp.blocked={temp} autocommit={}",
+        c.health.report(),
+        c.app.db.is_autocommit()
+    );
+    assert_eq!(main, 0);
+    assert_eq!(
+        c.health.report(),
+        Report::NotConfirmed(Unconfirmed::UntrustedSchema)
+    );
+    assert_eq!(temp, 0);
+    assert!(c.app.order.blocked.load(Ordering::SeqCst));
+    assert!(c.app.db.is_autocommit());
+    assert_eq!(before, c.snapshot_except_health());
+    c.denied_after_latch();
+    assert_eq!(
+        c.health.retry_block_record(&c.app),
+        Report::NotConfirmed(Unconfirmed::UntrustedSchema)
+    );
+    assert_eq!(independent_main_blocked(&c), 0);
+    // Reject without dropping, normalizing, or repairing the TEMP object.
+    assert_eq!(
+        c.app
+            .db
+            .query_row(
+                "SELECT count(*) FROM temp.sqlite_schema WHERE name='runtime'",
+                [],
+                |r| r.get::<_, i64>(0)
+            )
+            .unwrap(),
+        1
+    );
+}
+
+#[test]
+fn durable_temp_trigger_on_main_runtime_is_rejected_without_firing() {
+    let mut c = Case::new();
+    let before = c.snapshot_except_health();
+    assert_eq!(independent_main_blocked(&c), 0);
+    c.app
+        .db
+        .execute_batch(
+            "CREATE TEMP TABLE health_trigger_calls(value INTEGER);
+         CREATE TEMP TRIGGER observe_health_update AFTER UPDATE OF blocked ON main.runtime
+         BEGIN INSERT INTO health_trigger_calls VALUES(1); END;",
+        )
+        .unwrap();
+    assert_eq!(
+        c.app
+            .db
+            .query_row("SELECT count(*) FROM temp.sqlite_schema", [], |r| r
+                .get::<_, i64>(0))
+            .unwrap(),
+        2
+    );
+    c.health.block(&c.app, Cause::MetadataFault);
+    assert_eq!(
+        c.health.report(),
+        Report::NotConfirmed(Unconfirmed::UntrustedSchema)
+    );
+    assert_eq!(independent_main_blocked(&c), 0);
+    assert_eq!(
+        c.app
+            .db
+            .query_row("SELECT count(*) FROM temp.health_trigger_calls", [], |r| {
+                r.get::<_, i64>(0)
+            })
+            .unwrap(),
+        0
+    );
+    assert_eq!(before, c.snapshot_except_health());
+    c.denied_after_latch();
+    println!(
+        "DURABLE_TEMP_TRIGGER target=main.runtime main.blocked=0 calls=0 durable=false retained_temp_objects=2"
+    );
+}
+
+#[test]
+fn durable_attached_database_is_rejected_without_writing_either_runtime() {
+    let mut c = Case::new();
+    let extra = c.path.parent().unwrap().join("attached.sqlite");
+    c.app
+        .db
+        .execute("ATTACH DATABASE ?1 AS extra", [extra.to_str().unwrap()])
+        .unwrap();
+    c.app
+        .db
+        .execute_batch("CREATE TABLE extra.runtime AS SELECT * FROM main.runtime")
+        .unwrap();
+    let before = c.snapshot_except_health();
+    assert_eq!(independent_main_blocked(&c), 0);
+    c.health.block(&c.app, Cause::MetadataFault);
+    assert_eq!(
+        c.health.report(),
+        Report::NotConfirmed(Unconfirmed::UntrustedSchema)
+    );
+    assert_eq!(independent_main_blocked(&c), 0);
+    assert_eq!(
+        c.app
+            .db
+            .query_row("SELECT blocked FROM extra.runtime WHERE id=1", [], |r| r
+                .get::<_, i64>(0))
+            .unwrap(),
+        0
+    );
+    assert_eq!(
+        c.app
+            .db
+            .query_row(
+                "SELECT count(*) FROM pragma_database_list WHERE name='extra'",
+                [],
+                |r| r.get::<_, i64>(0)
+            )
+            .unwrap(),
+        1
+    );
+    assert_eq!(before, c.snapshot_except_health());
+    c.denied_after_latch();
+    println!(
+        "DURABLE_ATTACH main.blocked=0 extra.blocked=0 durable=false attached_database_retained=true"
+    );
+}
+
+#[test]
+fn durable_invalid_connection_pragmas_never_get_repaired_or_sign_durable() {
+    for (pragma, value) in [
+        ("foreign_keys", 0),
+        ("recursive_triggers", 0),
+        ("temp_store", 0),
+        ("temp_store", 1),
+        ("defer_foreign_keys", 1),
+    ] {
+        let mut c = Case::new();
+        let before = c.snapshot_except_health();
+        c.app.db.pragma_update(None, pragma, value).unwrap();
+        assert_eq!(
+            c.app
+                .db
+                .pragma_query_value(None, pragma, |r| r.get::<_, i64>(0))
+                .unwrap(),
+            value
+        );
+        assert_eq!(independent_main_blocked(&c), 0);
+        c.health.block(&c.app, Cause::MetadataFault);
+        println!(
+            "DURABLE_PRAGMA name={pragma} value={value} report={:?} main.blocked={} autocommit={}",
+            c.health.report(),
+            independent_main_blocked(&c),
+            c.app.db.is_autocommit()
+        );
+        assert_eq!(
+            c.health.report(),
+            Report::NotConfirmed(Unconfirmed::UntrustedSchema)
+        );
+        assert_eq!(independent_main_blocked(&c), 0);
+        assert!(c.app.order.blocked.load(Ordering::SeqCst));
+        assert!(c.app.db.is_autocommit());
+        // Rejected without normalizing even a connection-local pragma.
+        assert_eq!(
+            c.app
+                .db
+                .pragma_query_value(None, pragma, |r| r.get::<_, i64>(0))
+                .unwrap(),
+            value
+        );
+        assert_eq!(before, c.snapshot_except_health());
+        c.denied_after_latch();
+        assert_eq!(
+            c.health.retry_block_record(&c.app),
+            Report::NotConfirmed(Unconfirmed::UntrustedSchema)
+        );
+        assert_eq!(independent_main_blocked(&c), 0);
+    }
+}
+
+#[test]
+fn durable_normal_commit_is_confirmed_from_reopened_main_database() {
+    let mut c = Case::new();
+    let before = c.snapshot_except_health();
+    assert_eq!(independent_main_blocked(&c), 0);
+    c.health.block(&c.app, Cause::MetadataFault);
+    assert_eq!(c.health.report(), Report::Durable);
+    assert!(c.app.db.is_autocommit());
+    assert_eq!(independent_main_blocked(&c), 1);
+    let independent =
+        Connection::open_with_flags(&c.path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).unwrap();
+    let (installation, incarnation, blocked): (Id, Id, i64) = independent
+        .query_row(
+            "SELECT installation,incarnation,blocked FROM main.runtime WHERE id=1",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .unwrap();
+    assert_eq!((installation, incarnation, blocked), (id(2), id(3), 1));
+    assert_eq!(before, c.snapshot_except_health());
+    c.denied_after_latch();
+    println!(
+        "DURABLE_NORMAL report=Durable committed=true independent_read_only_reopen_main.blocked=1 current_incarnation=true transaction_ended=true"
+    );
+}

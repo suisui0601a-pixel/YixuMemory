@@ -155,12 +155,12 @@ impl OwnerHealth {
             app.owner(db)?;
             app.graph_guard(db)?;
             let roots: Vec<u8> = sql(db.query_row(
-                "SELECT store_identity FROM runtime WHERE id=1",
+                "SELECT store_identity FROM main.runtime WHERE id=1",
                 [],
                 |r| r.get(0),
             ))?;
             require(roots == permit.roots)?;
-            require(sql(db.query_row("SELECT NOT EXISTS(SELECT 1 FROM deletion_intent) AND NOT EXISTS(SELECT 1 FROM stop_receipt) AND NOT EXISTS(SELECT 1 FROM resume_receipt)",[],|r|r.get(0)))?)
+            require(sql(db.query_row("SELECT NOT EXISTS(SELECT 1 FROM main.deletion_intent) AND NOT EXISTS(SELECT 1 FROM main.stop_receipt) AND NOT EXISTS(SELECT 1 FROM main.resume_receipt)",[],|r|r.get(0)))?)
         })?;
         let h = Arc::new(Self {
             io,
@@ -196,10 +196,17 @@ impl OwnerHealth {
         }
     }
     fn schema_trusted(db: &Connection) -> Result<()> {
-        let expected = sql(Connection::open_in_memory())?;
-        super::super::configure(&expected)?;
-        super::super::write_schema(&expected)?;
-        require(super::super::definitions(db)? == super::super::definitions(&expected)?)
+        // Read only: never configure/repair the caller's connection, which could
+        // drop TEMP objects or silently re-enable a disabled protection. Check
+        // deferred enforcement before other database statements can end a txn.
+        for (pragma, expected) in [("defer_foreign_keys", 0), ("temp_store", 2)] {
+            require(sql(db.pragma_query_value(None, pragma, |r| r.get::<_, i64>(0)))? == expected)?;
+        }
+        // Reuse P12's attestation: configured() validates foreign_keys,
+        // recursive_triggers, the TEMP namespace and all attached databases;
+        // attest() additionally verifies the full main schema, format/header
+        // and integrity. It does not consult the latched Owner admission gate.
+        super::super::attest(db)
     }
     fn persist(&self, app: &Application, fault: BlockFault) -> BlockState {
         if !app.db.is_autocommit() {
@@ -214,7 +221,17 @@ impl OwnerHealth {
         if app.db.execute_batch("BEGIN IMMEDIATE").is_err() {
             return BlockState::NotConfirmed(Unconfirmed::KnownNotCommitted);
         }
-        let changed=app.db.execute("UPDATE runtime SET blocked=1 WHERE id=1 AND installation=?1 AND realm=?2 AND incarnation=?3 AND clean=0 AND schema_hash=?4",
+        // Revalidate under the main write lock as well as before BEGIN. No
+        // external file, DPAPI or output I/O is performed in this transaction.
+        if Self::schema_trusted(&app.db).is_err() {
+            let rb = app.db.execute_batch("ROLLBACK");
+            return BlockState::NotConfirmed(if rb.is_err() || !app.db.is_autocommit() {
+                Unconfirmed::Unsettled
+            } else {
+                Unconfirmed::UntrustedSchema
+            });
+        }
+        let changed=app.db.execute("UPDATE main.runtime SET blocked=1 WHERE id=1 AND installation=?1 AND realm=?2 AND incarnation=?3 AND clean=0 AND schema_hash=?4",
             params![self.installation,app.realm,self.incarnation,super::super::schema_hash()]);
         if changed != Ok(1) {
             let rb = app.db.execute_batch("ROLLBACK");
@@ -239,7 +256,13 @@ impl OwnerHealth {
         if fault == BlockFault::AfterCommitReplyLost {
             return BlockState::NotConfirmed(Unconfirmed::CommitUnknown);
         }
-        let confirmed:rusqlite::Result<bool>=app.db.query_row("SELECT blocked=1 AND installation=?1 AND realm=?2 AND incarnation=?3 AND clean=0 AND schema_hash=?4 FROM runtime WHERE id=1",
+        if !app.db.is_autocommit() {
+            return BlockState::NotConfirmed(Unconfirmed::Unsettled);
+        }
+        if Self::schema_trusted(&app.db).is_err() {
+            return BlockState::NotConfirmed(Unconfirmed::UntrustedSchema);
+        }
+        let confirmed:rusqlite::Result<bool>=app.db.query_row("SELECT blocked=1 AND installation=?1 AND realm=?2 AND incarnation=?3 AND clean=0 AND schema_hash=?4 FROM main.runtime WHERE id=1",
             params![self.installation,app.realm,self.incarnation,super::super::schema_hash()],|r|r.get(0));
         if confirmed == Ok(true) && app.db.is_autocommit() {
             BlockState::Durable(DurableBlockReceipt {
@@ -288,12 +311,12 @@ impl OwnerHealth {
         app.owner(db)?;
         app.graph_guard(db)?;
         let roots: Vec<u8> = sql(db.query_row(
-            "SELECT store_identity FROM runtime WHERE id=1",
+            "SELECT store_identity FROM main.runtime WHERE id=1",
             [],
             |r| r.get(0),
         ))?;
         require(roots == self.roots)?;
-        let mut q=sql(db.prepare("SELECT w.operation,w.event,i.scope,i.memory FROM deletion_work w JOIN write_intent i USING(operation) ORDER BY w.operation"))?;
+        let mut q=sql(db.prepare("SELECT w.operation,w.event,i.scope,i.memory FROM main.deletion_work w JOIN main.write_intent i USING(operation) ORDER BY w.operation"))?;
         let keys = sql(sql(q.query_map([], |r| {
             Ok((
                 r.get::<_, Id>(0)?,
@@ -312,17 +335,17 @@ impl OwnerHealth {
                 .ok_or(Error::Integrity)?;
             app.validate_work(db, &member, event)?;
             let raw: Option<Vec<u8>> = sql(db.query_row(
-                "SELECT marker_identity FROM deletion_work WHERE operation=?1",
+                "SELECT marker_identity FROM main.deletion_work WHERE operation=?1",
                 [operation],
                 |r| r.get(0),
             ))?;
             let identity = raw
                 .map(|b| b.try_into().map_err(|_| Error::Integrity))
                 .transpose()?;
-            let observation=sql(db.query_row("SELECT generation FROM deletion_observation WHERE operation=?1 AND action='KeyUnavailable'",[operation],|r|r.get(0)).optional())?;
-            let receipt=sql(db.query_row("SELECT generation FROM deletion_receipt WHERE operation=?1 AND action='KeyUnavailable'",[operation],|r|r.get(0)).optional())?;
+            let observation=sql(db.query_row("SELECT generation FROM main.deletion_observation WHERE operation=?1 AND action='KeyUnavailable'",[operation],|r|r.get(0)).optional())?;
+            let receipt=sql(db.query_row("SELECT generation FROM main.deletion_receipt WHERE operation=?1 AND action='KeyUnavailable'",[operation],|r|r.get(0)).optional())?;
             // S3 cannot certify or import unimplemented physical-cleanup outcomes.
-            require(!sql(db.query_row("SELECT EXISTS(SELECT 1 FROM deletion_observation WHERE operation=?1 AND action<>'KeyUnavailable') OR EXISTS(SELECT 1 FROM deletion_receipt WHERE operation=?1 AND action<>'KeyUnavailable')",[operation],|r|r.get::<_,bool>(0)))?)?;
+            require(!sql(db.query_row("SELECT EXISTS(SELECT 1 FROM main.deletion_observation WHERE operation=?1 AND action<>'KeyUnavailable') OR EXISTS(SELECT 1 FROM main.deletion_receipt WHERE operation=?1 AND action<>'KeyUnavailable')",[operation],|r|r.get::<_,bool>(0)))?)?;
             let bytes = member.marker(self.installation, event);
             let name = format!("revoked-{}", yixu_domain::Id::from_bytes(member.key));
             works.push(Work {
@@ -427,9 +450,9 @@ impl OwnerHealth {
                 .ok_or(Error::Integrity)?;
             require(&current == w)?;
             let changed=match point {
-                Point::IdentityCommitted=>sql(app.db.execute("UPDATE deletion_work SET marker_identity=?1 WHERE operation=?2 AND marker_identity IS NULL",params![pin.identity(),w.member.operation]))?,
-                Point::ObservationCommitted=>sql(app.db.execute("INSERT INTO deletion_observation VALUES(?1,'KeyUnavailable',?2)",params![w.member.operation,w.member.generation]))?,
-                Point::ReceiptCommitted=>sql(app.db.execute("INSERT INTO deletion_receipt VALUES(?1,'KeyUnavailable',?2)",params![w.member.operation,w.member.generation]))?,
+                Point::IdentityCommitted=>sql(app.db.execute("UPDATE main.deletion_work SET marker_identity=?1 WHERE operation=?2 AND marker_identity IS NULL",params![pin.identity(),w.member.operation]))?,
+                Point::ObservationCommitted=>sql(app.db.execute("INSERT INTO main.deletion_observation VALUES(?1,'KeyUnavailable',?2)",params![w.member.operation,w.member.generation]))?,
+                Point::ReceiptCommitted=>sql(app.db.execute("INSERT INTO main.deletion_receipt VALUES(?1,'KeyUnavailable',?2)",params![w.member.operation,w.member.generation]))?,
                 Point::Published=>return Err(Error::Integrity),
             };
             require(changed == 1)?;
@@ -438,7 +461,7 @@ impl OwnerHealth {
                 // failure, not a fake native completion or disk-full claim.
                 sql(app.db.execute_batch("PRAGMA defer_foreign_keys=ON"))?;
                 sql(app.db.execute(
-                    "INSERT INTO resume_receipt VALUES(?1,?2,1,?3)",
+                    "INSERT INTO main.resume_receipt VALUES(?1,?2,1,?3)",
                     params![[201u8; 16], [202u8; 16], [203u8; 32]],
                 ))?;
             }

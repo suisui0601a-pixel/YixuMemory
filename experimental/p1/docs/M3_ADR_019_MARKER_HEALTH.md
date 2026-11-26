@@ -91,3 +91,37 @@ package. They do not retroactively approve S2, establish production capability,
 or replace independent S3 review. Real OS errors and injected commit/reply-loss
 faults must remain distinguishable. No new process-kill or physical-power-loss
 claim follows from those injected faults.
+
+## S3 P1 follow-up: main persistence and connection trust
+
+Independent review found a false Durable result in commit 62c0fa4. A real
+SQLite TEMP runtime table could shadow both the unqualified UPDATE and its
+confirmation SELECT: temp.blocked became 1 while a separate connection still
+read main.runtime.blocked=0. Main-only sqlite_schema equality did not prevent it.
+The regression is first run against that implementation and retains the failure.
+
+Blocking still latches the host in memory before doing SQL. Its persistence
+path now reuses unchanged P12 attest/configured/namespace_clear, covering the
+exact main schema and format, integrity, TEMP objects, attached databases,
+foreign_keys and recursive_triggers. It additionally reads temp_store=MEMORY
+and defer_foreign_keys=OFF; it never configures, normalizes, drops or repairs
+the caller's connection. Deferred enforcement is checked before other database
+statements. A data-integrity failure can consequently also make this path
+NotConfirmed rather than allowing a best-effort Durable claim.
+
+Validation occurs before BEGIN IMMEDIATE, again under its write lock, and
+after a confirmed COMMIT before confirmation. Failed in-transaction validation
+requires explicit ROLLBACK; unresolved transaction state remains NotConfirmed.
+All persistent table references in the Marker coordinator, especially blocking
+UPDATE and readback, explicitly target main. Only a confirmed main commit,
+trusted readback with matching Owner, and ended transaction issue Durable.
+
+Regression coverage includes a TEMP shadow, a TEMP trigger on main.runtime,
+an attached database, disabled/incorrect protection pragmas, and an independent
+read-only reopen of main after normal persistence. Invalid connections retain
+their original TEMP/ATTACH/pragma state and never become Ready. This is a
+localized S3 correction; P12 package/DDL and historical attestation, W1,
+Marker encoding/canonical reuse, production API, and S4/S5 remain unchanged.
+Implementation self-validation and automated CI do not constitute independent
+S3 approval. Durable still means a confirmed SQLite main blocking fact, not
+physical-power-loss certification, an OS ownership proof or Ready admission.
